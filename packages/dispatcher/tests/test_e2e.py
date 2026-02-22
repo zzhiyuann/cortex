@@ -18,6 +18,14 @@ from dispatcher.session import Session, SessionManager
 from dispatcher.runner import AgentRunner
 
 
+# -- Global fixture: prevent tests from writing to real issues.jsonl --
+
+@pytest.fixture(autouse=True)
+def _no_record_issue(monkeypatch):
+    """Patch record_issue to a no-op so tests don't pollute the real issue store."""
+    monkeypatch.setattr("dispatcher.core.record_issue", lambda *a, **kw: None)
+
+
 # -- Fixtures --
 
 def make_config(tmp_path, projects=None):
@@ -324,7 +332,7 @@ class TestDoSession:
         session = d.sm.create(1, "hi", str(Path.home()))
         session.is_task = False
 
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, ephemeral=False):
             session.status = "running"
             session.started = time.time()
             await asyncio.sleep(0.1)
@@ -346,7 +354,7 @@ class TestDoSession:
         session = d.sm.create(1, "fix the bug", "/tmp/webapp")
         session.is_task = True
 
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, ephemeral=False):
             session.status = "running"
             session.started = time.time()
             await asyncio.sleep(0.2)
@@ -367,7 +375,7 @@ class TestDoSession:
         session = d.sm.create(1, "test", str(Path.home()))
 
         captured_model = []
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, ephemeral=False):
             captured_model.append(model)
             session.status = "done"
             session.finished = time.time()
@@ -388,7 +396,7 @@ class TestDoSession:
         prev.finished = time.time()
 
         invocations = []
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, ephemeral=False):
             invocations.append({"sid": session.sid, "resume": resume, "model": model})
             session.status = "done"
             session.finished = time.time()
@@ -412,7 +420,7 @@ class TestDoSession:
         prev.finished = time.time()
 
         invocations = []
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, ephemeral=False):
             invocations.append({"sid": session.sid, "resume": resume, "model": model})
             session.status = "done"
             session.finished = time.time()
@@ -797,7 +805,7 @@ class TestUXResponseLatency:
         session.is_task = False
 
         captured = {}
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, ephemeral=False):
             captured["stream"] = stream
             captured["max_turns"] = max_turns
             session.status = "done"
@@ -819,7 +827,7 @@ class TestUXResponseLatency:
         session.is_task = True
 
         captured = {}
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, ephemeral=False):
             captured["stream"] = stream
             session.status = "done"
             session.started = time.time()
@@ -1305,7 +1313,7 @@ class TestUXNewSession:
         d.sm.force_new = True
 
         invocations = []
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, ephemeral=False):
             invocations.append({"resume": resume, "sid": session.sid})
             session.status = "done"
             session.started = time.time()

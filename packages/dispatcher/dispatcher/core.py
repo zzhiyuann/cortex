@@ -297,8 +297,8 @@ class Dispatcher:
             # F1: instant reaction feedback
             self._fire_reaction(mid, "\U0001f440")
 
-            # F3: buffer non-reply tasks for batching; replies go directly
-            if reply_to:
+            # Quick questions (no project keyword) bypass the 2s batch buffer
+            if reply_to or not self._detect_project(text):
                 await self._handle_task(mid, text, reply_to, attachments=attachments)
             else:
                 self._buffer_message(mid, text, reply_to, attachments or [])
@@ -802,18 +802,20 @@ class Dispatcher:
         model: str | None = None,
     ):
         """Run a task with progress feedback."""
-        prompt = self._build_prompt(text, session.cwd, attachments, bg_context)
         session.model_override = model
         if quick:
-            max_turns = min(self.cfg.max_turns_chat, 5)  # Quick Q&A: 5 turns max
+            # Quick Q&A: minimal prompt, 1 turn, no session persistence
+            prompt = self._build_prompt_quick(text, attachments)
+            max_turns = 1
         else:
+            prompt = self._build_prompt(text, session.cwd, attachments, bg_context)
             max_turns = self.cfg.max_turns if session.is_task else self.cfg.max_turns_chat
 
         # Quick: plain mode (fast, no stream overhead). Task: stream-json (progressive updates).
         runner = asyncio.create_task(
             self.runner.invoke(
                 session, prompt, resume=False, max_turns=max_turns,
-                model=model, stream=not quick,
+                model=model, stream=not quick, ephemeral=quick,
             )
         )
         # Quick questions: typing only, no progress messages (no noise)
@@ -1014,6 +1016,17 @@ class Dispatcher:
             except Exception:
                 pass
         asyncio.ensure_future(_do())
+
+    def _build_prompt_quick(
+        self, text: str,
+        attachments: list[dict] | None = None,
+    ) -> str:
+        """Minimal prompt for quick questions — no memory, no cwd, less tokens."""
+        prompt = f"{text}\n\nAnswer concisely. Output is shown in Telegram."
+        if attachments:
+            for a in attachments:
+                prompt += f"\n[Attached {a['media_type']}: {a['path']}]"
+        return prompt
 
     def _build_prompt(
         self, text: str, cwd: str,
