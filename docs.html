@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Documentation — Cortex</title>
+<style>
+:root {
+  --bg: #0B0F19;
+  --bg-surface: #131825;
+  --bg-card: #1A1F2E;
+  --bg-card-hover: #222840;
+  --border: #2A3050;
+  --text: #E2E8F0;
+  --text-muted: #8892B0;
+  --text-dim: #5A6380;
+  --accent-blue: #60A5FA;
+  --accent-purple: #A78BFA;
+  --accent-green: #34D399;
+  --accent-amber: #FBBF24;
+  --accent-rose: #FB7185;
+  --gradient-1: linear-gradient(135deg, #60A5FA, #A78BFA);
+  --gradient-2: linear-gradient(135deg, #34D399, #60A5FA);
+  --gradient-3: linear-gradient(135deg, #FBBF24, #FB7185);
+  --gradient-4: linear-gradient(135deg, #A78BFA, #FB7185);
+  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  --max-w: 1200px;
+  --sidebar-w: 260px;
+  --toc-w: 200px;
+  --topnav-h: 56px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; font-size: 16px; scroll-padding-top: calc(var(--topnav-h) + 1.5rem); }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ---- TOP NAV ---- */
+.topnav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: var(--topnav-h);
+  background: rgba(11,15,25,0.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 1.5rem;
+}
+.topnav-brand {
+  font-weight: 700; font-size: 1.15rem; letter-spacing: -0.02em;
+  display: flex; align-items: center; gap: 0.5rem;
+  text-decoration: none; color: var(--text);
+}
+.topnav-brand .logo-icon {
+  width: 26px; height: 26px; border-radius: 6px;
+  background: var(--gradient-1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 800; color: var(--bg);
+}
+.topnav-links { display: flex; gap: 1.5rem; list-style: none; margin-left: 2.5rem; }
+.topnav-links a { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; font-weight: 500; transition: color 0.2s; }
+.topnav-links a:hover, .topnav-links a.active { color: var(--text); }
+.topnav-right { margin-left: auto; display: flex; align-items: center; gap: 1rem; }
+.topnav-right a { color: var(--text-muted); text-decoration: none; font-size: 0.85rem; transition: color 0.2s; }
+.topnav-right a:hover { color: var(--text); }
+.hamburger { display: none; background: none; border: none; color: var(--text); cursor: pointer; padding: 0.25rem; }
+.hamburger svg { width: 24px; height: 24px; }
+
+/* ---- LAYOUT ---- */
+.docs-layout {
+  display: flex;
+  margin-top: var(--topnav-h);
+  min-height: calc(100vh - var(--topnav-h));
+}
+
+/* ---- LEFT SIDEBAR ---- */
+.sidebar {
+  position: fixed; top: var(--topnav-h); left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto; overflow-x: hidden;
+  padding: 1.25rem 0;
+  z-index: 100;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.sidebar-section { margin-bottom: 0.25rem; }
+.sidebar-heading {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.4rem 1.25rem; font-size: 0.7rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-dim); cursor: pointer; user-select: none;
+  transition: color 0.2s;
+}
+.sidebar-heading:hover { color: var(--text-muted); }
+.sidebar-heading .chevron {
+  transition: transform 0.2s; font-size: 0.6rem;
+}
+.sidebar-heading.collapsed .chevron { transform: rotate(-90deg); }
+.sidebar-links { list-style: none; padding: 0; }
+.sidebar-heading.collapsed + .sidebar-links { display: none; }
+.sidebar-links a {
+  display: block; padding: 0.3rem 1.25rem 0.3rem 1.5rem;
+  font-size: 0.82rem; color: var(--text-muted);
+  text-decoration: none; border-left: 2px solid transparent;
+  transition: all 0.15s; line-height: 1.5;
+}
+.sidebar-links a:hover { color: var(--text); background: rgba(96,165,250,0.04); }
+.sidebar-links a.active {
+  color: var(--accent-blue); border-left-color: var(--accent-blue);
+  background: rgba(96,165,250,0.06);
+}
+
+/* ---- MAIN CONTENT ---- */
+.main-content {
+  flex: 1;
+  margin-left: var(--sidebar-w);
+  margin-right: var(--toc-w);
+  padding: 2.5rem 3rem 4rem;
+  max-width: calc(100% - var(--sidebar-w) - var(--toc-w));
+}
+.content-inner { max-width: 800px; margin: 0 auto; }
+
+/* ---- RIGHT TOC ---- */
+.right-toc {
+  position: fixed; top: var(--topnav-h); right: 0; bottom: 0;
+  width: var(--toc-w);
+  padding: 2rem 1rem 2rem 0.75rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.right-toc-title {
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 0.75rem;
+}
+.right-toc a {
+  display: block; padding: 0.2rem 0 0.2rem 0.75rem;
+  font-size: 0.78rem; color: var(--text-dim);
+  text-decoration: none; border-left: 1px solid var(--border);
+  transition: all 0.15s; line-height: 1.5;
+}
+.right-toc a:hover { color: var(--text-muted); }
+.right-toc a.active { color: var(--accent-blue); border-left-color: var(--accent-blue); }
+
+/* ---- TYPOGRAPHY ---- */
+.content-inner h1 {
+  font-size: 2rem; font-weight: 800; letter-spacing: -0.03em;
+  margin-bottom: 0.5rem; line-height: 1.2;
+}
+.content-inner .page-desc {
+  font-size: 1.05rem; color: var(--text-muted); margin-bottom: 2.5rem;
+  line-height: 1.6;
+}
+.content-inner h2 {
+  font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em;
+  margin-top: 3.5rem; margin-bottom: 1rem; padding-top: 1rem;
+  border-top: 1px solid var(--border); line-height: 1.3;
+}
+.content-inner h2:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+.content-inner h3 {
+  font-size: 1.15rem; font-weight: 600; margin-top: 2rem; margin-bottom: 0.75rem;
+  color: var(--text); line-height: 1.4;
+}
+.content-inner h4 {
+  font-size: 0.95rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem;
+  color: var(--text-muted);
+}
+.content-inner p { margin-bottom: 1rem; color: var(--text); font-size: 0.92rem; }
+.content-inner ul, .content-inner ol {
+  margin-bottom: 1rem; padding-left: 1.5rem; font-size: 0.92rem;
+}
+.content-inner li { margin-bottom: 0.35rem; color: var(--text); }
+.content-inner li code, .content-inner p code, .content-inner td code {
+  background: var(--bg-card); padding: 0.15rem 0.4rem; border-radius: 4px;
+  font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-blue);
+  border: 1px solid var(--border);
+}
+.content-inner a { color: var(--accent-blue); text-decoration: none; }
+.content-inner a:hover { text-decoration: underline; }
+.content-inner strong { color: var(--text); font-weight: 600; }
+.content-inner hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+/* ---- CODE BLOCKS ---- */
+.code-block {
+  position: relative; margin-bottom: 1.25rem; border-radius: 8px;
+  border: 1px solid var(--border); overflow: hidden;
+}
+.code-block-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.4rem 0.75rem; background: var(--bg-card);
+  border-bottom: 1px solid var(--border); font-size: 0.72rem;
+  color: var(--text-dim); font-family: var(--font-mono);
+}
+.copy-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem;
+  cursor: pointer; font-family: var(--font-mono); transition: all 0.15s;
+}
+.copy-btn:hover { color: var(--text); border-color: var(--text-muted); }
+.copy-btn.copied { color: var(--accent-green); border-color: var(--accent-green); }
+.code-block pre {
+  padding: 1rem; overflow-x: auto; background: var(--bg-surface);
+  font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.65;
+  color: var(--text); tab-size: 2;
+}
+.code-block pre .cm { color: var(--text-dim); }
+.code-block pre .s { color: var(--accent-green); }
+.code-block pre .kw { color: var(--accent-purple); }
+.code-block pre .fn { color: var(--accent-blue); }
+.code-block pre .fl { color: var(--accent-amber); }
+
+/* ---- CALLOUT BOXES ---- */
+.callout {
+  padding: 1rem 1.25rem; border-radius: 8px; margin-bottom: 1.25rem;
+  border-left: 3px solid; font-size: 0.88rem;
+}
+.callout-title {
+  font-weight: 700; font-size: 0.8rem; text-transform: uppercase;
+  letter-spacing: 0.04em; margin-bottom: 0.35rem; display: flex;
+  align-items: center; gap: 0.4rem;
+}
+.callout p { margin-bottom: 0.5rem; }
+.callout p:last-child { margin-bottom: 0; }
+.callout ul { margin-bottom: 0.5rem; }
+
+.callout-outcome {
+  background: rgba(52,211,153,0.06); border-color: var(--accent-green);
+}
+.callout-outcome .callout-title { color: var(--accent-green); }
+
+.callout-tip {
+  background: rgba(96,165,250,0.06); border-color: var(--accent-blue);
+}
+.callout-tip .callout-title { color: var(--accent-blue); }
+
+.callout-note {
+  background: rgba(167,139,250,0.06); border-color: var(--accent-purple);
+}
+.callout-note .callout-title { color: var(--accent-purple); }
+
+.callout-warning {
+  background: rgba(251,191,36,0.06); border-color: var(--accent-amber);
+}
+.callout-warning .callout-title { color: var(--accent-amber); }
+
+.callout-danger {
+  background: rgba(251,113,133,0.06); border-color: var(--accent-rose);
+}
+.callout-danger .callout-title { color: var(--accent-rose); }
+
+/* ---- TABLES ---- */
+.content-inner table {
+  width: 100%; border-collapse: collapse; margin-bottom: 1.25rem;
+  font-size: 0.85rem;
+}
+.content-inner th {
+  text-align: left; padding: 0.6rem 0.75rem; font-weight: 600;
+  color: var(--text-muted); border-bottom: 2px solid var(--border);
+  font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.content-inner td {
+  padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.content-inner tr:hover td { background: rgba(96,165,250,0.02); }
+
+/* ---- ARCHITECTURE DIAGRAM ---- */
+.arch-diagram {
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 2rem; margin: 1.5rem 0;
+  font-family: var(--font-mono); font-size: 0.78rem;
+  line-height: 1.4; overflow-x: auto; white-space: pre;
+  color: var(--text-muted);
+}
+
+/* ---- STEP LIST ---- */
+.step-list { counter-reset: steps; list-style: none; padding-left: 0; }
+.step-list li {
+  counter-increment: steps; position: relative;
+  padding-left: 2.5rem; margin-bottom: 1.25rem;
+}
+.step-list li::before {
+  content: counter(steps);
+  position: absolute; left: 0; top: 0.1rem;
+  width: 1.6rem; height: 1.6rem; border-radius: 50%;
+  background: var(--bg-card); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700; color: var(--accent-blue);
+}
+
+/* ---- MOBILE ---- */
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0; z-index: 99;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+}
+@media (max-width: 1100px) {
+  .right-toc { display: none; }
+  .main-content { margin-right: 0; max-width: calc(100% - var(--sidebar-w)); }
+}
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%); transition: transform 0.25s ease;
+    z-index: 150; width: 280px;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .main-content { margin-left: 0; max-width: 100%; padding: 1.5rem 1.25rem 3rem; }
+  .hamburger { display: block; }
+  .topnav-links { display: none; }
+  .content-inner h1 { font-size: 1.5rem; }
+  .content-inner h2 { font-size: 1.25rem; }
+}
+
+/* ---- PRINT ---- */
+@media print {
+  .topnav, .sidebar, .right-toc, .copy-btn, .hamburger, .sidebar-overlay { display: none !important; }
+  .main-content { margin: 0 !important; max-width: 100% !important; padding: 0 !important; }
+  .docs-layout { display: block; }
+  body { background: #fff; color: #111; font-size: 11pt; }
+  .content-inner h1, .content-inner h2, .content-inner h3, .content-inner h4 { color: #111; }
+  .content-inner p, .content-inner li, .content-inner td { color: #333; }
+  .code-block { border-color: #ccc; }
+  .code-block pre { background: #f5f5f5; color: #111; }
+  .callout { border-color: #999; background: #f9f9f9; }
+  a { color: #111; text-decoration: underline; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<div class="topnav">
+  <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle navigation">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+  </button>
+  <a href="index.html" class="topnav-brand">
+    <span class="logo-icon">Cx</span> Cortex
+  </a>
+  <ul class="topnav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="forge.html">Forge</a></li>
+    <li><a href="a2a-hub.html">A2A Hub</a></li>
+    <li><a href="vibe-replay.html">Vibe Replay</a></li>
+    <li><a href="dispatcher.html">Dispatcher</a></li>
+    <li><a href="docs.html" class="active">Docs</a></li>
+  </ul>
+  <div class="topnav-right">
+    <a href="https://github.com/zzhiyuann/cortex" target="_blank">GitHub</a>
+  </div>
+</div>
+
+<!-- SIDEBAR OVERLAY (mobile) -->
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- LAYOUT -->
+<div class="docs-layout">
+
+<!-- LEFT SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-heading" onclick="toggleSection(this)">Getting Started <span class="chevron">&#9662;</span></div>
+    <ul class="sidebar-links">
+      <li><a href="#quick-start">Quick Start</a></li>
+      <li><a href="#what-youll-have">What You'll Have</a></li>
+    </ul>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-heading" onclick="toggleSection(this)">Installation <span class="chevron">&#9662;</span></div>
+    <ul class="sidebar-links">
+      <li><a href="#prerequisites">Prerequisites</a></li>
+      <li><a href="#install-full">Full Stack Install</a></li>
+      <li><a href="#install-individual">Individual Components</a></li>
+      <li><a href="#install-source">From Source (Dev)</a></li>
+    </ul>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-heading" onclick="toggleSection(this)">Configuration <span class="chevron">&#9662;</span></div>
+    <ul class="sidebar-links">
+      <li><a href="#config-overview">Overview</a></li>
+      <li><a href="#config-mcp">MCP Registry</a></li>
+      <li><a href="#config-hooks">Claude Code Hooks</a></li>
+      <li><a href="#config-dispatcher">Dispatcher Config</a></li>
+    </ul>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-heading" onclick="toggleSection(this)">Forge <span class="chevron">&#9662;</span></div>
+    <ul class="sidebar-links">
+      <li><a href="#forge-mcp">From Claude Code (MCP)</a></li>
+      <li><a href="#forge-cli">From the CLI</a></li>
+      <li><a href="#forge-pipeline">Pipeline Steps</a></li>
+      <li><a href="#forge-manage">Managing Tools</a></li>
+    </ul>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-heading" onclick="toggleSection(this)">A2A Hub <span class="chevron">&#9662;</span></div>
+    <ul class="sidebar-links">
+      <li><a href="#a2a-start">Starting the Hub</a></li>
+      <li><a href="#a2a-create-agent">Creating an Agent</a></li>
+      <li><a href="#a2a-mcp-bridge">MCP Bridge Tools</a></li>
+      <li><a href="#a2a-workflow">Example Workflow</a></li>
+    </ul>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-heading" onclick="toggleSection(this)">Vibe Replay <span class="chevron">&#9662;</span></div>
+    <ul class="sidebar-links">
+      <li><a href="#replay-sessions">Viewing Sessions</a></li>
+      <li><a href="#replay-html">HTML Replays</a></li>
+      <li><a href="#replay-wisdom">Cross-Session Wisdom</a></li>
+    </ul>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-heading" onclick="toggleSection(this)">Dispatcher <span class="chevron">&#9662;</span></div>
+    <ul class="sidebar-links">
+      <li><a href="#dispatch-setup">Telegram Setup</a></li>
+      <li><a href="#dispatch-start">Starting Dispatcher</a></li>
+      <li><a href="#dispatch-usage">Using from Telegram</a></li>
+      <li><a href="#dispatch-routing">Project Routing</a></li>
+      <li><a href="#dispatch-fire">Fire-and-Refine</a></li>
+    </ul>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-heading" onclick="toggleSection(this)">CLI Reference <span class="chevron">&#9662;</span></div>
+    <ul class="sidebar-links">
+      <li><a href="#cli-cortex">cortex</a></li>
+      <li><a href="#cli-forge">forge</a></li>
+      <li><a href="#cli-a2a">a2a-hub</a></li>
+      <li><a href="#cli-replay">vibe-replay</a></li>
+      <li><a href="#cli-dispatcher">dispatcher</a></li>
+    </ul>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-heading" onclick="toggleSection(this)">Architecture <span class="chevron">&#9662;</span></div>
+    <ul class="sidebar-links">
+      <li><a href="#arch-layers">The Four Layers</a></li>
+      <li><a href="#arch-dataflow">Data Flow</a></li>
+      <li><a href="#arch-files">File Locations</a></li>
+    </ul>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-heading" onclick="toggleSection(this)">Troubleshooting <span class="chevron">&#9662;</span></div>
+    <ul class="sidebar-links">
+      <li><a href="#trouble-status">Status Issues</a></li>
+      <li><a href="#trouble-forge">Forge Issues</a></li>
+      <li><a href="#trouble-replay">Vibe Replay Issues</a></li>
+      <li><a href="#trouble-dispatcher">Dispatcher Issues</a></li>
+      <li><a href="#trouble-a2a">A2A Hub Issues</a></li>
+      <li><a href="#trouble-doctor">cortex doctor</a></li>
+    </ul>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-heading" onclick="toggleSection(this)">Reference <span class="chevron">&#9662;</span></div>
+    <ul class="sidebar-links">
+      <li><a href="#ref-env">Environment Variables</a></li>
+      <li><a href="#ref-files">File Locations</a></li>
+    </ul>
+  </div>
+</aside>
+
+<!-- RIGHT TOC -->
+<nav class="right-toc" id="rightToc"></nav>
+
+<!-- MAIN CONTENT -->
+<main class="main-content">
+<div class="content-inner">
+
+<h1>Cortex Documentation</h1>
+<p class="page-desc">A practical guide to setting up and using every component of Cortex &mdash; your personal agent infrastructure for tool creation, multi-agent coordination, session capture, and remote dispatch.</p>
+
+<!-- ============================================================ -->
+<!-- SECTION 1: GETTING STARTED -->
+<!-- ============================================================ -->
+<h2 id="quick-start">Quick Start</h2>
+
+<p>If you just want to get everything running as fast as possible, here are the six commands:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># Check prerequisites</span>
+python3 --version  <span class="cm"># Need 3.11+</span>
+
+<span class="cm"># Clone and install</span>
+git clone https://github.com/zzhiyuann/cortex.git
+<span class="kw">cd</span> cortex
+python3 -m venv .venv &amp;&amp; <span class="kw">source</span> .venv/bin/activate
+pip install -e .
+
+<span class="cm"># One-command setup (configures MCP, hooks, directories)</span>
+cortex init
+
+<span class="cm"># Start all services</span>
+cortex start
+
+<span class="cm"># Verify everything</span>
+cortex status</pre>
+</div>
+
+<p>That's it. Restart Claude Code (if it was open) and you're ready.</p>
+
+<div class="callout callout-outcome" id="what-youll-have">
+  <div class="callout-title">What You'll Have</div>
+  <p>After these commands, four systems are active:</p>
+  <ul>
+    <li><strong>Forge</strong> available as MCP tools in Claude Code &mdash; create tools with natural language</li>
+    <li><strong>Vibe Replay</strong> hooks capturing every Claude Code session automatically</li>
+    <li><strong>A2A Hub</strong> ready for multi-agent coordination</li>
+    <li><strong>Dispatcher</strong> accepting commands from your phone via Telegram</li>
+  </ul>
+</div>
+
+<div class="callout callout-tip">
+  <div class="callout-title">Tip</div>
+  <p>If you only want specific components, use the skip flags: <code>cortex init --skip-dispatcher --skip-a2a</code>. See <a href="#install-individual">Individual Components</a> below.</p>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 2: INSTALLATION -->
+<!-- ============================================================ -->
+<h2 id="prerequisites">Installation</h2>
+
+<h3>Prerequisites</h3>
+
+<table>
+  <thead><tr><th>Requirement</th><th>Version</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Python</td><td>3.11+ (3.13 recommended)</td><td>Runtime for all components</td></tr>
+    <tr><td>Git</td><td>Any recent</td><td>Cloning repos, version control</td></tr>
+    <tr><td>Claude Code CLI</td><td>Latest</td><td>MCP integration (Forge), hooks (Vibe Replay)</td></tr>
+    <tr><td>Telegram account</td><td>&mdash;</td><td>Optional. Required only for Dispatcher</td></tr>
+    <tr><td>pip</td><td>23+</td><td>Package installation</td></tr>
+  </tbody>
+</table>
+
+<p>Check your Python version:</p>
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>python3 --version
+<span class="cm"># Python 3.13.1  (good)</span>
+<span class="cm"># Python 3.10.4  (too old -- upgrade first)</span></pre>
+</div>
+
+<div class="callout callout-note">
+  <div class="callout-title">Note</div>
+  <p>On macOS, the system Python is often too old. Install a newer version with <code>brew install python@3.13</code> or download from <a href="https://python.org">python.org</a>.</p>
+</div>
+
+<h3 id="install-full">Option A: Full Stack (Recommended)</h3>
+
+<p>This installs all four components and the <code>cortex</code> unified CLI:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>git clone https://github.com/zzhiyuann/cortex.git
+<span class="kw">cd</span> cortex
+python3 -m venv .venv &amp;&amp; <span class="kw">source</span> .venv/bin/activate
+pip install -e .
+
+<span class="cm"># Run interactive setup</span>
+cortex init</pre>
+</div>
+
+<p>The <code>cortex init</code> command will:</p>
+<ol>
+  <li>Create virtual environments for each component</li>
+  <li>Register Forge and A2A Hub as MCP servers in <code>~/.mcp.json</code></li>
+  <li>Install Vibe Replay hooks into <code>~/.claude/settings.json</code></li>
+  <li>Create Dispatcher config at <code>~/.config/dispatcher/config.yaml</code></li>
+  <li>Prompt for your Telegram bot token and chat ID (optional, press Enter to skip)</li>
+</ol>
+
+<h3 id="install-individual">Option B: Individual Components</h3>
+
+<p>Install only the parts you need:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>pip install forge-agent       <span class="cm"># Just Forge</span>
+pip install a2a-hub            <span class="cm"># Just A2A Hub</span>
+pip install vibe-replay        <span class="cm"># Just Vibe Replay</span>
+pip install agent-dispatcher   <span class="cm"># Just Dispatcher</span></pre>
+</div>
+
+<p>Each package includes its own setup command:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>forge serve          <span class="cm"># Starts Forge MCP server</span>
+vibe-replay install  <span class="cm"># Installs Claude Code hooks</span>
+a2a-hub start        <span class="cm"># Starts the hub</span>
+dispatcher init      <span class="cm"># Interactive Dispatcher setup</span></pre>
+</div>
+
+<h3 id="install-source">Option C: From Source (Developer)</h3>
+
+<p>For contributing or modifying the code:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># Clone all repos</span>
+git clone https://github.com/zzhiyuann/cortex.git
+git clone https://github.com/zzhiyuann/forge.git
+git clone https://github.com/zzhiyuann/a2a-hub.git
+git clone https://github.com/zzhiyuann/vibe-replay.git
+git clone https://github.com/zzhiyuann/dispatcher.git
+
+<span class="cm"># Install Forge in editable mode with dev dependencies</span>
+<span class="kw">cd</span> forge
+python3 -m venv .venv &amp;&amp; <span class="kw">source</span> .venv/bin/activate
+pip install -e <span class="s">".[dev]"</span>
+<span class="kw">cd</span> ..
+
+<span class="cm"># Repeat for each component</span>
+<span class="kw">cd</span> a2a-hub
+python3 -m venv .venv &amp;&amp; <span class="kw">source</span> .venv/bin/activate
+pip install -e <span class="s">".[dev]"</span>
+<span class="kw">cd</span> ..
+
+<span class="kw">cd</span> vibe-replay
+python3 -m venv .venv &amp;&amp; <span class="kw">source</span> .venv/bin/activate
+pip install -e <span class="s">".[dev]"</span>
+<span class="kw">cd</span> ..
+
+<span class="kw">cd</span> dispatcher
+python3 -m venv .venv &amp;&amp; <span class="kw">source</span> .venv/bin/activate
+pip install -e <span class="s">".[dev]"</span>
+<span class="kw">cd</span> ..</pre>
+</div>
+
+<div class="callout callout-tip">
+  <div class="callout-title">Tip</div>
+  <p>Each component is a standalone Python project with its own <code>pyproject.toml</code>. The <code>[dev]</code> extra installs pytest, ruff, mypy, and other development tools.</p>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 3: CONFIGURATION -->
+<!-- ============================================================ -->
+<h2 id="config-overview">Configuration</h2>
+
+<p><code>cortex init</code> handles all configuration automatically. This section explains what it configures and how to customize things manually.</p>
+
+<h3 id="config-mcp">MCP Server Registry (~/.mcp.json)</h3>
+
+<p>This file tells Claude Code which MCP servers are available. Cortex registers Forge (for tool creation) and A2A Hub (for agent coordination):</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>json -- ~/.mcp.json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>{
+  <span class="s">"mcpServers"</span>: {
+    <span class="s">"forge"</span>: {
+      <span class="s">"command"</span>: <span class="s">"/path/to/forge/.venv/bin/forge-mcp"</span>
+    },
+    <span class="s">"a2a-hub"</span>: {
+      <span class="s">"command"</span>: <span class="s">"/path/to/a2a-hub/.venv/bin/a2a-hub"</span>,
+      <span class="s">"args"</span>: [<span class="s">"bridge"</span>]
+    }
+  }
+}</pre>
+</div>
+
+<div class="callout callout-warning">
+  <div class="callout-title">Warning</div>
+  <p>The paths must be absolute, pointing to the actual venv binaries. If you move your installation directories, re-run <code>cortex init</code> or update these paths manually.</p>
+</div>
+
+<p>If you already have other MCP servers configured, <code>cortex init</code> merges the new entries &mdash; it does not overwrite your existing configuration.</p>
+
+<h3 id="config-hooks">Claude Code Hooks (~/.claude/settings.json)</h3>
+
+<p>Vibe Replay captures sessions through Claude Code's hook system. Two hooks are installed:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>json -- ~/.claude/settings.json</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>{
+  <span class="s">"hooks"</span>: {
+    <span class="s">"PostToolUse"</span>: [{
+      <span class="s">"matcher"</span>: <span class="s">""</span>,
+      <span class="s">"hooks"</span>: [{
+        <span class="s">"type"</span>: <span class="s">"command"</span>,
+        <span class="s">"command"</span>: <span class="s">"python3 ~/.vibe-replay/capture-hook.py  # vibe-replay"</span>
+      }]
+    }],
+    <span class="s">"Stop"</span>: [{
+      <span class="s">"matcher"</span>: <span class="s">""</span>,
+      <span class="s">"hooks"</span>: [{
+        <span class="s">"type"</span>: <span class="s">"command"</span>,
+        <span class="s">"command"</span>: <span class="s">"python3 ~/.vibe-replay/stop-hook.py  # vibe-replay"</span>
+      }]
+    }]
+  }
+}</pre>
+</div>
+
+<ul>
+  <li><strong>PostToolUse</strong> fires after every tool call (file reads, edits, bash commands). The capture hook logs each event to the session file.</li>
+  <li><strong>Stop</strong> fires when a Claude Code session ends. The stop hook finalizes the session &mdash; calculates statistics, detects phases, and writes the summary.</li>
+</ul>
+
+<div class="callout callout-note">
+  <div class="callout-title">Note</div>
+  <p>The <code># vibe-replay</code> comment at the end of each command is intentional &mdash; it lets <code>cortex init</code> and <code>vibe-replay uninstall</code> identify which hooks belong to Vibe Replay without disturbing your other hooks.</p>
+</div>
+
+<h3 id="config-dispatcher">Dispatcher Config (~/.config/dispatcher/config.yaml)</h3>
+
+<p>This is the main configuration file for the Dispatcher. Every field has a sensible default, but you need to provide your Telegram credentials:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>yaml -- ~/.config/dispatcher/config.yaml</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># Telegram bot credentials</span>
+<span class="kw">telegram</span>:
+  <span class="kw">bot_token</span>: <span class="s">"YOUR_BOT_TOKEN"</span>
+  <span class="kw">chat_id</span>: <span class="s">YOUR_CHAT_ID</span>
+
+<span class="cm"># Agent execution settings</span>
+<span class="kw">agent</span>:
+  <span class="kw">command</span>: <span class="s">"claude"</span>
+  <span class="kw">args</span>: [<span class="s">"-p"</span>, <span class="s">"--dangerously-skip-permissions"</span>]
+  <span class="kw">max_concurrent</span>: 3        <span class="cm"># Max tasks running at once</span>
+  <span class="kw">timeout</span>: 1800             <span class="cm"># 30 min max per task</span>
+  <span class="kw">max_turns</span>: 50             <span class="cm"># Max agent turns per task</span>
+
+<span class="cm"># Polling and progress behavior</span>
+<span class="kw">behavior</span>:
+  <span class="kw">poll_timeout</span>: 30          <span class="cm"># Telegram long-poll interval (seconds)</span>
+  <span class="kw">progress_interval</span>: 180   <span class="cm"># Send progress update every 3 min</span>
+  <span class="kw">recent_window</span>: 300       <span class="cm"># "Recent" message window (5 min)</span>
+  <span class="kw">cancel_keywords</span>: [<span class="s">"cancel"</span>, <span class="s">"stop"</span>]
+  <span class="kw">status_keywords</span>: [<span class="s">"status"</span>]
+
+<span class="cm"># Project routing</span>
+<span class="kw">projects</span>:
+  <span class="kw">myapp</span>:
+    <span class="kw">path</span>: ~/projects/myapp
+    <span class="kw">keywords</span>: [myapp, app, frontend]
+  <span class="kw">api</span>:
+    <span class="kw">path</span>: ~/projects/api-server
+    <span class="kw">keywords</span>: [api, backend, server]</pre>
+</div>
+
+<p>Key settings explained:</p>
+<ul>
+  <li><strong>agent.command / agent.args</strong> &mdash; The command Dispatcher uses to spawn Claude. The <code>-p</code> flag enables prompt mode (non-interactive). The <code>--dangerously-skip-permissions</code> flag lets the agent run without permission prompts (safe because Dispatcher controls the scope).</li>
+  <li><strong>agent.max_concurrent</strong> &mdash; How many tasks can run simultaneously. Each task spawns a separate Claude process. Keep this low (2-3) to avoid hitting rate limits.</li>
+  <li><strong>behavior.recent_window</strong> &mdash; If you send a short follow-up message within this window (default 5 min), Dispatcher treats it as a continuation of the previous task instead of a new one.</li>
+  <li><strong>projects</strong> &mdash; Keyword-based routing. When your message contains a keyword, Dispatcher automatically sets the working directory to that project's path.</li>
+</ul>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 4: FORGE -->
+<!-- ============================================================ -->
+<h2 id="forge-mcp">Using Forge &mdash; Create Tools with Natural Language</h2>
+
+<p>Forge turns plain-English descriptions into working, tested tools. It can generate MCP tools (usable in Claude Code), CLI commands, or Python modules.</p>
+
+<h3>From Claude Code (MCP)</h3>
+
+<p>After <code>cortex init</code> and restarting Claude Code, Forge is available as a set of MCP tools. In any Claude Code session, you can say things like:</p>
+
+<ul>
+  <li>"Create a tool that converts CSV files to JSON with column filtering"</li>
+  <li>"Build me a CLI that resizes images to thumbnails"</li>
+  <li>"Make an MCP tool that validates JWT tokens"</li>
+</ul>
+
+<p>Claude Code will call Forge's <code>forge_create</code> MCP tool behind the scenes. Forge may ask clarification questions (through Claude Code's conversation), then generates, tests, and installs the tool.</p>
+
+<div class="callout callout-tip">
+  <div class="callout-title">Tip</div>
+  <p>When using Forge through Claude Code, the conversation is natural. You describe what you want, Forge asks follow-up questions, and you refine until the tool is right. No special syntax needed.</p>
+</div>
+
+<h3 id="forge-cli">From the CLI</h3>
+
+<p>You can also use Forge directly from the command line:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># Create a tool with full interactive pipeline</span>
+forge create <span class="s">"convert CSV to JSON with filtering"</span>
+
+<span class="cm"># Create and install as CLI command</span>
+forge create <span class="s">"validate JWT tokens"</span> <span class="fl">--type</span> cli <span class="fl">--install</span> cli
+
+<span class="cm"># Create as MCP tool and register it</span>
+forge create <span class="s">"resize images to thumbnails"</span> <span class="fl">--type</span> mcp <span class="fl">--install</span> mcp
+
+<span class="cm"># Skip clarification questions (use defaults)</span>
+forge create <span class="s">"parse YAML config files"</span> <span class="fl">--no-clarify</span></pre>
+</div>
+
+<h3 id="forge-pipeline">Pipeline Steps</h3>
+
+<p>Every tool goes through this pipeline, whether you trigger it from Claude Code or the CLI:</p>
+
+<ol class="step-list">
+  <li>
+    <strong>Describe</strong> &mdash; You provide a plain-English description of what the tool should do. Be as specific or vague as you want.
+  </li>
+  <li>
+    <strong>Clarify</strong> &mdash; Forge asks questions to resolve ambiguity. What's the input format? How should errors be handled? What about edge cases? What dependencies are acceptable? You can skip this with <code>--no-clarify</code>.
+  </li>
+  <li>
+    <strong>Generate</strong> &mdash; Forge builds a ToolSpec (structured definition), then generates Python code from Jinja2 templates. It creates the main module, a CLI wrapper or MCP handler, and a requirements file.
+  </li>
+  <li>
+    <strong>Test</strong> &mdash; Forge auto-generates pytest test cases based on the ToolSpec and runs them in an isolated virtual environment. The tests cover normal usage, edge cases, and error paths.
+  </li>
+  <li>
+    <strong>Iterate</strong> &mdash; If tests fail, Forge reads the error output, diagnoses the issue, and regenerates the problematic code. This loop runs up to 5 times. Most tools pass on the first or second try.
+  </li>
+  <li>
+    <strong>Install</strong> &mdash; Places the finished tool where you specified:
+    <ul>
+      <li><code>mcp</code> &rarr; <code>~/.claude/mcp-tools/forge/{name}.py</code> (available in Claude Code immediately)</li>
+      <li><code>cli</code> &rarr; <code>~/.local/bin/{name}</code> (available in your PATH)</li>
+      <li><code>local</code> &rarr; <code>~/.forge/tools/{name}/</code> (saved for later use)</li>
+    </ul>
+  </li>
+</ol>
+
+<h3 id="forge-manage">Managing Tools</h3>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># List all tools Forge has created</span>
+forge list
+<span class="cm"># NAME             TYPE   INSTALLED   CREATED</span>
+<span class="cm"># csv-to-json      mcp    mcp         2025-01-15</span>
+<span class="cm"># jwt-validator    cli    cli         2025-01-16</span>
+<span class="cm"># image-resizer    mcp    mcp         2025-01-17</span>
+
+<span class="cm"># View a tool's source code</span>
+forge show csv-to-json
+
+<span class="cm"># Re-run tests for a tool</span>
+forge test csv-to-json
+
+<span class="cm"># Uninstall a tool (removes from install location + registry)</span>
+forge uninstall csv-to-json</pre>
+</div>
+
+<div class="callout callout-outcome">
+  <div class="callout-title">What You'll Have</div>
+  <p>Working, tested tools that are immediately available in your workflow &mdash; as MCP tools in Claude Code, CLI commands in your terminal, or Python modules you can import. Every tool includes source code, tests, and documentation.</p>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 5: A2A HUB -->
+<!-- ============================================================ -->
+<h2 id="a2a-start">Using A2A Hub &mdash; Multi-Agent Coordination</h2>
+
+<p>A2A Hub is a coordination layer for multiple AI agents. Agents register with the hub, advertise their capabilities, and can discover and delegate tasks to each other.</p>
+
+<h3>Starting the Hub</h3>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># Start everything (hub + bridge + dispatcher)</span>
+cortex start
+
+<span class="cm"># Or start just the hub</span>
+a2a-hub start
+
+<span class="cm"># Start on a specific port</span>
+a2a-hub start <span class="fl">--host</span> 0.0.0.0 <span class="fl">--port</span> 8080
+
+<span class="cm"># Check hub status</span>
+a2a-hub status</pre>
+</div>
+
+<h3 id="a2a-create-agent">Creating an Agent</h3>
+
+<p>An agent is any process that connects to the hub and declares what it can do. Here's a complete example in Python:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>python -- my_agent.py</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="kw">from</span> a2a_hub <span class="kw">import</span> Agent
+
+<span class="cm"># Create an agent with declared capabilities</span>
+agent = Agent(<span class="s">"my-helper"</span>, capabilities=[<span class="s">"summarize"</span>, <span class="s">"translate"</span>])
+
+<span class="kw">@agent.on_task</span>(<span class="s">"summarize"</span>)
+<span class="kw">async def</span> <span class="fn">summarize</span>(text: str, max_length: int = 200) -> dict:
+    <span class="s">"""Summarize the given text to max_length words."""</span>
+    words = text.split()[:max_length]
+    <span class="kw">return</span> {
+        <span class="s">"summary"</span>: <span class="s">" "</span>.join(words),
+        <span class="s">"original_length"</span>: len(text.split())
+    }
+
+<span class="kw">@agent.on_task</span>(<span class="s">"translate"</span>)
+<span class="kw">async def</span> <span class="fn">translate</span>(text: str, target: str = <span class="s">"en"</span>) -> dict:
+    <span class="s">"""Translate text to the target language."""</span>
+    <span class="cm"># Your translation logic here</span>
+    <span class="kw">return</span> {<span class="s">"translated"</span>: text, <span class="s">"target"</span>: target}
+
+<span class="cm"># Connect to hub, register capabilities, and start listening</span>
+agent.run()</pre>
+</div>
+
+<p>Run the agent:</p>
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>python3 my_agent.py
+<span class="cm"># Agent "my-helper" connected to hub</span>
+<span class="cm"># Registered capabilities: summarize, translate</span>
+<span class="cm"># Listening for tasks...</span></pre>
+</div>
+
+<h3 id="a2a-mcp-bridge">MCP Bridge Tools</h3>
+
+<p>The A2A Hub MCP bridge exposes six tools inside Claude Code. These let Claude Code interact with all connected agents:</p>
+
+<table>
+  <thead><tr><th>MCP Tool</th><th>What It Does</th></tr></thead>
+  <tbody>
+    <tr><td><code>hub_status</code></td><td>Shows all connected agents and their current state</td></tr>
+    <tr><td><code>discover_agents</code></td><td>Finds agents by capability (e.g., "summarize", "code-review")</td></tr>
+    <tr><td><code>delegate_task</code></td><td>Sends a task to a specific agent with parameters</td></tr>
+    <tr><td><code>get_task_result</code></td><td>Retrieves the result of a previously delegated task</td></tr>
+    <tr><td><code>broadcast_message</code></td><td>Sends a message to all connected agents</td></tr>
+    <tr><td><code>list_tasks</code></td><td>Shows task history with statuses</td></tr>
+  </tbody>
+</table>
+
+<h3 id="a2a-workflow">Example Workflow in Claude Code</h3>
+
+<p>Here's what a real multi-agent conversation looks like in Claude Code:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>conversation</span></div>
+  <pre><span class="cm"># You: "What agents are available?"</span>
+<span class="cm"># Claude Code calls hub_status</span>
+<span class="cm"># Response:</span>
+<span class="cm">#   Connected agents: 3</span>
+<span class="cm">#   - my-helper (summarize, translate)</span>
+<span class="cm">#   - code-reviewer (review, lint)</span>
+<span class="cm">#   - data-pipeline (etl, transform)</span>
+
+<span class="cm"># You: "Ask the code reviewer to review this function"</span>
+<span class="cm"># Claude Code calls discover_agents(capability="review")</span>
+<span class="cm"># Then calls delegate_task(</span>
+<span class="cm">#   agent_id="code-reviewer",</span>
+<span class="cm">#   capability="review",</span>
+<span class="cm">#   params={"code": "def calculate_total(items): ..."})</span>
+<span class="cm"># Response: task_id="t-abc123", status="pending"</span>
+
+<span class="cm"># You: "What did it say?"</span>
+<span class="cm"># Claude Code calls get_task_result(task_id="t-abc123")</span>
+<span class="cm"># Response: { "issues": [...], "suggestions": [...], "score": 8 }</span></pre>
+</div>
+
+<div class="callout callout-outcome">
+  <div class="callout-title">What You'll Have</div>
+  <p>A network of specialized agents that can discover each other and collaborate through a central hub. Claude Code becomes an orchestrator &mdash; it finds the right agent for each task and delegates work automatically.</p>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 6: VIBE REPLAY -->
+<!-- ============================================================ -->
+<h2 id="replay-sessions">Using Vibe Replay &mdash; Session Capture &amp; Wisdom</h2>
+
+<p>After <code>cortex init</code>, Vibe Replay is already running. Every Claude Code session is automatically captured in the background. You don't need to do anything &mdash; just use Claude Code normally.</p>
+
+<h3>Viewing Captured Sessions</h3>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># List all captured sessions</span>
+vibe-replay sessions
+<span class="cm"># ID        PROJECT         DURATION   TOOLS   FILES   DATE</span>
+<span class="cm"># abc123    cortex          42m        87      12      2025-01-20</span>
+<span class="cm"># def456    webapp          18m        34       5      2025-01-19</span>
+<span class="cm"># ghi789    api-server      1h 15m    142      28      2025-01-18</span>
+
+<span class="cm"># Filter by project</span>
+vibe-replay sessions <span class="fl">-p</span> cortex
+
+<span class="cm"># Show last 10 sessions</span>
+vibe-replay sessions <span class="fl">-n</span> 10
+
+<span class="cm"># View terminal summary of a session (partial ID works)</span>
+vibe-replay show abc123
+<span class="cm"># Session abc123 -- cortex</span>
+<span class="cm"># Duration: 42 minutes</span>
+<span class="cm"># Phases: exploration (8m) -> implementation (22m) -> debugging (7m) -> testing (5m)</span>
+<span class="cm"># Tools used: 87 (Read: 34, Edit: 28, Bash: 19, Grep: 6)</span>
+<span class="cm"># Files modified: 12</span>
+<span class="cm"># Key decisions:</span>
+<span class="cm">#   - Chose asyncio over threading for the hub server</span>
+<span class="cm">#   - Switched from REST to WebSocket for real-time agent communication</span></pre>
+</div>
+
+<h3 id="replay-html">Generating HTML Replays</h3>
+
+<p>This is where Vibe Replay shines. It generates rich, interactive HTML documents from your session data:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># Generate and open in browser</span>
+vibe-replay replay abc123
+
+<span class="cm"># Export to a specific file</span>
+vibe-replay export abc123 <span class="fl">-f</span> html <span class="fl">-o</span> replay.html
+
+<span class="cm"># Export as markdown</span>
+vibe-replay export abc123 <span class="fl">-f</span> markdown <span class="fl">-o</span> summary.md
+
+<span class="cm"># Export raw data as JSON</span>
+vibe-replay export abc123 <span class="fl">-f</span> json <span class="fl">-o</span> data.json</pre>
+</div>
+
+<p>The HTML replay includes:</p>
+<ul>
+  <li><strong>Interactive timeline</strong> with collapsible phases</li>
+  <li><strong>Auto-detected phases</strong>: exploration, implementation, debugging, testing &mdash; with transitions highlighted</li>
+  <li><strong>Key decisions</strong> and turning points called out</li>
+  <li><strong>Code diffs</strong> shown inline with syntax highlighting</li>
+  <li><strong>Statistics sidebar</strong>: tools used, files modified, duration breakdown</li>
+  <li><strong>Dark/light theme</strong> toggle</li>
+  <li><strong>Filterable events</strong>: show only code changes, or errors, or tool calls</li>
+</ul>
+
+<h3 id="replay-wisdom">Cross-Session Wisdom</h3>
+
+<p>Vibe Replay can analyze patterns across all your sessions to extract recurring lessons:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># Aggregate learnings from all sessions</span>
+vibe-replay wisdom
+<span class="cm"># Common patterns:</span>
+<span class="cm">#   - You tend to explore for 15-20% of session time before coding</span>
+<span class="cm">#   - Most debugging sessions start with reading logs before code</span>
+<span class="cm">#   - Test-first sessions have 40% fewer iteration cycles</span>
+
+<span class="cm"># Analyze only the last 100 sessions</span>
+vibe-replay wisdom <span class="fl">-n</span> 100
+
+<span class="cm"># Re-analyze a specific session with updated logic</span>
+vibe-replay analyze abc123</pre>
+</div>
+
+<div class="callout callout-outcome">
+  <div class="callout-title">What You'll Have</div>
+  <p>Every AI coding session automatically captured and transformed into structured knowledge &mdash; decisions, patterns, and lessons you can review, share, and learn from. Think of it as a flight recorder for your development process.</p>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 7: DISPATCHER -->
+<!-- ============================================================ -->
+<h2 id="dispatch-setup">Using Dispatcher &mdash; Control from Your Phone</h2>
+
+<p>Dispatcher connects your Telegram to Claude Code. Send a message from your phone, and Dispatcher spawns an agent, routes it to the right project, and sends back the result.</p>
+
+<h3>Telegram Bot Setup</h3>
+
+<p>If you skipped this during <code>cortex init</code>, set it up now:</p>
+
+<ol class="step-list">
+  <li>
+    <strong>Create a Telegram bot.</strong> Open Telegram, find <strong>@BotFather</strong>, send <code>/newbot</code>. Follow the prompts to name your bot. BotFather gives you a bot token (looks like <code>7740709485:AAF35Lke...</code>). Copy it.
+  </li>
+  <li>
+    <strong>Get your chat ID.</strong> Send any message to your new bot. Then visit this URL in a browser (replace YOUR_TOKEN with the actual token):
+    <div class="code-block" style="margin-top:0.5rem">
+      <div class="code-block-header"><span>url</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre>https://api.telegram.org/bot&lt;YOUR_TOKEN&gt;/getUpdates</pre>
+    </div>
+    <p>Look for <code>"chat":{"id":123456789}</code> in the JSON response. That number is your chat ID.</p>
+  </li>
+  <li>
+    <strong>Configure Dispatcher:</strong>
+    <div class="code-block" style="margin-top:0.5rem">
+      <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cm"># Option A: use cortex init with flags</span>
+cortex init <span class="fl">--telegram-token</span> <span class="s">"YOUR_TOKEN"</span> <span class="fl">--telegram-chat-id</span> YOUR_ID
+
+<span class="cm"># Option B: edit the config file directly</span>
+<span class="cm"># vim ~/.config/dispatcher/config.yaml</span></pre>
+    </div>
+  </li>
+</ol>
+
+<h3 id="dispatch-start">Starting Dispatcher</h3>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># Start with cortex (recommended -- starts hub + dispatcher)</span>
+cortex start
+
+<span class="cm"># Or start standalone</span>
+dispatcher start                <span class="cm"># Foreground (see logs in terminal)</span>
+dispatcher start <span class="fl">-d</span>             <span class="cm"># Detached (background)</span>
+
+<span class="cm"># Install as a macOS LaunchAgent (starts on login, restarts on crash)</span>
+dispatcher install
+
+<span class="cm"># Remove the LaunchAgent</span>
+dispatcher uninstall
+
+<span class="cm"># Check status</span>
+dispatcher status</pre>
+</div>
+
+<div class="callout callout-tip">
+  <div class="callout-title">Tip</div>
+  <p>Using <code>dispatcher install</code> creates a macOS LaunchAgent that starts automatically on login and restarts if it crashes. This is the best option for always-on remote access.</p>
+</div>
+
+<h3 id="dispatch-usage">Using from Telegram</h3>
+
+<p>Once Dispatcher is running, just send messages to your bot:</p>
+
+<table>
+  <thead><tr><th>You Send</th><th>What Happens</th></tr></thead>
+  <tbody>
+    <tr><td><code>fix the login bug in webapp</code></td><td>Routes to ~/projects/webapp, spawns Claude, fixes the bug</td></tr>
+    <tr><td><code>add dark mode to the settings page</code></td><td>Detects project from context, runs the task</td></tr>
+    <tr><td><code>status</code></td><td>Shows currently running tasks with elapsed time</td></tr>
+    <tr><td><code>cancel</code></td><td>Kills the currently running task</td></tr>
+    <tr><td><em>(short reply within 5 min)</em></td><td>Treated as follow-up to previous task</td></tr>
+  </tbody>
+</table>
+
+<div class="callout callout-note">
+  <div class="callout-title">Note</div>
+  <p>Dispatcher only responds to messages from your configured <code>chat_id</code>. Other people messaging your bot will be ignored &mdash; no security risk even if your bot name is guessable.</p>
+</div>
+
+<h3 id="dispatch-routing">Project Routing</h3>
+
+<p>Dispatcher uses keyword matching to figure out which project a task belongs to. Add your projects to the config:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>yaml -- ~/.config/dispatcher/config.yaml</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="kw">projects</span>:
+  <span class="kw">webapp</span>:
+    <span class="kw">path</span>: ~/projects/webapp
+    <span class="kw">keywords</span>: [web, frontend, webapp, ui, css]
+  <span class="kw">api</span>:
+    <span class="kw">path</span>: ~/projects/api-server
+    <span class="kw">keywords</span>: [api, backend, server, endpoint, rest]
+  <span class="kw">docs</span>:
+    <span class="kw">path</span>: ~/projects/docs-site
+    <span class="kw">keywords</span>: [docs, documentation, readme]
+  <span class="kw">infra</span>:
+    <span class="kw">path</span>: ~/projects/infra
+    <span class="kw">keywords</span>: [deploy, infra, docker, ci, pipeline]</pre>
+</div>
+
+<p>When you send "fix the frontend bug", Dispatcher sees "frontend" matches the <code>webapp</code> project, so it spawns the agent in <code>~/projects/webapp</code>.</p>
+
+<p>If no keywords match, Dispatcher will ask you to specify the project (or use a default if configured).</p>
+
+<h3 id="dispatch-fire">How Fire-and-Refine Works</h3>
+
+<p>Dispatcher uses a two-phase execution model to give you fast feedback:</p>
+
+<ol class="step-list">
+  <li>
+    <strong>Phase 1 (fast acknowledgment).</strong> The agent runs for 1 turn and sends a quick response to Telegram. This usually takes 10-30 seconds. You get immediate confirmation that the task was understood and work has started.
+  </li>
+  <li>
+    <strong>Phase 2 (full execution).</strong> If the task requires more work, the agent continues running in the background. Every 3 minutes (configurable via <code>progress_interval</code>), it sends a progress update to Telegram.
+  </li>
+  <li>
+    <strong>Result.</strong> When the agent finishes, the final output is sent to Telegram. If the task succeeded, you see a summary. If it failed, you see the error and what was attempted.
+  </li>
+</ol>
+
+<div class="callout callout-outcome">
+  <div class="callout-title">What You'll Have</div>
+  <p>Your phone becomes a remote control for AI coding agents. Send a message, the agent works in the background, and the result appears on your phone. You can be on the train, at a coffee shop, or in bed &mdash; and still ship code.</p>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 8: CLI REFERENCE -->
+<!-- ============================================================ -->
+<h2 id="cli-cortex">CLI Reference</h2>
+
+<h3>cortex (unified)</h3>
+
+<p>The top-level command that manages all Cortex components:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>cortex init [<span class="fl">--telegram-token</span> TOKEN] [<span class="fl">--telegram-chat-id</span> ID]
+            [<span class="fl">--skip-dispatcher</span>] [<span class="fl">--skip-forge</span>] [<span class="fl">--skip-a2a</span>] [<span class="fl">--skip-replay</span>]
+cortex start           <span class="cm"># Start all services (hub, bridge, dispatcher)</span>
+cortex stop            <span class="cm"># Stop all services</span>
+cortex status          <span class="cm"># Show status of all components</span>
+cortex doctor          <span class="cm"># Verify all integrations and report issues</span>
+cortex <span class="fl">--version</span>       <span class="cm"># Print version</span></pre>
+</div>
+
+<h3 id="cli-forge">forge</h3>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>forge create DESCRIPTION
+      [<span class="fl">--type</span> mcp|cli|python]    <span class="cm"># Output type (default: mcp)</span>
+      [<span class="fl">--no-clarify</span>]             <span class="cm"># Skip clarification questions</span>
+      [<span class="fl">--install</span> mcp|cli|local]  <span class="cm"># Where to install (default: local)</span>
+      [<span class="fl">--max-iterations</span> N]      <span class="cm"># Max test-fix cycles (default: 5)</span>
+
+forge list                         <span class="cm"># List all created tools</span>
+forge show NAME                    <span class="cm"># View source code of a tool</span>
+forge test NAME                    <span class="cm"># Re-run tests for a tool</span>
+forge uninstall NAME               <span class="cm"># Remove a tool</span>
+forge serve                        <span class="cm"># Start the MCP server (used by Claude Code)</span></pre>
+</div>
+
+<h3 id="cli-a2a">a2a-hub</h3>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>a2a-hub start [<span class="fl">--host</span> HOST] [<span class="fl">--port</span> PORT]    <span class="cm"># Start the hub server</span>
+a2a-hub bridge [<span class="fl">--host</span> HOST] [<span class="fl">--port</span> PORT]   <span class="cm"># Start MCP bridge (for Claude Code)</span>
+a2a-hub status [<span class="fl">--host</span> HOST] [<span class="fl">--port</span> PORT]   <span class="cm"># Show hub status</span>
+a2a-hub agents [<span class="fl">--host</span> HOST] [<span class="fl">--port</span> PORT]   <span class="cm"># List connected agents</span>
+a2a-hub tasks [<span class="fl">--host</span> HOST] [<span class="fl">--port</span> PORT]    <span class="cm"># List task history</span></pre>
+</div>
+
+<h3 id="cli-replay">vibe-replay</h3>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>vibe-replay install                <span class="cm"># Install hooks into Claude Code settings</span>
+vibe-replay uninstall              <span class="cm"># Remove hooks</span>
+vibe-replay status                 <span class="cm"># Check if hooks are installed and working</span>
+
+vibe-replay sessions
+      [<span class="fl">-p</span> PROJECT]               <span class="cm"># Filter by project name</span>
+      [<span class="fl">-n</span> LIMIT]                 <span class="cm"># Limit number of results</span>
+
+vibe-replay show SESSION_ID        <span class="cm"># Terminal summary (partial ID works)</span>
+vibe-replay replay SESSION_ID      <span class="cm"># Generate HTML replay and open in browser</span>
+
+vibe-replay export SESSION_ID
+      [<span class="fl">-f</span> html|markdown|json]    <span class="cm"># Export format (default: html)</span>
+      [<span class="fl">-o</span> OUTPUT]                <span class="cm"># Output file path</span>
+
+vibe-replay analyze SESSION_ID     <span class="cm"># Re-analyze a session</span>
+vibe-replay wisdom [<span class="fl">-n</span> LIMIT]     <span class="cm"># Cross-session pattern analysis</span>
+vibe-replay serve [<span class="fl">--host</span> HOST] [<span class="fl">--port</span> PORT]  <span class="cm"># Start web UI</span></pre>
+</div>
+
+<h3 id="cli-dispatcher">dispatcher</h3>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>dispatcher init                    <span class="cm"># Interactive setup (bot token, chat ID)</span>
+dispatcher start [<span class="fl">-c</span> CONFIG]       <span class="cm"># Start in foreground</span>
+dispatcher start <span class="fl">-d</span>                <span class="cm"># Start detached (background)</span>
+dispatcher install                 <span class="cm"># Install macOS LaunchAgent (always-on)</span>
+dispatcher uninstall               <span class="cm"># Remove LaunchAgent</span>
+dispatcher status                  <span class="cm"># Check if running</span>
+dispatcher logs [<span class="fl">-n</span> LINES] [<span class="fl">-f</span>]   <span class="cm"># View logs (-f for follow/tail)</span></pre>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 9: ARCHITECTURE -->
+<!-- ============================================================ -->
+<h2 id="arch-layers">Architecture &amp; Concepts</h2>
+
+<h3>The Four Layers</h3>
+
+<p>Cortex is organized into four layers, each handling a distinct concern:</p>
+
+<table>
+  <thead><tr><th>Layer</th><th>Component</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Command</strong></td><td>Dispatcher</td><td>Receives tasks from Telegram and routes them to the right project and agent</td></tr>
+    <tr><td><strong>Communication</strong></td><td>A2A Hub</td><td>Coordinates multiple agents &mdash; discovery, delegation, message passing</td></tr>
+    <tr><td><strong>Creation</strong></td><td>Forge</td><td>Generates new tools from natural language descriptions</td></tr>
+    <tr><td><strong>Memory</strong></td><td>Vibe Replay</td><td>Captures every session and extracts patterns and lessons</td></tr>
+  </tbody>
+</table>
+
+<p>Each layer is independent &mdash; you can use any combination. But they work best together.</p>
+
+<h3 id="arch-dataflow">Data Flow</h3>
+
+<p>Here's how the components connect in a typical workflow:</p>
+
+<div class="arch-diagram">                          +-----------+
+                          |  Telegram |
+                          |  (phone)  |
+                          +-----+-----+
+                                |
+                                v
+                       +--------+--------+
+                       |   Dispatcher    |   Command Layer
+                       | Routes tasks to |
+                       | projects/agents |
+                       +--------+--------+
+                                |
+               +----------------+----------------+
+               |                                 |
+               v                                 v
+      +--------+--------+              +--------+--------+
+      |   Claude Code   |              |    A2A Hub      |   Communication
+      |   (with MCP)    |              | Agent registry  |
+      +--+----------+---+              | Task delegation |
+         |          |                  +--------+--------+
+         v          v                           |
+    +----+---+ +---+------+             +------+------+
+    | Forge  | |  Vibe    |             |   Agents    |
+    | (MCP)  | |  Replay  |             | (connected) |
+    | Create | |  (hooks) |             +-------------+
+    | tools  | | Capture  |
+    +--------+ | sessions |              Creation:  Forge
+                +----------+              Memory:    Vibe Replay</div>
+
+<p>The typical flow is:</p>
+<ol>
+  <li>You send a message from Telegram to Dispatcher.</li>
+  <li>Dispatcher identifies the project and spawns a Claude Code agent.</li>
+  <li>The agent can use Forge (via MCP) to create new tools if needed.</li>
+  <li>The agent can use A2A Hub (via MCP bridge) to delegate subtasks to specialized agents.</li>
+  <li>Throughout the session, Vibe Replay hooks capture every action, decision, and code change.</li>
+  <li>When done, Dispatcher sends the result back to Telegram.</li>
+</ol>
+
+<h3 id="arch-files">Where Everything Lives</h3>
+
+<p>A summary of the key directories:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>filesystem</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># Configuration</span>
+~/.mcp.json                            <span class="cm"># MCP server registry (Forge + A2A Hub)</span>
+~/.claude/settings.json                <span class="cm"># Claude Code settings (Vibe Replay hooks)</span>
+~/.config/dispatcher/config.yaml       <span class="cm"># Dispatcher configuration</span>
+
+<span class="cm"># Data</span>
+~/.config/dispatcher/data/             <span class="cm"># Dispatcher logs and task memory</span>
+~/.forge/tools/                        <span class="cm"># Generated tools storage</span>
+~/.claude/mcp-tools/forge/             <span class="cm"># MCP-installed tools (used by Claude Code)</span>
+~/.vibe-replay/sessions/               <span class="cm"># Captured session data (JSON)</span>
+
+<span class="cm"># Scripts (installed by vibe-replay)</span>
+~/.vibe-replay/capture-hook.py         <span class="cm"># PostToolUse hook script</span>
+~/.vibe-replay/stop-hook.py            <span class="cm"># Stop hook script</span>
+
+<span class="cm"># Runtime</span>
+~/.cortex/                             <span class="cm"># PID files and service logs</span>
+~/.cortex/hub.pid                      <span class="cm"># A2A Hub process ID</span>
+~/.cortex/dispatcher.pid               <span class="cm"># Dispatcher process ID</span>
+~/.cortex/logs/                        <span class="cm"># Service log files</span></pre>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 10: TROUBLESHOOTING -->
+<!-- ============================================================ -->
+<h2 id="trouble-status">Troubleshooting</h2>
+
+<h3>cortex status Shows a Component Not Found</h3>
+
+<p>This usually means the component wasn't installed or its virtual environment is missing.</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># Check what cortex status reports</span>
+cortex status
+<span class="cm"># Forge:      OK  installed, MCP registered</span>
+<span class="cm"># A2A Hub:    ERR not found</span>
+<span class="cm"># Vibe Replay: OK  hooks installed</span>
+<span class="cm"># Dispatcher:  OK  running (PID 12345)</span>
+
+<span class="cm"># Fix: re-run init for the missing component</span>
+cortex init</pre>
+</div>
+
+<p>If a specific component's venv is corrupted, delete it and re-init:</p>
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>rm -rf /path/to/a2a-hub/.venv
+cortex init</pre>
+</div>
+
+<h3 id="trouble-forge">Forge MCP Not Showing in Claude Code</h3>
+
+<p>After running <code>cortex init</code>, you must restart Claude Code for MCP changes to take effect.</p>
+
+<ol>
+  <li>Verify the MCP config exists:
+    <div class="code-block" style="margin-top:0.5rem">
+      <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre>cat ~/.mcp.json | python3 -m json.tool</pre>
+    </div>
+    You should see a <code>"forge"</code> key under <code>mcpServers</code>.
+  </li>
+  <li>Verify the binary exists:
+    <div class="code-block" style="margin-top:0.5rem">
+      <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre>ls -la /path/to/forge/.venv/bin/forge-mcp</pre>
+    </div>
+    If it doesn't exist, the Forge venv may need rebuilding.
+  </li>
+  <li>Restart Claude Code completely (quit and reopen, not just a new session).</li>
+</ol>
+
+<div class="callout callout-warning">
+  <div class="callout-title">Warning</div>
+  <p>Simply opening a new Claude Code session is not enough. You need to fully quit and restart the Claude Code application for MCP server changes to load.</p>
+</div>
+
+<h3 id="trouble-replay">Vibe Replay Not Capturing Sessions</h3>
+
+<p>Check that hooks are installed:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>vibe-replay status
+<span class="cm"># Hooks: installed</span>
+<span class="cm"># PostToolUse: OK</span>
+<span class="cm"># Stop: OK</span>
+<span class="cm"># Sessions directory: ~/.vibe-replay/sessions/ (23 sessions)</span></pre>
+</div>
+
+<p>If hooks are missing:</p>
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># Reinstall hooks</span>
+vibe-replay install
+
+<span class="cm"># Verify they appear in the settings file</span>
+cat ~/.claude/settings.json | python3 -m json.tool</pre>
+</div>
+
+<p>If hooks are installed but sessions are empty, check the hook scripts exist:</p>
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>ls -la ~/.vibe-replay/capture-hook.py
+ls -la ~/.vibe-replay/stop-hook.py</pre>
+</div>
+
+<h3 id="trouble-dispatcher">Dispatcher Not Responding to Telegram</h3>
+
+<p>Work through this checklist:</p>
+
+<ol>
+  <li><strong>Is Dispatcher running?</strong>
+    <div class="code-block" style="margin-top:0.5rem">
+      <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre>dispatcher status
+<span class="cm"># or</span>
+cortex status</pre>
+    </div>
+  </li>
+  <li><strong>Check the bot token.</strong> Open a browser and go to <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getMe</code>. You should see your bot's info in the JSON response. If you get an error, the token is wrong.</li>
+  <li><strong>Check the chat ID.</strong> Send a message to your bot, then visit <code>https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</code>. Verify the <code>chat.id</code> matches your config.</li>
+  <li><strong>Check logs:</strong>
+    <div class="code-block" style="margin-top:0.5rem">
+      <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre>dispatcher logs <span class="fl">-n</span> 50 <span class="fl">-f</span></pre>
+    </div>
+    Look for connection errors, authentication failures, or polling timeouts.
+  </li>
+</ol>
+
+<h3 id="trouble-a2a">A2A Hub Bridge Can't Connect</h3>
+
+<p>The MCP bridge needs the hub to be running first:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># Make sure the hub is running</span>
+a2a-hub status
+
+<span class="cm"># If not, start it</span>
+cortex start
+<span class="cm"># or</span>
+a2a-hub start</pre>
+</div>
+
+<p>If the hub is running but the bridge can't connect, check that the host and port match:</p>
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># The bridge defaults to localhost:8000</span>
+<span class="cm"># If you started the hub on a different port:</span>
+a2a-hub bridge <span class="fl">--port</span> 8080</pre>
+</div>
+
+<h3 id="trouble-doctor">cortex doctor</h3>
+
+<p>When in doubt, run the diagnostic tool:</p>
+
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre>cortex doctor
+<span class="cm"># Checking Python version...      OK  3.13.1</span>
+<span class="cm"># Checking Claude Code CLI...     OK  installed</span>
+<span class="cm"># Checking Forge installation...  OK  venv OK, MCP registered</span>
+<span class="cm"># Checking A2A Hub...             OK  installed, hub reachable</span>
+<span class="cm"># Checking Vibe Replay hooks...   OK  PostToolUse + Stop installed</span>
+<span class="cm"># Checking Dispatcher...          OK  running, Telegram connected</span>
+<span class="cm"># Checking file permissions...    OK  all OK</span>
+<span class="cm">#</span>
+<span class="cm"># All checks passed.</span></pre>
+</div>
+
+<p><code>cortex doctor</code> checks everything: Python version, CLI availability, venv integrity, MCP registration, hook installation, service connectivity, file permissions, and Telegram API reachability. It reports exactly what's wrong and how to fix it.</p>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 11: ENVIRONMENT VARIABLES -->
+<!-- ============================================================ -->
+<h2 id="ref-env">Environment Variables</h2>
+
+<p>These override the corresponding values in config files. Useful for CI, Docker, or temporary overrides:</p>
+
+<table>
+  <thead><tr><th>Variable</th><th>Overrides</th><th>Default</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>DISPATCHER_BOT_TOKEN</code></td>
+      <td><code>telegram.bot_token</code> in config.yaml</td>
+      <td>&mdash;</td>
+    </tr>
+    <tr>
+      <td><code>DISPATCHER_CHAT_ID</code></td>
+      <td><code>telegram.chat_id</code> in config.yaml</td>
+      <td>&mdash;</td>
+    </tr>
+    <tr>
+      <td><code>DISPATCHER_AGENT_COMMAND</code></td>
+      <td><code>agent.command</code> in config.yaml</td>
+      <td><code>claude</code></td>
+    </tr>
+    <tr>
+      <td><code>DISPATCHER_MAX_CONCURRENT</code></td>
+      <td><code>agent.max_concurrent</code> in config.yaml</td>
+      <td><code>3</code></td>
+    </tr>
+    <tr>
+      <td><code>DISPATCHER_TIMEOUT</code></td>
+      <td><code>agent.timeout</code> in config.yaml</td>
+      <td><code>1800</code> (30 min)</td>
+    </tr>
+    <tr>
+      <td><code>DISPATCHER_DATA_DIR</code></td>
+      <td>Data directory path</td>
+      <td><code>~/.config/dispatcher/data/</code></td>
+    </tr>
+    <tr>
+      <td><code>FORGE_TOOLS_DIR</code></td>
+      <td>Where Forge stores generated tools</td>
+      <td><code>~/.forge/tools/</code></td>
+    </tr>
+    <tr>
+      <td><code>VIBE_REPLAY_DIR</code></td>
+      <td>Session storage directory</td>
+      <td><code>~/.vibe-replay/sessions/</code></td>
+    </tr>
+    <tr>
+      <td><code>A2A_HUB_HOST</code></td>
+      <td>Hub server host</td>
+      <td><code>localhost</code></td>
+    </tr>
+    <tr>
+      <td><code>A2A_HUB_PORT</code></td>
+      <td>Hub server port</td>
+      <td><code>8000</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Example usage:</p>
+<div class="code-block">
+  <div class="code-block-header"><span>bash</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+  <pre><span class="cm"># Override bot token for this session only</span>
+DISPATCHER_BOT_TOKEN=<span class="s">"7740709485:AAF35..."</span> dispatcher start
+
+<span class="cm"># Run hub on a different port</span>
+A2A_HUB_PORT=9000 a2a-hub start</pre>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 12: FILE LOCATIONS -->
+<!-- ============================================================ -->
+<h2 id="ref-files">File Locations Reference</h2>
+
+<p>A complete reference of every file and directory Cortex uses:</p>
+
+<h4>Configuration Files</h4>
+<table>
+  <thead><tr><th>Path</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>~/.mcp.json</code></td><td>MCP server registry &mdash; tells Claude Code about Forge and A2A Hub</td></tr>
+    <tr><td><code>~/.claude/settings.json</code></td><td>Claude Code settings &mdash; contains Vibe Replay hooks</td></tr>
+    <tr><td><code>~/.config/dispatcher/config.yaml</code></td><td>Dispatcher settings &mdash; Telegram credentials, agent config, project routing</td></tr>
+  </tbody>
+</table>
+
+<h4>Data Directories</h4>
+<table>
+  <thead><tr><th>Path</th><th>Contents</th></tr></thead>
+  <tbody>
+    <tr><td><code>~/.forge/tools/</code></td><td>All generated tools (source, tests, metadata)</td></tr>
+    <tr><td><code>~/.claude/mcp-tools/forge/</code></td><td>MCP-installed tools (symlinked from forge tools)</td></tr>
+    <tr><td><code>~/.vibe-replay/sessions/</code></td><td>Captured session data as JSON files</td></tr>
+    <tr><td><code>~/.config/dispatcher/data/</code></td><td>Dispatcher task logs and conversation memory</td></tr>
+    <tr><td><code>~/.cortex/</code></td><td>Service PID files and runtime logs</td></tr>
+    <tr><td><code>~/.cortex/logs/</code></td><td>Service log files (hub.log, dispatcher.log)</td></tr>
+  </tbody>
+</table>
+
+<h4>Scripts</h4>
+<table>
+  <thead><tr><th>Path</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>~/.vibe-replay/capture-hook.py</code></td><td>PostToolUse hook &mdash; logs each tool call to the session file</td></tr>
+    <tr><td><code>~/.vibe-replay/stop-hook.py</code></td><td>Stop hook &mdash; finalizes session, calculates stats, writes summary</td></tr>
+  </tbody>
+</table>
+
+<div class="callout callout-tip">
+  <div class="callout-title">Tip</div>
+  <p>All these paths respect XDG conventions where applicable. If you have <code>XDG_CONFIG_HOME</code> set, Dispatcher will use <code>$XDG_CONFIG_HOME/dispatcher/</code> instead of <code>~/.config/dispatcher/</code>.</p>
+</div>
+
+<hr>
+
+<p style="color: var(--text-dim); font-size: 0.85rem; margin-top: 3rem; text-align: center;">Cortex Documentation &mdash; Built for people who want to get things running, not read marketing copy.</p>
+
+</div>
+</main>
+
+</div>
+
+<script>
+/* Copy to clipboard */
+function copyCode(btn) {
+  var pre = btn.closest('.code-block').querySelector('pre');
+  var text = pre.textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+/* Sidebar toggle (mobile) */
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.querySelector('.sidebar-overlay').classList.toggle('open');
+}
+
+/* Sidebar section collapse */
+function toggleSection(el) {
+  el.classList.toggle('collapsed');
+}
+
+/* Active sidebar link + Right TOC */
+(function() {
+  var sidebarLinks = document.querySelectorAll('.sidebar-links a');
+  var sections = [];
+  for (var i = 0; i < sidebarLinks.length; i++) {
+    var a = sidebarLinks[i];
+    var id = a.getAttribute('href').replace('#', '');
+    var el = document.getElementById(id);
+    if (el) sections.push({ id: id, el: el, link: a });
+  }
+
+  var rightToc = document.getElementById('rightToc');
+  var allH3 = document.querySelectorAll('.content-inner h3[id]');
+  var allH2 = document.querySelectorAll('.content-inner h2[id]');
+  var tocSections = [];
+  var lastH2 = '';
+
+  function buildRightToc(currentH2Id) {
+    while (rightToc.firstChild) {
+      rightToc.removeChild(rightToc.firstChild);
+    }
+    tocSections = [];
+
+    var h2Array = Array.prototype.slice.call(allH2);
+    var currentH2Index = -1;
+    for (var i = 0; i < h2Array.length; i++) {
+      if (h2Array[i].id === currentH2Id) { currentH2Index = i; break; }
+    }
+    var nextH2 = h2Array[currentH2Index + 1] || null;
+    var currentH2El = document.getElementById(currentH2Id);
+    if (!currentH2El) return;
+
+    var title = document.createElement('div');
+    title.className = 'right-toc-title';
+    title.textContent = 'On this page';
+    rightToc.appendChild(title);
+
+    for (var j = 0; j < allH3.length; j++) {
+      var h3 = allH3[j];
+      var h3Pos = h3.compareDocumentPosition(currentH2El);
+      var isAfterH2 = (h3Pos & Node.DOCUMENT_POSITION_PRECEDING) !== 0;
+      var isBeforeNextH2 = true;
+      if (nextH2) {
+        var nextPos = h3.compareDocumentPosition(nextH2);
+        isBeforeNextH2 = (nextPos & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+      }
+      if (isAfterH2 && isBeforeNextH2) {
+        var link = document.createElement('a');
+        link.href = '#' + h3.id;
+        link.textContent = h3.textContent;
+        rightToc.appendChild(link);
+        tocSections.push({ id: h3.id, el: h3, link: link });
+      }
+    }
+  }
+
+  function onScroll() {
+    var scrollY = window.scrollY + 100;
+
+    var activeSection = sections[0];
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].el.offsetTop <= scrollY) activeSection = sections[i];
+    }
+    for (var i = 0; i < sidebarLinks.length; i++) {
+      sidebarLinks[i].classList.remove('active');
+    }
+    if (activeSection) activeSection.link.classList.add('active');
+
+    var currentH2 = allH2[0];
+    for (var i = 0; i < allH2.length; i++) {
+      if (allH2[i].offsetTop <= scrollY) currentH2 = allH2[i];
+    }
+    if (currentH2 && currentH2.id !== lastH2) {
+      lastH2 = currentH2.id;
+      buildRightToc(currentH2.id);
+    }
+
+    var activeToc = tocSections[0];
+    for (var i = 0; i < tocSections.length; i++) {
+      if (tocSections[i].el.offsetTop <= scrollY) activeToc = tocSections[i];
+    }
+    for (var i = 0; i < tocSections.length; i++) {
+      tocSections[i].link.classList.remove('active');
+    }
+    if (activeToc) activeToc.link.classList.add('active');
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  for (var i = 0; i < sidebarLinks.length; i++) {
+    sidebarLinks[i].addEventListener('click', function() {
+      if (window.innerWidth <= 768) {
+        document.getElementById('sidebar').classList.remove('open');
+        document.querySelector('.sidebar-overlay').classList.remove('open');
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>
