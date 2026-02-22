@@ -1,0 +1,2253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge — Self-Evolving Tool Agent | Cortex</title>
+<style>
+  :root {
+    --bg: #0B0F19;
+    --bg-surface: #131825;
+    --bg-card: #1A1F2E;
+    --bg-card-hover: #222840;
+    --border: #2A3050;
+    --text: #E2E8F0;
+    --text-muted: #8892B0;
+    --text-dim: #5A6380;
+    --accent-blue: #60A5FA;
+    --accent-purple: #A78BFA;
+    --accent-green: #34D399;
+    --accent-amber: #FBBF24;
+    --accent-rose: #FB7185;
+    --gradient-1: linear-gradient(135deg, #60A5FA, #A78BFA);
+    --gradient-2: linear-gradient(135deg, #34D399, #60A5FA);
+    --gradient-3: linear-gradient(135deg, #FBBF24, #FB7185);
+    --gradient-4: linear-gradient(135deg, #A78BFA, #FB7185);
+    --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    --max-w: 1200px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---- NAV ---- */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(11, 15, 25, 0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    transition: box-shadow 0.3s;
+  }
+  nav.scrolled { box-shadow: 0 4px 30px rgba(0,0,0,0.4); }
+  .nav-inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .nav-brand {
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .nav-brand .logo-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--gradient-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--bg);
+  }
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+    align-items: center;
+  }
+  .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links a.active { color: var(--accent-amber); }
+  .nav-cta {
+    background: var(--gradient-3);
+    color: var(--bg) !important;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    font-weight: 600 !important;
+  }
+
+  /* ---- HERO ---- */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 6rem 2rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 900px;
+    background: radial-gradient(circle, rgba(251,191,36,0.07) 0%, rgba(251,113,133,0.04) 40%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -20%;
+    right: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(251,113,133,0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 1rem;
+    border: 1px solid rgba(251,191,36,0.3);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: var(--accent-amber);
+    margin-bottom: 2rem;
+    background: rgba(251,191,36,0.05);
+  }
+  .hero-badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-amber);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .hero h1 {
+    font-size: clamp(3rem, 7vw, 5.5rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 .gradient-text {
+    background: var(--gradient-3);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero .subtitle {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    max-width: 640px;
+    margin: 0 auto 3rem;
+    line-height: 1.6;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: none;
+    font-family: var(--font-sans);
+  }
+  .btn-primary {
+    background: var(--gradient-3);
+    color: var(--bg);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(251,191,36,0.25); }
+  .btn-secondary {
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--bg-card-hover); border-color: var(--text-dim); }
+
+  /* ---- PIPELINE FLOW (Hero) ---- */
+  .pipeline-flow {
+    max-width: 900px;
+    width: 100%;
+    margin: 4rem auto 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+    position: relative;
+  }
+  .pipeline-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.75rem 0.5rem;
+    min-width: 100px;
+    position: relative;
+  }
+  .pipeline-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 800;
+    border: 2px solid rgba(251,191,36,0.3);
+    background: rgba(251,191,36,0.08);
+    color: var(--accent-amber);
+    transition: all 0.3s ease;
+  }
+  .pipeline-node:hover .pipeline-icon {
+    border-color: var(--accent-amber);
+    box-shadow: 0 0 20px rgba(251,191,36,0.2);
+    transform: translateY(-2px);
+  }
+  .pipeline-node.active .pipeline-icon {
+    background: var(--gradient-3);
+    color: var(--bg);
+    border-color: transparent;
+  }
+  .pipeline-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+  }
+  .pipeline-node:hover .pipeline-label { color: var(--accent-amber); }
+  .pipeline-arrow {
+    color: rgba(251,191,36,0.4);
+    font-size: 1.2rem;
+    padding: 0 0.15rem;
+    margin-top: -1rem;
+  }
+  .pipeline-loop {
+    position: absolute;
+    bottom: -2rem;
+    right: 22%;
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    color: var(--accent-rose);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .pipeline-loop .loop-arrow {
+    font-size: 1rem;
+  }
+
+  /* ---- TERMINAL PREVIEW ---- */
+  .terminal-preview {
+    max-width: 720px;
+    width: 100%;
+    margin: 4rem auto 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    text-align: left;
+  }
+  .terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+  }
+  .terminal-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .terminal-dot.red { background: #FF5F57; }
+  .terminal-dot.yellow { background: #FEBC2E; }
+  .terminal-dot.green { background: #28C840; }
+  .terminal-title {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .terminal-body {
+    padding: 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    color: var(--text-muted);
+    overflow-x: auto;
+  }
+  .terminal-body .prompt { color: var(--accent-amber); }
+  .terminal-body .cmd { color: var(--text); }
+  .terminal-body .comment { color: var(--text-dim); }
+  .terminal-body .output { color: var(--accent-green); }
+  .terminal-body .accent { color: var(--accent-amber); }
+  .terminal-body .rose { color: var(--accent-rose); }
+  .terminal-body .blue { color: var(--accent-blue); }
+
+  /* ---- SECTIONS ---- */
+  section {
+    padding: 6rem 2rem;
+    max-width: var(--max-w);
+    margin: 0 auto;
+  }
+  .section-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent-amber);
+    margin-bottom: 0.75rem;
+  }
+  .section-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 1rem;
+  }
+  .section-desc {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 640px;
+    margin-bottom: 3rem;
+    line-height: 1.6;
+  }
+  .section-center {
+    text-align: center;
+  }
+  .section-center .section-desc {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ---- PIPELINE SECTION ---- */
+  .pipeline-stages {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    position: relative;
+  }
+  .pipeline-stage {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .pipeline-stage:hover {
+    border-color: var(--text-dim);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .pipeline-stage::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient-3);
+    opacity: 0.6;
+    transition: opacity 0.3s;
+  }
+  .pipeline-stage:hover::before { opacity: 1; }
+  .stage-num {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent-amber);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+  }
+  .stage-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    background: rgba(251,191,36,0.1);
+    color: var(--accent-amber);
+  }
+  .pipeline-stage:nth-child(4) .stage-icon,
+  .pipeline-stage:nth-child(5) .stage-icon {
+    background: rgba(251,113,133,0.1);
+    color: var(--accent-rose);
+  }
+  .pipeline-stage:nth-child(6) .stage-icon {
+    background: rgba(52,211,153,0.1);
+    color: var(--accent-green);
+  }
+  .pipeline-stage h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.01em;
+  }
+  .pipeline-stage p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  /* ---- OUTPUT TYPES ---- */
+  .output-types {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+  .output-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .output-card:hover {
+    border-color: var(--text-dim);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .output-card-header {
+    padding: 1.5rem 1.5rem 1rem;
+  }
+  .output-card-header .output-type-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    margin-bottom: 0.75rem;
+  }
+  .output-card:nth-child(1) .output-type-badge {
+    background: rgba(96,165,250,0.15);
+    color: var(--accent-blue);
+  }
+  .output-card:nth-child(2) .output-type-badge {
+    background: rgba(52,211,153,0.15);
+    color: var(--accent-green);
+  }
+  .output-card:nth-child(3) .output-type-badge {
+    background: rgba(251,191,36,0.15);
+    color: var(--accent-amber);
+  }
+  .output-card-header h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .output-card-header p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .output-card-code {
+    padding: 1rem 1.5rem;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.7;
+    color: var(--text-muted);
+    overflow-x: auto;
+    max-height: 320px;
+  }
+  .output-card-code .kw { color: var(--accent-purple); }
+  .output-card-code .fn { color: var(--accent-blue); }
+  .output-card-code .str { color: var(--accent-green); }
+  .output-card-code .dec { color: var(--accent-amber); }
+  .output-card-code .cm { color: var(--text-dim); }
+  .output-card-code .typ { color: var(--accent-rose); }
+
+  /* ---- CLARIFIER ---- */
+  .clarifier-visual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+  .clarifier-left {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .clarifier-input {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+  .clarifier-input-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent-amber);
+    margin-bottom: 0.75rem;
+  }
+  .clarifier-input p {
+    font-size: 1rem;
+    color: var(--text);
+    font-style: italic;
+    line-height: 1.5;
+  }
+  .clarifier-detections {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .detection-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+  }
+  .detection-item:hover {
+    border-color: rgba(251,191,36,0.3);
+    background: var(--bg-card-hover);
+  }
+  .detection-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-amber);
+    flex-shrink: 0;
+  }
+  .detection-item:nth-child(2) .detection-dot { background: var(--accent-rose); }
+  .detection-item:nth-child(3) .detection-dot { background: var(--accent-blue); }
+  .detection-text {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .detection-text strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .clarifier-right {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .clarifier-right-header {
+    padding: 0.75rem 1.25rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent-amber);
+    font-family: var(--font-mono);
+  }
+  .clarifier-questions {
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .cq-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    background: rgba(251,191,36,0.03);
+    border: 1px solid rgba(251,191,36,0.1);
+    transition: all 0.3s ease;
+  }
+  .cq-item:hover {
+    background: rgba(251,191,36,0.06);
+    border-color: rgba(251,191,36,0.2);
+  }
+  .cq-cat {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    white-space: nowrap;
+    height: fit-content;
+    margin-top: 0.15rem;
+  }
+  .cq-cat.input { background: rgba(251,191,36,0.15); color: var(--accent-amber); }
+  .cq-cat.output { background: rgba(52,211,153,0.15); color: var(--accent-green); }
+  .cq-cat.behavior { background: rgba(96,165,250,0.15); color: var(--accent-blue); }
+  .cq-cat.deps { background: rgba(167,139,250,0.15); color: var(--accent-purple); }
+  .cq-cat.edge { background: rgba(251,113,133,0.15); color: var(--accent-rose); }
+  .cq-text {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  /* ---- ITERATION VISUAL ---- */
+  .iteration-visual {
+    position: relative;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    overflow: hidden;
+  }
+  .iteration-visual::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(251,191,36,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(251,191,36,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+  .iteration-flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .iter-node {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 2rem;
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+    transition: all 0.3s ease;
+  }
+  .iter-node:hover {
+    border-color: var(--text-dim);
+  }
+  .iter-node h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .iter-node p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+  .iter-node.pass {
+    border-color: rgba(52,211,153,0.4);
+    background: rgba(52,211,153,0.05);
+  }
+  .iter-node.pass h4 { color: var(--accent-green); }
+  .iter-node.fail {
+    border-color: rgba(251,113,133,0.4);
+    background: rgba(251,113,133,0.05);
+  }
+  .iter-node.fail h4 { color: var(--accent-rose); }
+  .iter-node.gen h4 { color: var(--accent-amber); }
+  .iter-connector {
+    width: 2px;
+    height: 30px;
+    background: rgba(251,191,36,0.3);
+  }
+  .iter-branch-row {
+    display: flex;
+    gap: 3rem;
+    width: 100%;
+    max-width: 500px;
+    justify-content: center;
+  }
+  .iter-branch-node {
+    flex: 1;
+    max-width: 220px;
+  }
+  .iter-decision {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 500px;
+    justify-content: center;
+    position: relative;
+  }
+  .iter-decision::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: calc(50% - 100px);
+    width: 200px;
+    height: 2px;
+    background: rgba(251,191,36,0.2);
+  }
+  .iter-decision-arm {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    max-width: 220px;
+  }
+  .iter-decision-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.25rem 0;
+  }
+  .iter-decision-label.fail-label { color: var(--accent-rose); }
+  .iter-decision-label.pass-label { color: var(--accent-green); }
+  .iter-loop-arrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+  }
+  .iter-loop-text {
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    color: var(--accent-rose);
+  }
+
+  /* ---- INSTALL TARGETS ---- */
+  .install-targets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+  .install-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .install-card:hover {
+    border-color: var(--text-dim);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .install-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
+  .install-card:nth-child(1)::before { background: var(--gradient-3); }
+  .install-card:nth-child(2)::before { background: var(--gradient-2); }
+  .install-card:nth-child(3)::before { background: var(--gradient-1); }
+  .install-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    margin-bottom: 1rem;
+  }
+  .install-card:nth-child(1) .install-icon { background: rgba(251,191,36,0.15); color: var(--accent-amber); }
+  .install-card:nth-child(2) .install-icon { background: rgba(52,211,153,0.15); color: var(--accent-green); }
+  .install-card:nth-child(3) .install-icon { background: rgba(96,165,250,0.15); color: var(--accent-blue); }
+  .install-card h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .install-card p {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    line-height: 1.5;
+  }
+  .install-path {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-surface);
+    border-radius: 6px;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+
+  /* ---- CLI REFERENCE ---- */
+  .cli-commands {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .cli-cmd {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    transition: all 0.3s ease;
+  }
+  .cli-cmd:hover {
+    border-color: var(--text-dim);
+    background: var(--bg-card-hover);
+  }
+  .cli-cmd-name {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent-amber);
+    white-space: nowrap;
+    min-width: 200px;
+    padding-top: 0.1rem;
+  }
+  .cli-cmd-desc {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .cli-cmd-desc code {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    background: var(--bg-surface);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    color: var(--accent-blue);
+  }
+  .cli-flags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+  }
+  .cli-flag {
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(251,191,36,0.08);
+    color: var(--accent-amber);
+    border: 1px solid rgba(251,191,36,0.15);
+  }
+
+  /* ---- MCP TOOLS ---- */
+  .mcp-tools-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  .mcp-tool {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    transition: all 0.3s ease;
+  }
+  .mcp-tool:hover {
+    border-color: rgba(251,191,36,0.3);
+    background: var(--bg-card-hover);
+  }
+  .mcp-tool-name {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent-amber);
+    margin-bottom: 0.35rem;
+  }
+  .mcp-tool-sig {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-bottom: 0.5rem;
+  }
+  .mcp-tool p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+  .mcp-tool:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    max-width: calc(50% - 0.5rem);
+  }
+
+  /* ---- API REFERENCE ---- */
+  .api-ref {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .api-ref-header {
+    padding: 1rem 1.5rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .api-ref-header h3 {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent-amber);
+  }
+  .api-ref-header .api-badge {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    background: rgba(251,191,36,0.15);
+    color: var(--accent-amber);
+  }
+  .api-methods {
+    padding: 0;
+  }
+  .api-method {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+  }
+  .api-method:last-child { border-bottom: none; }
+  .api-method:hover { background: rgba(251,191,36,0.02); }
+  .api-method-sig {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    margin-bottom: 0.35rem;
+  }
+  .api-method-sig .method-name { color: var(--accent-blue); font-weight: 600; }
+  .api-method-sig .method-param { color: var(--accent-purple); }
+  .api-method-sig .method-type { color: var(--accent-green); }
+  .api-method-sig .method-arrow { color: var(--text-dim); }
+  .api-method p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ---- MODULE MAP ---- */
+  .module-map {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 0.75rem;
+  }
+  .module-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+  }
+  .module-item:hover {
+    border-color: rgba(251,191,36,0.3);
+    background: var(--bg-card-hover);
+  }
+  .module-file {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent-amber);
+    white-space: nowrap;
+  }
+  .module-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  /* ---- QUICKSTART ---- */
+  .quickstart-block {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .qs-header {
+    padding: 0.75rem 1.25rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .qs-body {
+    padding: 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    color: var(--text-muted);
+    overflow-x: auto;
+  }
+  .qs-body .g { color: var(--accent-green); }
+  .qs-body .b { color: var(--accent-blue); }
+  .qs-body .a { color: var(--accent-amber); }
+  .qs-body .p { color: var(--accent-purple); }
+  .qs-body .r { color: var(--accent-rose); }
+  .qs-body .c { color: var(--text-dim); }
+  .qs-body .w { color: var(--text); }
+
+  /* ---- STATES BAR ---- */
+  .states-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+    padding: 2rem 0;
+  }
+  .state-chip {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+  }
+  .state-chip:hover {
+    border-color: var(--accent-amber);
+    color: var(--accent-amber);
+    background: rgba(251,191,36,0.08);
+  }
+  .state-chip.active-state {
+    border-color: var(--accent-amber);
+    color: var(--accent-amber);
+    background: rgba(251,191,36,0.1);
+  }
+  .state-chip.success-state {
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+    background: rgba(52,211,153,0.08);
+  }
+  .state-chip.fail-state {
+    border-color: var(--accent-rose);
+    color: var(--accent-rose);
+    background: rgba(251,113,133,0.08);
+  }
+  .state-arrow {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    padding: 0 0.3rem;
+  }
+
+  /* ---- STATS ---- */
+  .stats-bar {
+    display: flex;
+    justify-content: center;
+    gap: 4rem;
+    flex-wrap: wrap;
+    padding: 3rem 2rem;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin: 2rem 0;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    background: var(--gradient-3);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    margin-top: 0.25rem;
+  }
+
+  /* ---- FOOTER ---- */
+  footer {
+    padding: 4rem 2rem;
+    text-align: center;
+    border-top: 1px solid var(--border);
+  }
+  footer .footer-inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+  }
+  footer .footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+  footer .footer-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: color 0.2s;
+  }
+  footer .footer-links a:hover { color: var(--text); }
+  footer .footer-note {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 1.8;
+  }
+
+  /* ---- ANIMATIONS ---- */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .fade-in-delay-1 { transition-delay: 0.1s; }
+  .fade-in-delay-2 { transition-delay: 0.2s; }
+  .fade-in-delay-3 { transition-delay: 0.3s; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+
+  /* Warm glow behind section titles */
+  .section-title .glow {
+    background: var(--gradient-3);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 768px) {
+    .nav-links { display: none; }
+    .hero { padding: 5rem 1.5rem 3rem; }
+    .hero h1 { font-size: 2.5rem; }
+    section { padding: 4rem 1.5rem; }
+    .pipeline-stages { grid-template-columns: 1fr; }
+    .output-types { grid-template-columns: 1fr; }
+    .install-targets { grid-template-columns: 1fr; }
+    .mcp-tools-grid { grid-template-columns: 1fr; }
+    .mcp-tool:last-child:nth-child(odd) { max-width: none; grid-column: auto; }
+    .clarifier-visual { grid-template-columns: 1fr; }
+    .cli-cmd { flex-direction: column; gap: 0.5rem; }
+    .cli-cmd-name { min-width: unset; }
+    .stats-bar { gap: 2rem; }
+    .pipeline-flow { gap: 0; }
+    .pipeline-node { min-width: 70px; padding: 0.5rem 0.25rem; }
+    .pipeline-icon { width: 36px; height: 36px; font-size: 0.9rem; }
+    .pipeline-label { font-size: 0.55rem; }
+    .pipeline-arrow { font-size: 0.8rem; }
+    .states-flow { gap: 0.25rem; }
+    .state-chip { font-size: 0.6rem; padding: 0.25rem 0.5rem; }
+    .module-map { grid-template-columns: 1fr; }
+    .api-method-sig { font-size: 0.75rem; }
+    .terminal-body { font-size: 0.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-brand">
+      <div class="logo-icon">Cx</div>
+      Cortex
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="#pipeline" class="active">Forge</a></li>
+      <li><a href="#output-types">Output Types</a></li>
+      <li><a href="#cli">CLI</a></li>
+      <li><a href="#mcp-tools">MCP Tools</a></li>
+      <li><a href="#quickstart">Quick Start</a></li>
+      <li><a href="https://github.com/zzhiyuann/forge" class="nav-cta">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="dot"></span>
+    Creation Layer of Cortex
+  </div>
+  <h1>
+    Describe it.<br>
+    <span class="gradient-text">Forge builds it.</span>
+  </h1>
+  <p class="subtitle">
+    Natural language to working tool in one command. Forge generates code, writes tests,
+    iterates until they pass, and installs directly into your workflow. Self-evolving tools, zero friction.
+  </p>
+  <div class="hero-actions">
+    <a href="#quickstart" class="btn btn-primary">Get Started</a>
+    <a href="#pipeline" class="btn btn-secondary">See The Pipeline</a>
+  </div>
+
+  <!-- Pipeline Flow Visual -->
+  <div class="pipeline-flow">
+    <div class="pipeline-node">
+      <div class="pipeline-icon">?!</div>
+      <div class="pipeline-label">Describe</div>
+    </div>
+    <div class="pipeline-arrow">&rarr;</div>
+    <div class="pipeline-node">
+      <div class="pipeline-icon">Q</div>
+      <div class="pipeline-label">Clarify</div>
+    </div>
+    <div class="pipeline-arrow">&rarr;</div>
+    <div class="pipeline-node">
+      <div class="pipeline-icon">S</div>
+      <div class="pipeline-label">Spec</div>
+    </div>
+    <div class="pipeline-arrow">&rarr;</div>
+    <div class="pipeline-node active">
+      <div class="pipeline-icon">{}</div>
+      <div class="pipeline-label">Generate</div>
+    </div>
+    <div class="pipeline-arrow">&rarr;</div>
+    <div class="pipeline-node">
+      <div class="pipeline-icon">T</div>
+      <div class="pipeline-label">Test</div>
+    </div>
+    <div class="pipeline-arrow">&rarr;</div>
+    <div class="pipeline-node">
+      <div class="pipeline-icon">&#10003;</div>
+      <div class="pipeline-label">Install</div>
+    </div>
+  </div>
+
+  <!-- Terminal Preview -->
+  <div class="terminal-preview" style="margin-top: 3rem;">
+    <div class="terminal-bar">
+      <div class="terminal-dot red"></div>
+      <div class="terminal-dot yellow"></div>
+      <div class="terminal-dot green"></div>
+      <span class="terminal-title">forge &mdash; zsh</span>
+    </div>
+    <div class="terminal-body">
+      <span class="prompt">$</span> <span class="cmd">forge create "convert CSV files to JSON with column filtering"</span><br>
+      <br>
+      <span class="accent">Forge</span> <span class="comment">Analyzing description...</span><br>
+      <span class="accent">Forge</span> <span class="blue">Detected: file input (CSV), structured output (JSON), transform pattern</span><br>
+      <span class="accent">Forge</span> <span class="comment">Generating clarification questions...</span><br>
+      <br>
+      <span class="output">Q1: Should it handle multiple CSV files or single file?</span><br>
+      <span class="output">Q2: What column filtering syntax? (names, indices, regex?)</span><br>
+      <span class="output">Q3: Output to stdout or write to .json file?</span><br>
+      <br>
+      <span class="prompt">$</span> <span class="cmd">forge answer --session abc123 "single file, column names, write to file"</span><br>
+      <br>
+      <span class="accent">Forge</span> <span class="comment">Generating code + tests...</span><br>
+      <span class="accent">Forge</span> <span class="rose">Tests: 8/10 passed (2 edge case failures)</span><br>
+      <span class="accent">Forge</span> <span class="comment">Auto-fixing... iteration 1/5</span><br>
+      <span class="accent">Forge</span> <span class="output">Tests: 10/10 passed</span><br>
+      <br>
+      <span class="accent">Forge</span> <span class="output">&#10003; csv_to_json installed to ~/.local/bin/csv_to_json</span><br>
+      <span class="accent">Forge</span> <span class="output">&#10003; Ready to use: csv_to_json data.csv --columns name,email -o output.json</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- STATS -->
+<div class="stats-bar fade-in">
+  <div class="stat">
+    <div class="stat-value">6</div>
+    <div class="stat-label">Pipeline Stages</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">3</div>
+    <div class="stat-label">Output Types</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">5x</div>
+    <div class="stat-label">Auto-Iterate</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">7</div>
+    <div class="stat-label">MCP Tools</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">3</div>
+    <div class="stat-label">Install Targets</div>
+  </div>
+</div>
+
+
+<!-- THE PIPELINE -->
+<section id="pipeline" class="fade-in">
+  <div class="section-label">The Pipeline</div>
+  <h2 class="section-title">From description to <span class="glow">deployed tool</span></h2>
+  <p class="section-desc">
+    Six stages, fully automated. Describe what you need in plain English.
+    Forge handles everything else — including fixing its own mistakes.
+  </p>
+
+  <div class="pipeline-stages">
+    <div class="pipeline-stage fade-in">
+      <div class="stage-num">Stage 01</div>
+      <div class="stage-icon">?!</div>
+      <h3>Describe</h3>
+      <p>Start with a natural language description. "Convert CSV to JSON with column filtering." That's all Forge needs to begin.</p>
+    </div>
+    <div class="pipeline-stage fade-in fade-in-delay-1">
+      <div class="stage-num">Stage 02</div>
+      <div class="stage-icon">Q</div>
+      <h3>Clarify</h3>
+      <p>Forge analyzes your description, detects patterns (file I/O, network, transforms), and generates targeted questions to eliminate ambiguity.</p>
+    </div>
+    <div class="pipeline-stage fade-in fade-in-delay-2">
+      <div class="stage-num">Stage 03</div>
+      <div class="stage-icon">S</div>
+      <h3>Generate Spec</h3>
+      <p>A structured ToolSpec is built: name, params, return type, dependencies, core logic, error handling, and usage examples. The blueprint.</p>
+    </div>
+    <div class="pipeline-stage fade-in fade-in-delay-1">
+      <div class="stage-num">Stage 04</div>
+      <div class="stage-icon">{}</div>
+      <h3>Generate Code + Tests</h3>
+      <p>Jinja2 templates produce production-quality code with type hints, docstrings, and error handling. Tests are generated in parallel.</p>
+    </div>
+    <div class="pipeline-stage fade-in fade-in-delay-2">
+      <div class="stage-num">Stage 05</div>
+      <div class="stage-icon">&#8635;</div>
+      <h3>Test + Iterate</h3>
+      <p>Tests run in an isolated tmpdir. If failures occur, Forge auto-analyzes errors and regenerates — up to 5 iterations until all tests pass.</p>
+    </div>
+    <div class="pipeline-stage fade-in fade-in-delay-3">
+      <div class="stage-num">Stage 06</div>
+      <div class="stage-icon">&#10003;</div>
+      <h3>Install</h3>
+      <p>One command installs your tool to MCP (for Claude Code), CLI (for terminal), or local storage. Immediately usable. Zero config.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- SESSION STATES -->
+<section class="fade-in section-center" style="padding-top: 0;">
+  <div class="section-label">Session Lifecycle</div>
+  <h2 class="section-title">Tracked through every state</h2>
+  <p class="section-desc">
+    Every Forge session moves through a deterministic state machine.
+    You always know exactly where your tool is in the pipeline.
+  </p>
+  <div class="states-flow">
+    <div class="state-chip">CREATED</div>
+    <div class="state-arrow">&rarr;</div>
+    <div class="state-chip">CLARIFYING</div>
+    <div class="state-arrow">&rarr;</div>
+    <div class="state-chip">READY</div>
+    <div class="state-arrow">&rarr;</div>
+    <div class="state-chip active-state">GENERATING</div>
+    <div class="state-arrow">&rarr;</div>
+    <div class="state-chip">TESTING</div>
+    <div class="state-arrow">&rarr;</div>
+    <div class="state-chip">ITERATING</div>
+    <div class="state-arrow">&rarr;</div>
+    <div class="state-chip success-state">SUCCEEDED</div>
+    <div class="state-arrow">/</div>
+    <div class="state-chip fail-state">FAILED</div>
+    <div class="state-arrow">&rarr;</div>
+    <div class="state-chip success-state">INSTALLED</div>
+  </div>
+</section>
+
+
+<!-- OUTPUT TYPES -->
+<section id="output-types" class="fade-in">
+  <div class="section-label">Output Types</div>
+  <h2 class="section-title">Three templates. <span class="glow">Any target.</span></h2>
+  <p class="section-desc">
+    Forge generates production-ready code in three formats. Each template includes
+    proper error handling, type hints, docstrings, and is immediately executable.
+  </p>
+
+  <div class="output-types">
+    <!-- Python Module -->
+    <div class="output-card fade-in">
+      <div class="output-card-header">
+        <div class="output-type-badge">Python Module</div>
+        <h3>Function + CLI</h3>
+        <p>Type-hinted function with <code>if __name__</code> runner</p>
+      </div>
+      <div class="output-card-code">
+        <span class="cm">"""CSV to JSON converter with column filtering."""</span><br>
+        <span class="kw">import</span> csv<br>
+        <span class="kw">import</span> json<br>
+        <span class="kw">from</span> pathlib <span class="kw">import</span> Path<br>
+        <br>
+        <span class="kw">def</span> <span class="fn">csv_to_json</span>(<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;input_path: <span class="typ">str</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;columns: <span class="typ">list[str]</span> | <span class="typ">None</span> = <span class="kw">None</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;output_path: <span class="typ">str</span> | <span class="typ">None</span> = <span class="kw">None</span>,<br>
+        ) -> <span class="typ">list[dict]</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">"""Convert CSV to JSON."""</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">with</span> <span class="fn">open</span>(input_path) <span class="kw">as</span> f:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;reader = csv.<span class="fn">DictReader</span>(f)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rows = [<span class="fn">dict</span>(r) <span class="kw">for</span> r <span class="kw">in</span> reader]<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;...<br>
+        <br>
+        <span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="fn">csv_to_json</span>(sys.argv[<span class="dec">1</span>])
+      </div>
+    </div>
+
+    <!-- CLI Tool -->
+    <div class="output-card fade-in fade-in-delay-1">
+      <div class="output-card-header">
+        <div class="output-type-badge">CLI Tool</div>
+        <h3>Click-based CLI</h3>
+        <p>Full argument parsing, help text, error handling</p>
+      </div>
+      <div class="output-card-code">
+        <span class="cm">#!/usr/bin/env python3</span><br>
+        <span class="cm">"""CSV to JSON CLI tool."""</span><br>
+        <span class="kw">import</span> click<br>
+        <br>
+        <span class="dec">@click.command</span>()<br>
+        <span class="dec">@click.argument</span>(<span class="str">"input_file"</span>)<br>
+        <span class="dec">@click.option</span>(<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"--columns"</span>, <span class="str">"-c"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;help=<span class="str">"Comma-separated column names"</span>,<br>
+        )<br>
+        <span class="dec">@click.option</span>(<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">"--output"</span>, <span class="str">"-o"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;help=<span class="str">"Output file path"</span>,<br>
+        )<br>
+        <span class="kw">def</span> <span class="fn">main</span>(input_file, columns, output):<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">"""Convert CSV to JSON."""</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">try</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result = <span class="fn">csv_to_json</span>(...)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;click.<span class="fn">echo</span>(<span class="str">"Done"</span>)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">except</span> <span class="typ">Exception</span> <span class="kw">as</span> e:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;click.<span class="fn">echo</span>(e, err=<span class="kw">True</span>)
+      </div>
+    </div>
+
+    <!-- MCP Tool -->
+    <div class="output-card fade-in fade-in-delay-2">
+      <div class="output-card-header">
+        <div class="output-type-badge">MCP Tool</div>
+        <h3>FastMCP Server</h3>
+        <p>Single-tool server, ready for Claude Code</p>
+      </div>
+      <div class="output-card-code">
+        <span class="cm">"""MCP server for csv_to_json."""</span><br>
+        <span class="kw">from</span> mcp.server.fastmcp <span class="kw">import</span> FastMCP<br>
+        <br>
+        mcp = <span class="fn">FastMCP</span>(<span class="str">"csv-to-json"</span>)<br>
+        <br>
+        <span class="dec">@mcp.tool</span>()<br>
+        <span class="kw">def</span> <span class="fn">csv_to_json</span>(<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;input_path: <span class="typ">str</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;columns: <span class="typ">list[str]</span> | <span class="typ">None</span> = <span class="kw">None</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;output_path: <span class="typ">str</span> | <span class="typ">None</span> = <span class="kw">None</span>,<br>
+        ) -> <span class="typ">str</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">"""Convert CSV to filtered JSON.</span><br>
+        <br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">Args:</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">input_path: Path to CSV</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">columns: Filter columns</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">"""</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;...<br>
+        <br>
+        mcp.<span class="fn">run</span>()
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- CLARIFIER -->
+<section id="clarifier" class="fade-in">
+  <div class="section-label">Intelligent Clarification</div>
+  <h2 class="section-title">Asks the <span class="glow">right questions</span></h2>
+  <p class="section-desc">
+    Forge doesn't guess. It analyzes your description, detects patterns in what you said,
+    and generates targeted questions across 5 categories to build an unambiguous spec.
+  </p>
+
+  <div class="clarifier-visual">
+    <div class="clarifier-left">
+      <div class="clarifier-input">
+        <div class="clarifier-input-label">Your description</div>
+        <p>"Build a tool that scrapes product prices from a URL and saves them to a CSV file"</p>
+      </div>
+      <div class="clarifier-detections">
+        <div class="detection-item">
+          <div class="detection-dot"></div>
+          <div class="detection-text"><strong>Network detected</strong> &mdash; keywords: URL, scrape</div>
+        </div>
+        <div class="detection-item">
+          <div class="detection-dot"></div>
+          <div class="detection-text"><strong>Output format detected</strong> &mdash; keywords: CSV, save</div>
+        </div>
+        <div class="detection-item">
+          <div class="detection-dot"></div>
+          <div class="detection-text"><strong>Dependencies inferred</strong> &mdash; requests, beautifulsoup4</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="clarifier-right">
+      <div class="clarifier-right-header">Generated Questions</div>
+      <div class="clarifier-questions">
+        <div class="cq-item">
+          <div class="cq-cat input">INPUT</div>
+          <div class="cq-text">Single URL or multiple URLs? Should it follow pagination?</div>
+        </div>
+        <div class="cq-item">
+          <div class="cq-cat output">OUTPUT</div>
+          <div class="cq-text">Which fields to extract? (name, price, currency, URL?)</div>
+        </div>
+        <div class="cq-item">
+          <div class="cq-cat behavior">BEHAVIOR</div>
+          <div class="cq-text">Should it handle JavaScript-rendered pages or static HTML only?</div>
+        </div>
+        <div class="cq-item">
+          <div class="cq-cat deps">DEPS</div>
+          <div class="cq-text">Need rate limiting or request delays between pages?</div>
+        </div>
+        <div class="cq-item">
+          <div class="cq-cat edge">EDGE CASE</div>
+          <div class="cq-text">How to handle missing prices or unavailable products?</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- AUTO-ITERATION -->
+<section id="iteration" class="fade-in">
+  <div class="section-label">Auto-Iteration</div>
+  <h2 class="section-title">Self-healing <span class="glow">test loop</span></h2>
+  <p class="section-desc">
+    When tests fail, Forge doesn't give up. It analyzes the failures, regenerates the broken code,
+    and retries — up to 5 times. Most tools pass by iteration 2.
+  </p>
+
+  <div class="iteration-visual">
+    <div class="iteration-flow">
+      <div class="iter-node gen">
+        <h4>Generate Code + Tests</h4>
+        <p>Code and tests produced from ToolSpec</p>
+      </div>
+      <div class="iter-connector"></div>
+      <div class="iter-node" style="border-color: rgba(96,165,250,0.4);">
+        <h4 style="color: var(--accent-blue);">Run Tests (isolated tmpdir)</h4>
+        <p>Tests execute in clean temporary directory</p>
+      </div>
+      <div class="iter-connector"></div>
+
+      <!-- Decision point -->
+      <div class="iter-decision">
+        <div class="iter-decision-arm">
+          <div class="iter-connector" style="height: 15px;"></div>
+          <div class="iter-decision-label fail-label">FAIL (iteration &lt; 5)</div>
+          <div class="iter-connector" style="height: 10px;"></div>
+          <div class="iter-node fail">
+            <h4>Analyze Failures</h4>
+            <p>Parse errors, identify root cause</p>
+          </div>
+          <div class="iter-loop-arrow">
+            <span class="iter-loop-text">&#8634; Fix &amp; retry</span>
+          </div>
+        </div>
+        <div class="iter-decision-arm">
+          <div class="iter-connector" style="height: 15px; background: rgba(52,211,153,0.3);"></div>
+          <div class="iter-decision-label pass-label">PASS</div>
+          <div class="iter-connector" style="height: 10px; background: rgba(52,211,153,0.3);"></div>
+          <div class="iter-node pass">
+            <h4>All Tests Passed</h4>
+            <p>Ready to install</p>
+          </div>
+          <div style="padding: 0.5rem 0;">
+            <div class="iter-connector" style="height: 10px; background: rgba(52,211,153,0.3);"></div>
+          </div>
+          <div class="iter-node pass">
+            <h4>Install to Target</h4>
+            <p>MCP / CLI / Local</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- INSTALL TARGETS -->
+<section id="install-targets" class="fade-in">
+  <div class="section-label">Installation Targets</div>
+  <h2 class="section-title">Install once. <span class="glow">Use everywhere.</span></h2>
+  <p class="section-desc">
+    Three targets for three workflows. Forge handles all the wiring — file placement,
+    permissions, config updates. Your tool is ready to use the moment it's installed.
+  </p>
+
+  <div class="install-targets">
+    <div class="install-card fade-in">
+      <div class="install-icon">M</div>
+      <h3>MCP Server</h3>
+      <p>Installs as a FastMCP tool server for Claude Code. Auto-updates <code style="font-family:var(--font-mono);font-size:0.8rem;color:var(--accent-amber);">~/.mcp.json</code> with the new server entry.</p>
+      <div class="install-path">~/.claude/mcp-tools/forge/{name}.py</div>
+    </div>
+    <div class="install-card fade-in fade-in-delay-1">
+      <div class="install-icon">$</div>
+      <h3>CLI Binary</h3>
+      <p>Installs as an executable CLI tool with shebang line. Added to your PATH. Run it like any other command.</p>
+      <div class="install-path">~/.local/bin/{name}</div>
+    </div>
+    <div class="install-card fade-in fade-in-delay-2">
+      <div class="install-icon">~</div>
+      <h3>Local Storage</h3>
+      <p>Default target. Saves to Forge's tool library. Browse, re-test, or promote to MCP/CLI later.</p>
+      <div class="install-path">~/.forge/tools/{name}/</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- CLI REFERENCE -->
+<section id="cli" class="fade-in">
+  <div class="section-label">CLI Reference</div>
+  <h2 class="section-title">Six commands. <span class="glow">Complete control.</span></h2>
+  <p class="section-desc">
+    The Forge CLI is built with Click. Every command has help text, sensible defaults,
+    and works exactly as you'd expect.
+  </p>
+
+  <div class="cli-commands">
+    <div class="cli-cmd">
+      <div class="cli-cmd-name">forge create &lt;desc&gt;</div>
+      <div class="cli-cmd-desc">
+        Create a new tool from a natural language description. Starts the full pipeline: clarify, generate, test, install.
+        <div class="cli-flags">
+          <span class="cli-flag">--type mcp|cli|python</span>
+          <span class="cli-flag">--no-clarify</span>
+          <span class="cli-flag">--install mcp|cli|local</span>
+        </div>
+      </div>
+    </div>
+    <div class="cli-cmd">
+      <div class="cli-cmd-name">forge list</div>
+      <div class="cli-cmd-desc">
+        Display a rich table of all tools in your Forge library. Shows name, type, status, and creation date.
+      </div>
+    </div>
+    <div class="cli-cmd">
+      <div class="cli-cmd-name">forge show &lt;name&gt;</div>
+      <div class="cli-cmd-desc">
+        Display the source code of a generated tool with syntax highlighting.
+      </div>
+    </div>
+    <div class="cli-cmd">
+      <div class="cli-cmd-name">forge test &lt;name&gt;</div>
+      <div class="cli-cmd-desc">
+        Re-run the test suite for an existing tool. Useful after manual edits or dependency updates.
+      </div>
+    </div>
+    <div class="cli-cmd">
+      <div class="cli-cmd-name">forge uninstall &lt;name&gt;</div>
+      <div class="cli-cmd-desc">
+        Remove a tool from its install target. Cleans up files, PATH entries, and MCP config.
+      </div>
+    </div>
+    <div class="cli-cmd">
+      <div class="cli-cmd-name">forge serve</div>
+      <div class="cli-cmd-desc">
+        Start the Forge MCP server. Exposes all 7 tools for use by Claude Code or other MCP clients.
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- MCP TOOLS -->
+<section id="mcp-tools" class="fade-in">
+  <div class="section-label">MCP Server</div>
+  <h2 class="section-title">7 tools for <span class="glow">programmatic access</span></h2>
+  <p class="section-desc">
+    The Forge MCP server exposes the full pipeline as individual tools. Claude Code (or any MCP client)
+    can create, iterate, and install tools programmatically.
+  </p>
+
+  <div class="mcp-tools-grid">
+    <div class="mcp-tool">
+      <div class="mcp-tool-name">forge_create</div>
+      <div class="mcp-tool-sig">(description: str, output_type: str) &rarr; Session</div>
+      <p>Start a new Forge session. Analyzes description, generates clarification questions. Returns session ID and questions.</p>
+    </div>
+    <div class="mcp-tool">
+      <div class="mcp-tool-name">forge_answer</div>
+      <div class="mcp-tool-sig">(session_id: str, answers: dict) &rarr; ToolSpec</div>
+      <p>Provide answers to clarification questions. Forge builds the ToolSpec and transitions to READY state.</p>
+    </div>
+    <div class="mcp-tool">
+      <div class="mcp-tool-name">forge_generate</div>
+      <div class="mcp-tool-sig">(session_id: str) &rarr; TestResult</div>
+      <p>Generate code and tests from the ToolSpec. Runs tests automatically. Returns results with pass/fail status.</p>
+    </div>
+    <div class="mcp-tool">
+      <div class="mcp-tool-name">forge_iterate</div>
+      <div class="mcp-tool-sig">(session_id: str, feedback: str) &rarr; TestResult</div>
+      <p>Auto-fix failing tests. Analyzes errors, regenerates code, retries. Up to 5 iterations.</p>
+    </div>
+    <div class="mcp-tool">
+      <div class="mcp-tool-name">forge_install</div>
+      <div class="mcp-tool-sig">(session_id: str, target: str) &rarr; InstallResult</div>
+      <p>Install a passing tool to MCP, CLI, or local storage. Handles all file placement and config updates.</p>
+    </div>
+    <div class="mcp-tool">
+      <div class="mcp-tool-name">forge_status</div>
+      <div class="mcp-tool-sig">(session_id: str) &rarr; SessionState</div>
+      <p>Get the current state of a Forge session: state, code preview, test results, iteration count.</p>
+    </div>
+    <div class="mcp-tool">
+      <div class="mcp-tool-name">forge_list</div>
+      <div class="mcp-tool-sig">() &rarr; list[ToolSummary]</div>
+      <p>List all tools in the Forge library with name, type, status, and install location.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- API REFERENCE -->
+<section id="api" class="fade-in">
+  <div class="section-label">API Reference</div>
+  <h2 class="section-title">ForgeEngine <span class="glow">internals</span></h2>
+  <p class="section-desc">
+    The core orchestration class. ForgeEngine coordinates clarifier, generator, tester,
+    and installer. Use it programmatically for custom integrations.
+  </p>
+
+  <div class="api-ref">
+    <div class="api-ref-header">
+      <h3>class ForgeEngine</h3>
+      <span class="api-badge">forge/engine.py</span>
+    </div>
+    <div class="api-methods">
+      <div class="api-method">
+        <div class="api-method-sig">
+          <span class="method-arrow">async</span> <span class="method-name">create_session</span>(<span class="method-param">description: str, output_type: str</span>) <span class="method-arrow">&rarr;</span> <span class="method-type">Session</span>
+        </div>
+        <p>Initialize a new session from a natural language description. Runs clarifier to generate questions.</p>
+      </div>
+      <div class="api-method">
+        <div class="api-method-sig">
+          <span class="method-arrow">async</span> <span class="method-name">answer_questions</span>(<span class="method-param">session_id: str, answers: dict[str, str]</span>) <span class="method-arrow">&rarr;</span> <span class="method-type">ToolSpec</span>
+        </div>
+        <p>Process answers to clarification questions and build a complete ToolSpec.</p>
+      </div>
+      <div class="api-method">
+        <div class="api-method-sig">
+          <span class="method-arrow">async</span> <span class="method-name">generate</span>(<span class="method-param">session_id: str</span>) <span class="method-arrow">&rarr;</span> <span class="method-type">tuple[str, TestResult]</span>
+        </div>
+        <p>Generate code from ToolSpec using Jinja2 templates, then generate and run tests. Returns code and test results.</p>
+      </div>
+      <div class="api-method">
+        <div class="api-method-sig">
+          <span class="method-arrow">async</span> <span class="method-name">iterate</span>(<span class="method-param">session_id: str, feedback: str | None</span>) <span class="method-arrow">&rarr;</span> <span class="method-type">TestResult</span>
+        </div>
+        <p>Analyze test failures, regenerate code, and re-run tests. Tracks iteration count (max 5).</p>
+      </div>
+      <div class="api-method">
+        <div class="api-method-sig">
+          <span class="method-arrow">async</span> <span class="method-name">install</span>(<span class="method-param">session_id: str, target: str</span>) <span class="method-arrow">&rarr;</span> <span class="method-type">InstallResult</span>
+        </div>
+        <p>Install generated tool to the specified target (mcp, cli, local). Returns install path and status.</p>
+      </div>
+      <div class="api-method">
+        <div class="api-method-sig">
+          <span class="method-name">get_session</span>(<span class="method-param">session_id: str</span>) <span class="method-arrow">&rarr;</span> <span class="method-type">Session</span>
+        </div>
+        <p>Retrieve a session by ID. Returns full session state including code, test results, and metadata.</p>
+      </div>
+      <div class="api-method">
+        <div class="api-method-sig">
+          <span class="method-name">list_tools</span>() <span class="method-arrow">&rarr;</span> <span class="method-type">list[ToolSummary]</span>
+        </div>
+        <p>List all persisted tools from storage (~/.forge/tools/).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- MODULE MAP -->
+<section class="fade-in">
+  <div class="section-label">Architecture</div>
+  <h2 class="section-title">Module <span class="glow">structure</span></h2>
+  <p class="section-desc">
+    Clean separation of concerns. Each module handles one stage of the pipeline.
+    The templates/ directory holds Jinja2 templates for all output types.
+  </p>
+
+  <div class="module-map">
+    <div class="module-item">
+      <div class="module-file">engine.py</div>
+      <div class="module-desc">Core orchestration (ForgeEngine)</div>
+    </div>
+    <div class="module-item">
+      <div class="module-file">models.py</div>
+      <div class="module-desc">Pydantic data models</div>
+    </div>
+    <div class="module-item">
+      <div class="module-file">clarifier.py</div>
+      <div class="module-desc">Question generation for ambiguities</div>
+    </div>
+    <div class="module-item">
+      <div class="module-file">generator.py</div>
+      <div class="module-desc">Code generation + Jinja2 templates</div>
+    </div>
+    <div class="module-item">
+      <div class="module-file">tester.py</div>
+      <div class="module-desc">Test generation &amp; isolated execution</div>
+    </div>
+    <div class="module-item">
+      <div class="module-file">installer.py</div>
+      <div class="module-desc">Install to MCP / CLI / local</div>
+    </div>
+    <div class="module-item">
+      <div class="module-file">storage.py</div>
+      <div class="module-desc">Persistence (~/.forge/tools/)</div>
+    </div>
+    <div class="module-item">
+      <div class="module-file">cli.py</div>
+      <div class="module-desc">Click CLI (6 commands)</div>
+    </div>
+    <div class="module-item">
+      <div class="module-file">mcp_server.py</div>
+      <div class="module-desc">FastMCP server (7 tools)</div>
+    </div>
+    <div class="module-item">
+      <div class="module-file">templates/</div>
+      <div class="module-desc">python_function, cli_tool, mcp_tool, test_tool</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- DATA MODELS -->
+<section class="fade-in">
+  <div class="section-label">Data Models</div>
+  <h2 class="section-title">Pydantic-powered <span class="glow">type safety</span></h2>
+  <p class="section-desc">
+    Every object in the pipeline is a validated Pydantic model.
+    Full type safety from description to deployment.
+  </p>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>ToolSpec</span>
+      <span>forge/models.py</span>
+    </div>
+    <div class="qs-body">
+      <span class="a">name</span>: <span class="b">str</span> <span class="c">&mdash; Tool name (snake_case)</span><br>
+      <span class="a">description</span>: <span class="b">str</span> <span class="c">&mdash; What the tool does</span><br>
+      <span class="a">params</span>: <span class="b">list[ToolParam]</span> <span class="c">&mdash; Input parameters</span><br>
+      <span class="a">return_type</span>: <span class="b">str</span> <span class="c">&mdash; Return type hint</span><br>
+      <span class="a">dependencies</span>: <span class="b">list[str]</span> <span class="c">&mdash; pip packages needed</span><br>
+      <span class="a">core_logic</span>: <span class="b">str</span> <span class="c">&mdash; Description of implementation</span><br>
+      <span class="a">error_handling</span>: <span class="b">str</span> <span class="c">&mdash; Error handling strategy</span><br>
+      <span class="a">examples</span>: <span class="b">list[str]</span> <span class="c">&mdash; Usage examples</span>
+    </div>
+  </div>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>Session</span>
+      <span>forge/models.py</span>
+    </div>
+    <div class="qs-body">
+      <span class="a">id</span>: <span class="b">str</span> <span class="c">&mdash; Unique session identifier</span><br>
+      <span class="a">state</span>: <span class="b">SessionState</span> <span class="c">&mdash; Current pipeline stage</span><br>
+      <span class="a">description</span>: <span class="b">str</span> <span class="c">&mdash; Original user description</span><br>
+      <span class="a">questions</span>: <span class="b">list[str]</span> <span class="c">&mdash; Generated clarification questions</span><br>
+      <span class="a">answers</span>: <span class="b">dict[str, str]</span> <span class="c">&mdash; User answers</span><br>
+      <span class="a">spec</span>: <span class="b">ToolSpec | None</span> <span class="c">&mdash; Generated tool specification</span><br>
+      <span class="a">code</span>: <span class="b">str | None</span> <span class="c">&mdash; Generated source code</span><br>
+      <span class="a">test_results</span>: <span class="b">TestResult | None</span> <span class="c">&mdash; Latest test run</span><br>
+      <span class="a">iterations</span>: <span class="b">int</span> <span class="c">&mdash; Auto-fix iteration count</span>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+    <div class="quickstart-block" style="margin-bottom: 0;">
+      <div class="qs-header">
+        <span>TestResult</span>
+      </div>
+      <div class="qs-body">
+        <span class="a">passed</span>: <span class="b">int</span><br>
+        <span class="a">total</span>: <span class="b">int</span><br>
+        <span class="a">failures</span>: <span class="b">int</span><br>
+        <span class="a">errors</span>: <span class="b">list[str]</span><br>
+        <span class="a">output</span>: <span class="b">str</span><br>
+        <span class="a">test_code</span>: <span class="b">str</span>
+      </div>
+    </div>
+    <div class="quickstart-block" style="margin-bottom: 0;">
+      <div class="qs-header">
+        <span>InstallResult</span>
+      </div>
+      <div class="qs-body">
+        <span class="a">success</span>: <span class="b">bool</span><br>
+        <span class="a">install_path</span>: <span class="b">str</span><br>
+        <span class="a">target</span>: <span class="b">str</span><br>
+        <span class="a">message</span>: <span class="b">str</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- QUICKSTART -->
+<section id="quickstart" class="fade-in">
+  <div class="section-label">Quick Start</div>
+  <h2 class="section-title">One command. <span class="glow">Working tool.</span></h2>
+  <p class="section-desc">
+    Install Forge, describe what you need, get a tested and installed tool.
+    The whole process takes under a minute.
+  </p>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>1 &mdash; Install</span>
+      <span>Python 3.11+</span>
+    </div>
+    <div class="qs-body">
+      <span class="w">pip install</span> <span class="a">cortex-forge</span><br>
+      <br>
+      <span class="c"># Or install with Cortex</span><br>
+      <span class="w">pip install</span> <span class="b">cortex-agent</span><span class="c">[forge]</span>
+    </div>
+  </div>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>2 &mdash; Create a tool (interactive)</span>
+    </div>
+    <div class="qs-body">
+      <span class="w">forge create</span> <span class="p">"convert markdown files to HTML with syntax highlighting"</span><br>
+      <br>
+      <span class="a">Forge</span> <span class="c">Analyzing description...</span><br>
+      <span class="a">Forge</span> <span class="b">Detected: file input (markdown), structured output (HTML)</span><br>
+      <br>
+      <span class="g">Q1:</span> <span class="w">Single file or batch directory processing?</span><br>
+      <span class="g">Q2:</span> <span class="w">Which syntax highlighter? (pygments, highlight.js, none?)</span><br>
+      <span class="g">Q3:</span> <span class="w">Include CSS in output or external stylesheet?</span><br>
+      <br>
+      <span class="b">&gt;</span> <span class="w">single file, pygments, include CSS inline</span><br>
+      <br>
+      <span class="a">Forge</span> <span class="c">Generating code + tests...</span><br>
+      <span class="a">Forge</span> <span class="g">Tests: 8/8 passed</span><br>
+      <span class="a">Forge</span> <span class="g">&#10003; md_to_html installed to ~/.local/bin/md_to_html</span>
+    </div>
+  </div>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>3 &mdash; Skip clarification (fast mode)</span>
+    </div>
+    <div class="qs-body">
+      <span class="c"># --no-clarify skips questions and infers everything</span><br>
+      <span class="w">forge create</span> <span class="p">"count lines of code in a directory"</span> <span class="a">--no-clarify --install cli</span><br>
+      <br>
+      <span class="a">Forge</span> <span class="c">Generating...</span><br>
+      <span class="a">Forge</span> <span class="g">Tests: 6/6 passed</span><br>
+      <span class="a">Forge</span> <span class="g">&#10003; loc_counter installed to ~/.local/bin/loc_counter</span><br>
+      <br>
+      <span class="w">loc_counter</span> <span class="p">./src --ext py,ts,rs</span><br>
+      <span class="g">Python:     1,247 lines</span><br>
+      <span class="g">TypeScript:   892 lines</span><br>
+      <span class="g">Rust:         341 lines</span><br>
+      <span class="g">Total:      2,480 lines</span>
+    </div>
+  </div>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>4 &mdash; Create an MCP tool for Claude Code</span>
+    </div>
+    <div class="qs-body">
+      <span class="w">forge create</span> <span class="p">"validate JSON schemas"</span> <span class="a">--type mcp --install mcp</span><br>
+      <br>
+      <span class="a">Forge</span> <span class="g">&#10003; json_validator installed as MCP server</span><br>
+      <span class="a">Forge</span> <span class="c">Updated ~/.mcp.json</span><br>
+      <br>
+      <span class="c"># Now Claude Code can use it:</span><br>
+      <span class="b">"Validate this JSON against the user schema"</span><br>
+      <span class="g">Claude Code calls json_validator automatically</span>
+    </div>
+  </div>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>5 &mdash; Start the MCP server</span>
+    </div>
+    <div class="qs-body">
+      <span class="c"># Expose all 7 Forge tools to Claude Code</span><br>
+      <span class="w">forge serve</span><br>
+      <br>
+      <span class="g">&#10003; Forge MCP server running on stdio</span><br>
+      <span class="g">&#10003; 7 tools available: forge_create, forge_answer, forge_generate,</span><br>
+      <span class="g">&nbsp;&nbsp;forge_iterate, forge_install, forge_status, forge_list</span><br>
+      <br>
+      <span class="c"># Claude Code can now build tools autonomously:</span><br>
+      <span class="b">"I need a CSV parser. Let me use Forge to build one."</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- TECHNICAL SPECS -->
+<section class="fade-in section-center">
+  <div class="section-label">Technical Specs</div>
+  <h2 class="section-title">Built on <span class="glow">solid foundations</span></h2>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; max-width: 800px; margin: 2rem auto 0; text-align: left;">
+    <div class="module-item">
+      <div class="module-file" style="color: var(--accent-green);">Python</div>
+      <div class="module-desc">&gt;= 3.11</div>
+    </div>
+    <div class="module-item">
+      <div class="module-file">click</div>
+      <div class="module-desc">&gt;= 8.1</div>
+    </div>
+    <div class="module-item">
+      <div class="module-file">pydantic</div>
+      <div class="module-desc">&gt;= 2.0</div>
+    </div>
+    <div class="module-item">
+      <div class="module-file">jinja2</div>
+      <div class="module-desc">&gt;= 3.1</div>
+    </div>
+    <div class="module-item">
+      <div class="module-file">mcp</div>
+      <div class="module-desc">&gt;= 1.0</div>
+    </div>
+    <div class="module-item">
+      <div class="module-file">rich</div>
+      <div class="module-desc">&gt;= 13.0</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-links">
+      <a href="index.html">Cortex Home</a>
+      <a href="https://github.com/zzhiyuann/dispatcher">Dispatcher</a>
+      <a href="https://github.com/zzhiyuann/a2a-hub">A2A Hub</a>
+      <a href="https://github.com/zzhiyuann/forge">Forge</a>
+      <a href="https://github.com/zzhiyuann/vibe-replay">Vibe Replay</a>
+      <a href="https://github.com/zzhiyuann">GitHub</a>
+    </div>
+    <p class="footer-note">
+      Forge is the Creation Layer of Cortex &mdash; open source under the MIT License.<br>
+      Built by one person and their AI agents. Tools creating tools. Naturally.<br><br>
+      <span style="color: var(--text-dim);">Dependencies: click, pydantic, jinja2, mcp, rich.
+      Tests run in isolated tmpdir. Templates are extensible.</span>
+    </p>
+  </div>
+</footer>
+
+<!-- JS -->
+<script>
+  // Nav scroll effect
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 20);
+  });
+
+  // Fade-in on scroll with stagger
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Pipeline node hover animation
+  const pipelineNodes = document.querySelectorAll('.pipeline-node');
+  let currentActive = document.querySelector('.pipeline-node.active');
+
+  pipelineNodes.forEach(node => {
+    node.addEventListener('mouseenter', () => {
+      if (currentActive) currentActive.classList.remove('active');
+      node.classList.add('active');
+    });
+    node.addEventListener('mouseleave', () => {
+      node.classList.remove('active');
+      if (currentActive) currentActive.classList.add('active');
+    });
+  });
+
+  // Auto-cycle pipeline nodes
+  let pipeIdx = 3; // Start at Generate
+  setInterval(() => {
+    pipelineNodes.forEach(n => n.classList.remove('active'));
+    pipeIdx = (pipeIdx + 1) % pipelineNodes.length;
+    pipelineNodes[pipeIdx].classList.add('active');
+    currentActive = pipelineNodes[pipeIdx];
+  }, 2500);
+
+  // Session state hover
+  const stateChips = document.querySelectorAll('.state-chip');
+  let stateIdx = 0;
+  let stateInterval;
+
+  function cycleStates() {
+    stateChips.forEach(c => c.classList.remove('active-state'));
+    const chip = stateChips[stateIdx];
+    if (!chip.classList.contains('success-state') && !chip.classList.contains('fail-state')) {
+      chip.classList.add('active-state');
+    }
+    stateIdx = (stateIdx + 1) % stateChips.length;
+  }
+
+  const stateObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !stateInterval) {
+        stateInterval = setInterval(cycleStates, 800);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  const statesSection = document.querySelector('.states-flow');
+  if (statesSection) stateObserver.observe(statesSection);
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // Typing effect for terminal (subtle)
+  const terminalBody = document.querySelector('.hero .terminal-body');
+  if (terminalBody) {
+    const terminalObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+        }
+      });
+    }, { threshold: 0.2 });
+
+    terminalBody.style.opacity = '0';
+    terminalBody.style.transform = 'translateY(10px)';
+    terminalBody.style.transition = 'all 0.8s ease 0.5s';
+    terminalObserver.observe(terminalBody);
+  }
+
+  // Add subtle parallax to hero glow
+  window.addEventListener('mousemove', (e) => {
+    const hero = document.querySelector('.hero');
+    if (!hero) return;
+    const rect = hero.getBoundingClientRect();
+    if (e.clientY > rect.bottom) return;
+    const x = (e.clientX / window.innerWidth - 0.5) * 30;
+    const y = (e.clientY / window.innerHeight - 0.5) * 30;
+    hero.style.setProperty('--glow-x', `${x}px`);
+    hero.style.setProperty('--glow-y', `${y}px`);
+  });
+</script>
+
+</body>
+</html>
