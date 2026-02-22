@@ -60,32 +60,44 @@ def _load_state() -> dict:
 
 
 def _default_tasks() -> list[dict]:
-    """Default P0 task queue for Cortex improvement."""
+    """Default task queue for Cortex improvement."""
     return [
         {
             "id": 1,
+            "title": "System-level Cortex architecture improvements",
+            "description": (
+                "Review and improve the entire Cortex ecosystem from a systems perspective: "
+                "inter-project communication, shared config management, error handling across "
+                "components, unified logging, health checks, dependency management. "
+                "Make the stack more robust and cohesive as a whole."
+            ),
+            "project": "cortex",
+            "status": "pending",
+        },
+        {
+            "id": 2,
             "title": "Improve Vibe Replay HTML template",
             "description": "Polish visual design, improve mobile responsiveness, add micro-interactions",
             "project": "vibe-replay",
             "status": "pending",
         },
         {
-            "id": 2,
+            "id": 3,
             "title": "Enhance Vibe Replay analysis quality",
             "description": "Better insights, smarter phase detection, more meaningful summaries",
             "project": "vibe-replay",
             "status": "pending",
         },
         {
-            "id": 3,
+            "id": 4,
             "title": "Fix bugs across Cortex projects",
             "description": "Run tests on all projects, fix any failures, improve test coverage",
             "project": "cortex",
             "status": "pending",
         },
         {
-            "id": 4,
-            "title": "Polish Cortex website",
+            "id": 5,
+            "title": "Polish Cortex website and documentation",
             "description": "Improve index.html, project pages, docs page. Fix broken links, improve UX",
             "project": "cortex",
             "status": "pending",
