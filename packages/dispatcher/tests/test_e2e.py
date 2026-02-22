@@ -112,47 +112,77 @@ class TestClassification:
 # -- Model prefix extraction tests --
 
 class TestModelPrefix:
-    def test_haiku_prefix(self, tmp_path):
+    def test_haiku_prefix_lowercase(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model = d._extract_model_prefix("@haiku 你是什么模型")
+        text, model, sticky = d._extract_model_prefix("@haiku 你是什么模型")
         assert text == "你是什么模型"
         assert model == "haiku"
+        assert sticky is False
 
-    def test_opus_prefix(self, tmp_path):
+    def test_opus_prefix_lowercase(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model = d._extract_model_prefix("@opus write a complex algo")
+        text, model, sticky = d._extract_model_prefix("@opus write a complex algo")
         assert text == "write a complex algo"
         assert model == "opus"
+        assert sticky is False
 
-    def test_sonnet_prefix(self, tmp_path):
+    def test_sonnet_prefix_lowercase(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model = d._extract_model_prefix("@sonnet help me")
+        text, model, sticky = d._extract_model_prefix("@sonnet help me")
         assert text == "help me"
         assert model == "sonnet"
+        assert sticky is False
 
     def test_no_prefix(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model = d._extract_model_prefix("just a normal message")
+        text, model, sticky = d._extract_model_prefix("just a normal message")
         assert text == "just a normal message"
         assert model is None
+        assert sticky is False
 
-    def test_prefix_case_insensitive(self, tmp_path):
+    def test_capitalized_is_sticky(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model = d._extract_model_prefix("@Haiku test")
+        text, model, sticky = d._extract_model_prefix("@Haiku test")
         assert text == "test"
         assert model == "haiku"
+        assert sticky is True
+
+    def test_capitalized_sonnet_sticky(self, tmp_path):
+        d = make_dispatcher(tmp_path)
+        text, model, sticky = d._extract_model_prefix("@Sonnet do something")
+        assert text == "do something"
+        assert model == "sonnet"
+        assert sticky is True
 
     def test_prefix_only_no_text(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model = d._extract_model_prefix("@haiku")
+        text, model, sticky = d._extract_model_prefix("@haiku")
         assert text == "@haiku"
         assert model is None
 
     def test_prefix_at_in_middle(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model = d._extract_model_prefix("use @haiku for this")
+        text, model, sticky = d._extract_model_prefix("use @haiku for this")
         assert text == "use @haiku for this"
         assert model is None
+
+    def test_sticky_sets_dispatcher_model(self, tmp_path):
+        """@Haiku (capitalized) sets _sticky_model on the dispatcher."""
+        d = make_dispatcher(tmp_path)
+        assert d._sticky_model is None
+        text, model, sticky = d._extract_model_prefix("@Haiku test")
+        if sticky and model:
+            d._sticky_model = model
+        assert d._sticky_model == "haiku"
+
+    def test_lowercase_does_not_set_sticky(self, tmp_path):
+        """@haiku (lowercase) does NOT change _sticky_model."""
+        d = make_dispatcher(tmp_path)
+        d._sticky_model = "opus"  # previously set
+        text, model, sticky = d._extract_model_prefix("@haiku test")
+        if sticky and model:
+            d._sticky_model = model
+        assert d._sticky_model == "opus"  # unchanged
 
 
 # -- Project routing tests --
@@ -349,8 +379,8 @@ class TestDoSession:
         assert captured_model == ["haiku"]
 
     @pytest.mark.asyncio
-    async def test_followup_uses_same_sid(self, tmp_path):
-        """Follow-ups should resume the same session ID."""
+    async def test_followup_same_model_resumes(self, tmp_path):
+        """Follow-up with same model should resume the session."""
         d = make_dispatcher(tmp_path)
         prev = d.sm.create(1, "original task", "/tmp/webapp")
         prev.is_task = True
@@ -365,12 +395,36 @@ class TestDoSession:
             return "Follow-up result"
 
         d.runner.invoke = mock_invoke
-        await d._do_followup(2, "what about tests?", prev, model="opus")
+        await d._do_followup(2, "what about tests?", prev)
 
         assert len(invocations) == 1
         assert invocations[0]["sid"] == prev.sid
         assert invocations[0]["resume"] is True
-        assert invocations[0]["model"] == "opus"
+
+    @pytest.mark.asyncio
+    async def test_followup_different_model_fresh_session(self, tmp_path):
+        """Follow-up with different model should start fresh (--resume ignores --model)."""
+        d = make_dispatcher(tmp_path)
+        prev = d.sm.create(1, "original task", "/tmp/webapp")
+        prev.is_task = True
+        prev.status = "done"
+        prev.model_override = "opus"
+        prev.finished = time.time()
+
+        invocations = []
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+            invocations.append({"sid": session.sid, "resume": resume, "model": model})
+            session.status = "done"
+            session.finished = time.time()
+            return "Follow-up result"
+
+        d.runner.invoke = mock_invoke
+        await d._do_followup(2, "what about tests?", prev, model="haiku")
+
+        assert len(invocations) == 1
+        assert invocations[0]["sid"] != prev.sid  # fresh session
+        assert invocations[0]["resume"] is False
+        assert invocations[0]["model"] == "haiku"
 
 
 # -- Result formatting tests --

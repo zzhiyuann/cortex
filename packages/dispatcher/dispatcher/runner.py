@@ -85,6 +85,7 @@ class AgentRunner:
                 stderr=asyncio.subprocess.PIPE,
                 cwd=session.cwd,
                 env=env,
+                limit=1024 * 1024,  # 1MB line buffer (default 64KB too small for stream-json)
             )
             session.proc = proc
             session.status = "running"
@@ -151,6 +152,7 @@ class AgentRunner:
         """
         result_text = ""
         last_text = ""
+        completed_turns: list[str] = []  # finished assistant turns
 
         async for raw_line in proc.stdout:
             line = raw_line.decode(errors="replace").strip()
@@ -172,8 +174,13 @@ class AgentRunner:
                     if block.get("type") == "text":
                         text = block.get("text", "")
                         if text:
+                            # Detect new turn: current text doesn't extend previous
+                            if last_text and not text.startswith(last_text):
+                                completed_turns.append(last_text)
                             last_text = text
-                            session.partial_output = text
+                            # Show all turns chained together
+                            all_parts = completed_turns + [text]
+                            session.partial_output = "\n\n".join(all_parts)
 
             # Final result — authoritative
             elif etype == "result":

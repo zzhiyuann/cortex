@@ -14,7 +14,7 @@ class Session:
     __slots__ = (
         "msg_id", "task_text", "cwd", "sid", "status",
         "proc", "started", "finished", "result", "is_task",
-        "bot_msgs", "partial_output", "model_override",
+        "bot_msgs", "partial_output", "model_override", "model_sticky",
     )
 
     def __init__(self, msg_id: int, text: str, cwd: str, sid: str | None = None):
@@ -31,6 +31,7 @@ class Session:
         self.bot_msgs: list[int] = []
         self.partial_output = ""  # streaming: accumulated text so far
         self.model_override: str | None = None
+        self.model_sticky: bool = False  # True = model persists in follow-ups
 
     def elapsed(self) -> float:
         end = self.finished or time.time()

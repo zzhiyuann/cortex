@@ -149,6 +149,7 @@ class Dispatcher:
         self._consecutive_failures = 0
         self._msg_buffer: list[tuple] = []  # (mid, text, reply_to, attachments)
         self._batch_task: asyncio.Task | None = None
+        self._sticky_model: str | None = None  # @Model (capitalized) sets this
 
     # -- Lifecycle --
 
@@ -696,25 +697,35 @@ class Dispatcher:
 
     _NEW_SESSION_KEYWORDS = {"新session", "新建session", "new session", "开个新的", "新对话"}
 
-    # Model aliases users can prefix messages with
-    _MODEL_PREFIXES = {
-        "@haiku": "haiku",
-        "@sonnet": "sonnet",
-        "@opus": "opus",
-    }
+    # Model aliases: lowercase = current message only, capitalized = persist in follow-ups
+    _MODEL_PREFIXES_TEMP = {"@haiku": "haiku", "@sonnet": "sonnet", "@opus": "opus"}
+    _MODEL_PREFIXES_STICKY = {"@Haiku": "haiku", "@Sonnet": "sonnet", "@Opus": "opus"}
 
-    def _extract_model_prefix(self, text: str) -> tuple[str, str | None]:
-        """Extract @model prefix from message. Returns (clean_text, model_or_none)."""
-        for prefix, model in self._MODEL_PREFIXES.items():
-            if text.lower().startswith(prefix):
+    def _extract_model_prefix(self, text: str) -> tuple[str, str | None, bool]:
+        """Extract @model prefix from message. Returns (clean_text, model_or_none, sticky).
+
+        Lowercase @haiku/@opus/@sonnet = current message only.
+        Capitalized @Haiku/@Opus/@Sonnet = persist in follow-ups.
+        """
+        # Check sticky (capitalized) first — case-sensitive
+        for prefix, model in self._MODEL_PREFIXES_STICKY.items():
+            if text.startswith(prefix):
                 rest = text[len(prefix):]
-                # Must be followed by whitespace or end of string
                 if rest and not rest[0].isspace():
                     continue
                 clean = rest.lstrip()
                 if clean:
-                    return clean, model
-        return text, None
+                    return clean, model, True
+        # Then check temp (lowercase) — case-sensitive
+        for prefix, model in self._MODEL_PREFIXES_TEMP.items():
+            if text.lower().startswith(prefix):
+                rest = text[len(prefix):]
+                if rest and not rest[0].isspace():
+                    continue
+                clean = rest.lstrip()
+                if clean:
+                    return clean, model, False
+        return text, None, False
 
     async def _handle_task(
         self, mid: int, text: str, reply_to: int | None,
@@ -730,18 +741,21 @@ class Dispatcher:
         - Chat window is NEVER stuck waiting
         """
         # 0. Extract model preference from @haiku/@opus/@sonnet prefix
-        text, model_from_prefix = self._extract_model_prefix(text)
-        model_override = model or model_from_prefix
+        text, model_from_prefix, is_sticky = self._extract_model_prefix(text)
+        if is_sticky and model_from_prefix:
+            self._sticky_model = model_from_prefix
+        # Priority: explicit arg > prefix > sticky > None
+        model_override = model or model_from_prefix or self._sticky_model
 
         # 1. Explicit reply to a running task → only case where we queue
         if reply_to:
             prev = self.sm.find_by_reply(reply_to)
             if prev and prev.status == "running":
                 self._reply(mid, "\u23f3 等这个任务跑完继续。")
-                self._spawn(self._do_queued_followup(mid, text, prev, attachments, model=model_override))
+                self._spawn(self._do_queued_followup(mid, text, prev, attachments, model=model_override, model_sticky=is_sticky))
                 return
             if prev:
-                self._spawn(self._do_followup(mid, text, prev, attachments, model=model_override))
+                self._spawn(self._do_followup(mid, text, prev, attachments, model=model_override, model_sticky=is_sticky))
                 return
 
         # 2. Build background context — all sessions know what else is running
@@ -764,13 +778,14 @@ class Dispatcher:
         if not self.sm.force_new:
             last = self.sm.last_session()
             if not active and last and last.status in ("done", "failed"):
-                self._spawn(self._do_followup(mid, text, last, attachments, model=model_override))
+                self._spawn(self._do_followup(mid, text, last, attachments, model=model_override, model_sticky=is_sticky))
                 return
         self.sm.force_new = False
 
         # 5. Always create a new session — never block
         session = self.sm.create(mid, text, cwd)
         session.is_task = is_project
+        session.model_sticky = is_sticky
         self._spawn(self._do_session(
             mid, session, text, attachments, bg_context=bg_context,
             quick=is_quick, model=model_override,
@@ -810,26 +825,61 @@ class Dispatcher:
         self, mid: int, text: str, target: Session,
         attachments: list[dict] | None = None,
         model: str | None = None,
+        model_sticky: bool = False,
     ):
         """Wait for a running session to finish, then resume with the new message."""
         while target.status in ("pending", "running"):
             await asyncio.sleep(1)
-        await self._do_followup(mid, text, target, attachments, model=model)
+        await self._do_followup(mid, text, target, attachments, model=model, model_sticky=model_sticky)
 
     async def _do_followup(
         self, mid: int, text: str, prev: Session,
         attachments: list[dict] | None = None,
         model: str | None = None,
+        model_sticky: bool = False,
     ):
         """Resume a previous session for follow-up."""
-        session = self.sm.create(mid, text, prev.cwd, sid=prev.sid)
-        session.is_task = prev.is_task
-        session.model_override = model
+        effective_model = model or self._sticky_model
+        effective_sticky = model_sticky or (prev.model_sticky if not model else False)
 
-        # For follow-ups with attachments, include file references in the prompt
+        # If model differs from previous session, --resume would ignore it.
+        # Start a fresh session with previous context injected instead.
+        model_changed = (
+            effective_model
+            and prev.model_override != effective_model
+        )
+        if model_changed:
+            session = self.sm.create(mid, text, prev.cwd)  # new session id
+            resume = False
+        else:
+            session = self.sm.create(mid, text, prev.cwd, sid=prev.sid)
+            resume = True
+
+        session.is_task = prev.is_task
+        session.model_override = effective_model
+        session.model_sticky = effective_sticky
+
+        # Build follow-up text with context
         follow_text = text
+
+        # If previous session failed, inject error context so the agent understands
+        if prev.status == "failed" and prev.result:
+            error_snippet = prev.result[:500]
+            follow_text = (
+                f"[Previous task failed with this error]:\n{error_snippet}\n\n"
+                f"[User follow-up]: {text}"
+            )
+
+        # If we can't resume (model changed), inject previous result as context
+        if not resume and prev.result:
+            prev_snippet = prev.result[:1000]
+            follow_text = (
+                f"[Previous conversation result]:\n{prev_snippet}\n\n"
+                f"[User says]: {follow_text}"
+            )
+
         if attachments:
-            parts = [text]
+            parts = [follow_text]
             for a in attachments:
                 parts.append(
                     f"\n\n[Attached {a['media_type']}: {a['path']}]"
@@ -837,10 +887,14 @@ class Dispatcher:
                 )
             follow_text = "".join(parts)
 
+        prompt = follow_text if resume else self._build_prompt(
+            follow_text, session.cwd,
+        )
+
         runner = asyncio.create_task(
             self.runner.invoke(
-                session, follow_text, resume=True,
-                max_turns=self.cfg.max_turns_followup, model=model,
+                session, prompt, resume=resume,
+                max_turns=self.cfg.max_turns_followup, model=effective_model,
             )
         )
         monitor = asyncio.create_task(self._progress_loop(mid, session))
