@@ -13,7 +13,6 @@ import json
 import os
 import shutil
 import stat
-import subprocess
 from pathlib import Path
 
 import click
@@ -22,6 +21,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from cortex_cli.detect import Component, detect_all
+from cortex_cli.process import is_running, read_pid
 
 console = Console()
 
@@ -526,23 +526,21 @@ def run_status():
         except Exception:
             console.print("  [red]Error reading settings[/red]")
 
-    # Dispatcher
+    # Services
     console.print()
-    console.print("[bold]Dispatcher[/bold]")
+    console.print("[bold]Services[/bold]")
+    for svc_name, svc_label in [("a2a-hub", "A2A Hub"), ("dispatcher", "Dispatcher")]:
+        pid = read_pid(svc_name)
+        if pid:
+            console.print(f"  [green]{svc_label}[/green] → Running (pid {pid})")
+        else:
+            console.print(f"  [dim]{svc_label}[/dim] → Not running")
+
+    # Dispatcher config
+    console.print()
+    console.print("[bold]Dispatcher Config[/bold]")
     if DISPATCHER_CONFIG.exists():
         console.print(f"  [green]Config[/green] → {DISPATCHER_CONFIG}")
-        # Check if running
-        try:
-            result = subprocess.run(
-                ["pgrep", "-f", "dispatcher start"],
-                capture_output=True, text=True, timeout=5,
-            )
-            if result.returncode == 0:
-                console.print("  [green]Status[/green] → Running")
-            else:
-                console.print("  [yellow]Status[/yellow] → Not running")
-        except Exception:
-            console.print("  [dim]Status[/dim] → Unknown")
     else:
         console.print("  [dim]Not configured[/dim]")
 

@@ -10,9 +10,6 @@ from __future__ import annotations
 
 import json
 import os
-import signal
-import subprocess
-import time
 from datetime import datetime
 from pathlib import Path
 
@@ -20,14 +17,18 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from cortex_cli.process import read_pid, write_pid, stop_process, log_size, tail_log
+
 console = Console()
 
+AGENT_NAME = "agent"
 AGENT_DIR = Path.home() / ".cortex" / "agent"
-PID_FILE = AGENT_DIR / "agent.pid"
-LOG_FILE = AGENT_DIR / "agent.log"
 STATE_FILE = AGENT_DIR / "state.json"
 TASKS_FILE = AGENT_DIR / "tasks.json"
 PROMPT_FILE = AGENT_DIR / "prompt.md"
+# Agent uses its own log/pid under agent/ dir for isolation
+LOG_FILE = AGENT_DIR / "agent.log"
+PID_FILE = AGENT_DIR / "agent.pid"
 
 
 def _ensure_dir():
@@ -35,10 +36,11 @@ def _ensure_dir():
 
 
 def _read_pid() -> int | None:
+    """Read agent PID from its dedicated PID file."""
     if PID_FILE.exists():
         try:
             pid = int(PID_FILE.read_text().strip())
-            os.kill(pid, 0)  # Check if alive
+            os.kill(pid, 0)
             return pid
         except (ValueError, ProcessLookupError, PermissionError):
             PID_FILE.unlink(missing_ok=True)

@@ -14,6 +14,8 @@ from rich.console import Console
 from cortex_cli.setup import run_init, run_status
 from cortex_cli.services import start_all, stop_all
 from cortex_cli.agent import start_agent, stop_agent, agent_status, agent_log
+from cortex_cli.health import run_health
+from cortex_cli.process import tail_log, log_file
 
 console = Console()
 
@@ -66,6 +68,53 @@ def stop():
 def status():
     """Show what's installed, configured, and running."""
     run_status()
+
+
+@cli.command()
+def health():
+    """Run health checks on all Cortex components and wiring."""
+    run_health()
+
+
+@cli.command()
+@click.argument("service", default="all")
+@click.option("--lines", "-n", default=50, help="Number of log lines to show.")
+def logs(service, lines):
+    """View logs for a Cortex service.
+
+    SERVICE can be: a2a-hub, dispatcher, agent, or all (default).
+    """
+    services = ["a2a-hub", "dispatcher"]
+    if service == "all":
+        targets = services
+    elif service in services or service == "agent":
+        targets = [service]
+    else:
+        console.print(f"[red]Unknown service: {service}[/red]")
+        console.print(f"[dim]Available: {', '.join(services + ['agent', 'all'])}[/dim]")
+        return
+
+    for target in targets:
+        if target == "agent":
+            from cortex_cli.agent import LOG_FILE
+            path = LOG_FILE
+        else:
+            path = log_file(target)
+
+        if not path.exists():
+            console.print(f"[dim]{target}: no log file[/dim]")
+            continue
+
+        console.print(f"\n[bold]--- {target} ---[/bold] ({path})")
+        log_lines = tail_log(target) if target != "agent" else []
+        if target == "agent":
+            content = path.read_text().strip()
+            log_lines = content.split("\n")[-lines:] if content else []
+
+        for line in log_lines[-lines:]:
+            console.print(f"  {line[:200]}")
+
+    console.print()
 
 
 @cli.group()
