@@ -1015,8 +1015,8 @@
   .diagnosis-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-    max-width: 800px;
+    gap: 1rem;
+    max-width: 720px;
     width: 100%;
     opacity: 0;
     transform: translateY(20px);
@@ -1025,29 +1025,29 @@
   .diagnosis-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 2rem 1.5rem;
+    border-radius: 10px;
+    padding: 1.25rem 1rem;
     text-align: center;
     transition: all 0.5s ease;
   }
   .diagnosis-card .diag-status {
-    font-size: 2.5rem;
-    margin-bottom: 0.75rem;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
     line-height: 1;
   }
   .diagnosis-card .diag-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
   }
   .diagnosis-card.ok .diag-label { color: var(--accent-green); }
   .diagnosis-card.missing .diag-label { color: var(--accent-rose); }
   .diagnosis-card .diag-desc {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
-    line-height: 1.5;
+    line-height: 1.45;
   }
   .diagnosis-card.missing {
     border-color: rgba(251, 113, 133, 0.3);
@@ -1268,15 +1268,15 @@
     </div>
     <div class="terminal-body">
       <span class="comment"># Message your AI from your phone</span><br>
-      <span class="prompt">telegram&gt;</span> <span class="cmd">refactor the auth module in sims</span><br>
-      <span class="output">Dispatcher: on it (sims) &mdash; 3 agents mobilized</span><br>
+      <span class="prompt">telegram&gt;</span> <span class="cmd">refactor the auth module, add proper error handling</span><br>
+      <span class="output">Dispatcher: on it (myapp) &mdash; 3 agents mobilized</span><br>
       <br>
       <span class="comment"># Agents discover and delegate to each other</span><br>
       <span class="prompt">a2a-hub&gt;</span> <span class="output">code-reviewer registered &middot; test-runner registered</span><br>
       <span class="prompt">a2a-hub&gt;</span> <span class="output">task delegated: review &rarr; code-reviewer</span><br>
       <br>
       <span class="comment"># Need a new tool? Forge builds it on the fly</span><br>
-      <span class="prompt">forge&gt;</span> <span class="cmd">create "parse SIMS sensor CSV with filtering"</span><br>
+      <span class="prompt">forge&gt;</span> <span class="cmd">create "validate JWT tokens with role-based access"</span><br>
       <span class="output">Generated &middot; 12 tests passed &middot; Installed to MCP</span><br>
       <br>
       <span class="comment"># Every session becomes structured wisdom</span><br>
@@ -1304,7 +1304,7 @@
 
 
   <!-- Scene 2: A Real Day -->
-  <div class="story-scene scene-day">
+  <div class="story-scene scene-day centered">
     <div class="scene-number">A Real Day</div>
     <h2 class="scene-headline">Sound familiar?</h2>
     <div class="day-timeline">
@@ -1361,7 +1361,7 @@
   <div class="story-scene scene-diagnosis centered">
     <div class="scene-number">The Diagnosis</div>
     <h2 class="scene-headline">The tools are there. The glue isn't.</h2>
-    <div class="diagnosis-grid scene-body" style="opacity:0;transform:translateY(20px);transition:all 0.8s ease 0.2s;">
+    <div class="diagnosis-grid">
       <div class="diagnosis-card ok">
         <div class="diag-status">&#10003;</div>
         <div class="diag-label">The Brain</div>
@@ -1405,13 +1405,13 @@
         <div class="shift-chat">
           <div class="shift-chat-header">A Thursday afternoon &mdash; Without Cortex</div>
           <div class="shift-chat-body">
-            <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><em class="dim">Opens Claude Code on laptop...</em><br>"Refactor the sims data pipeline"</div></div>
+            <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><em class="dim">Opens Claude Code on laptop...</em><br>"Refactor the data pipeline, add error handling"</div></div>
             <div class="chat-msg"><div class="chat-avatar agent">C</div><div class="chat-bubble">I'll read the codebase first...<br><span class="dim">[reads 20 files, plans refactor, starts working]</span></div></div>
             <div class="chat-divider">&mdash; 32 min later &mdash;</div>
-            <div class="chat-msg"><div class="chat-avatar agent">C</div><div class="chat-bubble">I need a custom CSV parser for the sensor data format.</div></div>
-            <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><span class="pain">I built one last week but it was in a different session... let me re-describe it.</span></div></div>
+            <div class="chat-msg"><div class="chat-avatar agent">C</div><div class="chat-bubble">I need a JWT validation helper for the auth middleware.</div></div>
+            <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><span class="pain">I built one last week in a different session... let me re-describe it.</span></div></div>
             <div class="chat-divider">&mdash; 15 min rebuilding what existed &mdash;</div>
-            <div class="chat-msg"><div class="chat-avatar system">!</div><div class="chat-bubble"><span class="pain">Phone buzzes. You're walking to a meeting. Great idea for the API design. Can't do anything about it.</span></div></div>
+            <div class="chat-msg"><div class="chat-avatar system">!</div><div class="chat-bubble"><span class="pain">Phone buzzes. Walking to a meeting. Great idea for the API design. Can't do anything about it.</span></div></div>
             <div class="chat-divider">&mdash; 45 min meeting &mdash;</div>
             <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><span class="pain">Back at laptop. "Where was I?" Session context is stale. Re-reading everything.</span></div></div>
             <div class="chat-divider">&mdash; 2 hours later, task done &mdash;</div>
@@ -1425,16 +1425,16 @@
         <div class="shift-chat">
           <div class="shift-chat-header">A Thursday afternoon &mdash; With Cortex</div>
           <div class="shift-chat-body">
-            <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><em class="dim">Sends Telegram message from phone while walking...</em><br>"Refactor the sims data pipeline, add proper error handling"</div></div>
-            <div class="chat-msg"><div class="chat-avatar agent">D</div><div class="chat-bubble"><span class="win">On it (sims). Detected project, spawning session.</span></div></div>
+            <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><em class="dim">Sends Telegram message from phone while walking...</em><br>"Refactor the data pipeline, add proper error handling"</div></div>
+            <div class="chat-msg"><div class="chat-avatar agent">D</div><div class="chat-bubble"><span class="win">On it (myapp). Detected project, spawning session.</span></div></div>
             <div class="chat-divider">&mdash; Agents working &mdash;</div>
-            <div class="chat-msg"><div class="chat-avatar agent">H</div><div class="chat-bubble"><span class="win">Agent needs CSV parser. Found Forge via A2A Hub. Delegating.</span></div></div>
-            <div class="chat-msg"><div class="chat-avatar agent">F</div><div class="chat-bubble"><span class="win">Built sensor_csv_parser. 12 tests passing. Installed to MCP.</span></div></div>
+            <div class="chat-msg"><div class="chat-avatar agent">H</div><div class="chat-bubble"><span class="win">Agent needs JWT validator. Found Forge via A2A Hub. Delegating.</span></div></div>
+            <div class="chat-msg"><div class="chat-avatar agent">F</div><div class="chat-bubble"><span class="win">Built jwt_validator. 12 tests passing. Installed to MCP.</span></div></div>
             <div class="chat-divider">&mdash; You're still in your meeting &mdash;</div>
-            <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><em class="dim">Quick Telegram reply between meetings...</em><br>"Also add timestamp filtering to that parser"</div></div>
-            <div class="chat-msg"><div class="chat-avatar agent">D</div><div class="chat-bubble"><span class="win">Got it. Resuming session. Adding filter.</span></div></div>
+            <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><em class="dim">Quick Telegram reply between meetings...</em><br>"Also add role-based access control to that validator"</div></div>
+            <div class="chat-msg"><div class="chat-avatar agent">D</div><div class="chat-bubble"><span class="win">Got it. Resuming session. Adding RBAC.</span></div></div>
             <div class="chat-divider">&mdash; 20 min later &mdash;</div>
-            <div class="chat-msg"><div class="chat-avatar agent">D</div><div class="chat-bubble"><span class="win">Done. Refactored into 3 modules, 24 tests, new parser tool installed. Pushed to git.</span></div></div>
+            <div class="chat-msg"><div class="chat-avatar agent">D</div><div class="chat-bubble"><span class="win">Done. Refactored into 3 modules, 24 tests, new JWT tool installed. Pushed to git.</span></div></div>
             <div class="chat-msg"><div class="chat-avatar agent">V</div><div class="chat-bubble"><span class="win">Session captured: 4 decisions, 2 learnings, 1 new tool. Replay ready. Shareable link generated.</span></div></div>
             <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><em class="dim">Forwards the replay link to colleague.</em> "Here's exactly how and why."</div></div>
           </div>
@@ -1671,7 +1671,7 @@
       <div class="step-marker">01</div>
       <h4>You send a message from your phone</h4>
       <p>
-        "Refactor the data pipeline in sims, add proper error handling and tests."
+        "Refactor the data pipeline, add proper error handling and tests."
         <br>Sent via Telegram. You're on the subway. No laptop needed.
       </p>
     </div>
@@ -1680,9 +1680,9 @@
       <div class="step-marker">02</div>
       <h4>Dispatcher classifies and routes</h4>
       <p>
-        Detects project <code>sims</code>, sets working directory, classifies as engineering task.
+        Detects project <code>myapp</code>, sets working directory, classifies as engineering task.
         Spawns a Claude Code session with 50 max turns and your memory context.
-        Sends you: "On it (sims)."
+        Sends you: "On it (myapp)."
       </p>
     </div>
 
@@ -1690,8 +1690,8 @@
       <div class="step-marker">03</div>
       <h4>Agent discovers it needs a CSV parser tool</h4>
       <p>
-        During refactoring, Claude realizes it needs a custom CSV parser.
-        Through A2A Hub, it finds Forge and delegates: "Build a SIMS sensor CSV parser with timestamp filtering."
+        During refactoring, Claude realizes it needs a JWT validation tool.
+        Through A2A Hub, it finds Forge and delegates: "Build a JWT validator with role-based access control."
       </p>
     </div>
 
@@ -1699,7 +1699,7 @@
       <div class="step-marker">04</div>
       <h4>Forge builds, tests, and installs the tool</h4>
       <p>
-        Forge generates the parser, creates 12 tests, runs them, all pass.
+        Forge generates the validator, creates 12 tests, runs them, all pass.
         Installs as an MCP tool. The refactoring agent now uses it directly.
       </p>
     </div>
@@ -1708,8 +1708,8 @@
       <div class="step-marker">05</div>
       <h4>Task completes. Results sent to your phone</h4>
       <p>
-        "Done. Refactored data_loader into 3 modules, added error handling and 24 tests.
-        Also created a new sensor_csv_parser tool (installed to MCP)."
+        "Done. Refactored into 3 modules, added error handling and 24 tests.
+        Also created a new jwt_validator tool (installed to MCP)."
       </p>
     </div>
 
@@ -1718,7 +1718,7 @@
       <h4>Vibe Replay captures everything</h4>
       <p>
         The entire session is captured: 4 key decisions (why 3 modules instead of 2),
-        2 learnings (SIMS timestamp format quirks), 1 new tool created.
+        2 learnings (JWT token edge cases), 1 new tool created.
         HTML replay generated. Wisdom aggregated.
       </p>
     </div>
