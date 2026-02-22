@@ -872,45 +872,45 @@
   /* ---- STORY / WHY ---- */
   .story {
     position: relative;
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: 2rem 2rem 0;
   }
   .story-scene {
-    min-height: 80vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 6rem 2rem;
-    max-width: var(--max-w);
-    margin: 0 auto;
+    padding: 3rem 0;
     position: relative;
   }
   .story-scene.centered { align-items: center; text-align: center; }
 
-  /* Scene 1: The Paradox */
-  .scene-paradox .scene-number {
+  /* Shared scene elements */
+  .scene-number {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--accent-blue);
     letter-spacing: 0.15em;
     text-transform: uppercase;
     font-weight: 700;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     opacity: 0;
     transform: translateY(10px);
     transition: all 0.6s ease;
   }
-  .scene-paradox .scene-headline {
-    font-size: clamp(2rem, 5vw, 3.5rem);
+  .scene-headline {
+    font-size: clamp(1.5rem, 3.5vw, 2.5rem);
     font-weight: 800;
     letter-spacing: -0.03em;
     line-height: 1.2;
     max-width: 700px;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     opacity: 0;
     transform: translateY(20px);
     transition: all 0.8s ease 0.15s;
   }
-  .scene-paradox .scene-sub {
-    font-size: 1.15rem;
+  .scene-sub {
+    font-size: 1.05rem;
     color: var(--text-muted);
     max-width: 600px;
     line-height: 1.7;
@@ -918,7 +918,7 @@
     transform: translateY(20px);
     transition: all 0.8s ease 0.3s;
   }
-  .scene-paradox .scene-sub em {
+  .scene-sub em {
     color: var(--text);
     font-style: normal;
     font-weight: 600;
@@ -931,6 +931,11 @@
     transform: translateY(0);
   }
 
+  /* Scene 1: Paradox — slightly bigger headline */
+  .scene-paradox .scene-headline {
+    font-size: clamp(1.75rem, 4vw, 3rem);
+  }
+
   /* Scene 2: The Day */
   .day-timeline {
     position: relative;
@@ -939,15 +944,20 @@
     opacity: 0;
     transform: translateY(20px);
     transition: all 0.8s ease 0.2s;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.25rem 1.5rem;
   }
   .day-entry {
     display: flex;
-    gap: 1.5rem;
-    padding: 1.25rem 0;
-    border-bottom: 1px solid rgba(42, 48, 80, 0.5);
-    transition: all 0.4s ease;
-    opacity: 0.35;
+    gap: 1.25rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid rgba(42, 48, 80, 0.4);
+    transition: all 0.5s ease;
+    opacity: 0.25;
   }
+  .day-entry:last-child { border-bottom: none; }
   .day-entry.lit { opacity: 1; }
   .day-entry .time {
     font-family: var(--font-mono);
@@ -987,8 +997,8 @@
   }
   .day-punchline {
     text-align: center;
-    padding: 3rem 0 1rem;
-    font-size: 1.2rem;
+    padding: 1.5rem 0 0;
+    font-size: 1.05rem;
     color: var(--text-muted);
     font-weight: 500;
     opacity: 0;
@@ -1046,8 +1056,8 @@
   }
   .diagnosis-insight {
     text-align: center;
-    margin-top: 3rem;
-    font-size: 1.15rem;
+    margin-top: 2rem;
+    font-size: 1.05rem;
     color: var(--text-muted);
     max-width: 600px;
     line-height: 1.7;
@@ -1185,26 +1195,12 @@
   }
   .shift-summary p strong { color: var(--text); }
 
-  /* Scene transition dividers */
-  .scene-divider {
-    text-align: center;
-    padding: 2rem 0;
-    position: relative;
-  }
-  .scene-divider::before {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: linear-gradient(to bottom, transparent, var(--border), transparent);
-  }
-
   @media (max-width: 768px) {
-    .story-scene { min-height: auto; padding: 4rem 1.5rem; }
+    .story { padding: 1rem 1.5rem 0; }
+    .story-scene { padding: 2rem 0; }
     .diagnosis-grid { grid-template-columns: 1fr; max-width: 320px; }
     .shift-toggle .toggle-opt { padding: 0.5rem 1rem; font-size: 0.8rem; }
+    .day-timeline { padding: 0.25rem 1rem; }
   }
 
   /* ---- ANIMATIONS ---- */
@@ -1302,14 +1298,11 @@
     </p>
   </div>
 
-  <div class="scene-divider"></div>
 
   <!-- Scene 2: A Real Day -->
   <div class="story-scene scene-day">
-    <div class="scene-number" style="opacity:0;transform:translateY(10px);transition:all 0.6s ease;">A Real Day</div>
-    <h2 class="scene-headline" style="font-size:clamp(1.5rem,3.5vw,2.5rem);margin-bottom:2.5rem;">
-      Sound familiar?
-    </h2>
+    <div class="scene-number">A Real Day</div>
+    <h2 class="scene-headline">Sound familiar?</h2>
     <div class="day-timeline">
       <div class="day-entry" data-index="0">
         <div class="time">9:15</div>
@@ -1359,14 +1352,11 @@
     </div>
   </div>
 
-  <div class="scene-divider"></div>
 
   <!-- Scene 3: The Diagnosis -->
   <div class="story-scene scene-diagnosis centered">
-    <div class="scene-number" style="opacity:0;transform:translateY(10px);transition:all 0.6s ease;">The Diagnosis</div>
-    <h2 class="scene-headline" style="font-size:clamp(1.5rem,3.5vw,2.5rem);margin-bottom:2.5rem;">
-      The tools are there. The glue isn't.
-    </h2>
+    <div class="scene-number">The Diagnosis</div>
+    <h2 class="scene-headline">The tools are there. The glue isn't.</h2>
     <div class="diagnosis-grid scene-body" style="opacity:0;transform:translateY(20px);transition:all 0.8s ease 0.2s;">
       <div class="diagnosis-card ok">
         <div class="diag-status">&#10003;</div>
@@ -1392,14 +1382,11 @@
     </div>
   </div>
 
-  <div class="scene-divider"></div>
 
   <!-- Scene 4: The Shift (Before / After) -->
   <div class="story-scene scene-shift centered">
-    <div class="scene-number" style="opacity:0;transform:translateY(10px);transition:all 0.6s ease;">The Shift</div>
-    <h2 class="scene-headline" style="font-size:clamp(1.5rem,3.5vw,2.5rem);margin-bottom:1rem;">
-      Same person. Same tools. Different infrastructure.
-    </h2>
+    <div class="scene-number">The Shift</div>
+    <h2 class="scene-headline">Same person. Same tools. Different infrastructure.</h2>
 
     <div class="shift-toggle-wrap">
       <div class="shift-toggle" role="tablist">
