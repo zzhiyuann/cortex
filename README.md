@@ -10,7 +10,7 @@ Cortex is four integrated systems that let a single person command, orchestrate,
 
 | Component | Role | Description |
 |-----------|------|-------------|
-| **[Dispatcher](https://github.com/zzhiyuann/cortex-dispatcher)** | Command | Mobile JARVIS via Telegram. Always-on daemon. Zero dependencies. |
+| **[Dispatcher](https://github.com/zzhiyuann/dispatcher)** | Command | Mobile JARVIS via Telegram. Always-on daemon. Zero dependencies. |
 | **[A2A Hub](https://github.com/zzhiyuann/a2a-hub)** | Communication | Agent-to-Agent protocol. WebSocket hub + MCP bridge for Claude Code. |
 | **[Forge](https://github.com/zzhiyuann/forge)** | Creation | Self-evolving tool agent. Describe → Clarify → Generate → Test → Install. |
 | **[Vibe Replay](https://github.com/zzhiyuann/vibe-replay)** | Memory | Capture sessions, extract learnings, generate shareable replays. |
