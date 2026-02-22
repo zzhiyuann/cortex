@@ -1,81 +1,67 @@
 # Cortex
 
-**Personal Agent Infrastructure Stack**
+**The infrastructure layer for AI agents.**
 
-> One person. Infinite agents.
+> Your AI agent is powerful. Cortex makes it a system.
 
-Cortex is four integrated systems that let a single person command, orchestrate, create tools, and capture wisdom — all through AI agents.
-
-## The Stack
-
-| Component | Role | Description |
-|-----------|------|-------------|
-| **[Dispatcher](https://github.com/zzhiyuann/dispatcher)** | Command | Mobile JARVIS via Telegram. Always-on daemon. Zero dependencies. |
-| **[A2A Hub](https://github.com/zzhiyuann/a2a-hub)** | Communication | Agent-to-Agent protocol. WebSocket hub + MCP bridge for Claude Code. |
-| **[Forge](https://github.com/zzhiyuann/forge)** | Creation | Self-evolving tool agent. Describe → Clarify → Generate → Test → Install. |
-| **[Vibe Replay](https://github.com/zzhiyuann/vibe-replay)** | Memory | Capture sessions, extract learnings, generate shareable replays. |
-
-## Architecture
+Cortex is not another agent framework. It's a plug-in layer that sits **on top** of Claude Code, Cursor, or any MCP-compatible agent — adding the capabilities they don't have: remote command, cross-agent communication, on-demand tool generation, and session memory.
 
 ```
-                     ┌─────────────────────────────┐
-                     │      YOU (Phone / Desktop)   │
-                     └──────────────┬──────────────┘
-                                    │
-                     ┌──────────────▼──────────────┐
-                     │     DISPATCHER (Command)     │
-                     │  Classify → Route → Execute  │
-                     └──────┬───────────┬──────────┘
-                            │           │
-                  ┌─────────▼───┐  ┌────▼──────────┐
-                  │   A2A HUB   │  │    FORGE       │
-                  │   (Comms)   │◄►│  (Creation)    │
-                  └──────┬──────┘  └───────────────┘
-                         │
-              ┌──────────▼─────────────────────────┐
-              │     VIBE REPLAY (Memory)            │
-              │  Capture → Analyze → Share Wisdom   │
-              └────────────────────────────────────┘
+              ┌──────────────────────────────────────────────┐
+              │              CORTEX (plug-in layer)           │
+              │                                               │
+              │  Dispatcher   A2A Hub   Forge   Vibe Replay   │
+              │  (command)    (comms)  (tools)   (memory)     │
+              └──────────────────┬─────────────────────────────┘
+                                 │  plugs into via MCP & hooks
+              ┌──────────────────▼─────────────────────────────┐
+              │     Your Agent (Claude Code / Cursor / etc.)    │
+              └────────────────────────────────────────────────┘
+```
+
+## What It Adds
+
+| Component | What's Missing | What Cortex Adds |
+|-----------|---------------|------------------|
+| **[Dispatcher](https://github.com/zzhiyuann/dispatcher)** | Can't command your agent from your phone | Mobile JARVIS via Telegram. Always-on daemon. |
+| **[A2A Hub](https://github.com/zzhiyuann/a2a-hub)** | Agents can't discover or delegate to each other | Agent-to-Agent protocol. WebSocket hub + MCP bridge. |
+| **[Forge](https://github.com/zzhiyuann/forge)** | Agent can't build its own tools | Self-evolving tool agent. Describe → Generate → Test → Install. |
+| **[Vibe Replay](https://github.com/zzhiyuann/vibe-replay)** | Sessions are ephemeral — wisdom is lost | Capture sessions, extract decisions, generate shareable replays. |
+
+## Install
+
+```bash
+pip install cortex-cli-agent
+
+# Or via Homebrew
+brew tap zzhiyuann/tap && brew install cortex
 ```
 
 ## Quick Start
 
 ```bash
-# Each component installs independently
-pip install a2a-hub forge-agent vibe-replay
+# Set up Cortex on top of your existing agent
+cortex init
 
-# Start the agent communication hub
-a2a-hub start
+# Check what's connected
+cortex status
 
-# Create a tool from natural language
-forge create "convert CSV to JSON with filtering"
-
-# Capture and replay coding sessions
-vibe-replay install    # Hook into Claude Code
-vibe-replay replay latest
+# Or install components individually
+pip install vibe-replay          # Session memory
+pip install forge-agent          # Tool generation
+pip install a2a-hub              # Agent communication
 ```
 
 ## Philosophy
 
-We believe AI agents should be like utilities — always on, working for you, learning and improving. Cortex is built by one person who uses it daily to run a research lab, ship open-source projects, and automate everything in between.
+Claude Code, Cursor, Windsurf — these agents are incredible on their own. But they're isolated. Each session starts from zero. They can't talk to each other, can't be reached from your phone, and can't remember what they learned last week.
 
-The best tools don't just help you do things faster. They change what's possible for one person to do.
+Cortex doesn't replace them. It plugs in and adds the missing infrastructure — turning a powerful but isolated agent into a persistent, autonomous system that compounds over time.
 
 ## Website
 
-Open `index.html` or visit the [GitHub Pages site](https://zzhiyuann.github.io/cortex/) for the full interactive documentation.
-
-## Stats
-
-- **4** integrated systems
-- **141** tests passing
-- **0** external dependencies (Dispatcher)
-- **1** person needed
+[zzhiyuann.github.io/cortex](https://zzhiyuann.github.io/cortex/) — full interactive docs and architecture overview.
 
 ## License
 
-MIT — see individual component repos for details.
-
----
-
-*Built by one person and their AI agents. Naturally.*
+MIT
