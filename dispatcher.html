@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dispatcher — Command Layer of Cortex</title>
+<style>
+  :root {
+    --bg: #0B0F19;
+    --bg-surface: #131825;
+    --bg-card: #1A1F2E;
+    --bg-card-hover: #222840;
+    --border: #2A3050;
+    --text: #E2E8F0;
+    --text-muted: #8892B0;
+    --text-dim: #5A6380;
+    --accent-blue: #60A5FA;
+    --accent-purple: #A78BFA;
+    --accent-green: #34D399;
+    --accent-amber: #FBBF24;
+    --accent-rose: #FB7185;
+    --gradient-1: linear-gradient(135deg, #60A5FA, #A78BFA);
+    --gradient-2: linear-gradient(135deg, #34D399, #60A5FA);
+    --gradient-3: linear-gradient(135deg, #FBBF24, #FB7185);
+    --gradient-4: linear-gradient(135deg, #A78BFA, #FB7185);
+    --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    --max-w: 1200px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---- NAV ---- */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(11, 15, 25, 0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    transition: box-shadow 0.3s;
+  }
+  nav.scrolled { box-shadow: 0 4px 30px rgba(0,0,0,0.4); }
+  .nav-inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .nav-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .nav-brand {
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: var(--text-muted);
+    transition: color 0.2s;
+  }
+  .nav-brand:hover { color: var(--text); }
+  .nav-brand .logo-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--gradient-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--bg);
+  }
+  .nav-sep {
+    color: var(--text-dim);
+    font-size: 1.25rem;
+    font-weight: 300;
+    user-select: none;
+  }
+  .nav-project {
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+  }
+  .nav-project .project-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--gradient-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--bg);
+  }
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+    align-items: center;
+  }
+  .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta {
+    background: var(--gradient-2) !important;
+    color: var(--bg) !important;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    font-weight: 600 !important;
+  }
+
+  /* ---- HERO ---- */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 6rem 2rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(52,211,153,0.1) 0%, rgba(96,165,250,0.04) 40%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -20%;
+    right: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(96,165,250,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    background: var(--bg-surface);
+  }
+  .hero-badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .hero h1 {
+    font-size: clamp(3rem, 7vw, 5.5rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 .gradient-text {
+    background: var(--gradient-2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero .subtitle {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    max-width: 640px;
+    margin: 0 auto 3rem;
+    line-height: 1.6;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: none;
+    font-family: var(--font-sans);
+  }
+  .btn-primary {
+    background: var(--gradient-2);
+    color: var(--bg);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(52,211,153,0.25); }
+  .btn-secondary {
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--bg-card-hover); border-color: var(--text-dim); }
+
+  /* ---- TERMINAL PREVIEW ---- */
+  .terminal-preview {
+    max-width: 720px;
+    width: 100%;
+    margin: 4rem auto 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    text-align: left;
+  }
+  .terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+  }
+  .terminal-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .terminal-dot.red { background: #FF5F57; }
+  .terminal-dot.yellow { background: #FEBC2E; }
+  .terminal-dot.green { background: #28C840; }
+  .terminal-title {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .terminal-body {
+    padding: 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    color: var(--text-muted);
+    overflow-x: auto;
+  }
+  .terminal-body .prompt { color: var(--accent-green); }
+  .terminal-body .cmd { color: var(--text); }
+  .terminal-body .comment { color: var(--text-dim); }
+  .terminal-body .output { color: var(--accent-green); }
+  .terminal-body .blue { color: var(--accent-blue); }
+  .terminal-body .accent { color: var(--accent-amber); }
+  .terminal-body .dim { color: var(--text-dim); }
+
+  /* ---- SECTIONS ---- */
+  section {
+    padding: 6rem 2rem;
+    max-width: var(--max-w);
+    margin: 0 auto;
+  }
+  .section-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent-green);
+    margin-bottom: 0.75rem;
+  }
+  .section-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 1rem;
+  }
+  .section-desc {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 640px;
+    margin-bottom: 3rem;
+    line-height: 1.6;
+  }
+
+  /* ---- ARCHITECTURE DIAGRAM ---- */
+  .arch-visual {
+    position: relative;
+    padding: 3rem 2rem 4rem;
+    margin-bottom: 2rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .arch-visual::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(52,211,153,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(52,211,153,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .arch-flow {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    z-index: 1;
+  }
+
+  .arch-node {
+    position: relative;
+    border-radius: 12px;
+    padding: 2px;
+    max-width: 420px;
+    width: 100%;
+  }
+  .arch-node-inner {
+    background: var(--bg-card);
+    border-radius: 10px;
+    padding: 1.25rem 1.75rem;
+    text-align: center;
+  }
+  .arch-node .node-title {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.15rem;
+  }
+  .arch-node .node-role {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.6rem;
+  }
+  .arch-node .node-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .arch-node .node-desc .sep {
+    color: var(--text-dim);
+    margin: 0 0.15rem;
+  }
+
+  .node-phone {
+    background: linear-gradient(135deg, rgba(96,165,250,0.5), rgba(167,139,250,0.5));
+    max-width: 280px;
+  }
+  .node-phone .node-title { color: var(--text); }
+
+  .node-telegram {
+    background: linear-gradient(135deg, #60A5FA, #3B82F6);
+    max-width: 320px;
+  }
+  .node-telegram .node-title { color: var(--accent-blue); }
+  .node-telegram .node-role { color: var(--accent-blue); }
+
+  .node-dispatcher-main {
+    background: var(--gradient-2);
+    max-width: 500px;
+  }
+  .node-dispatcher-main .node-title { color: var(--accent-green); }
+  .node-dispatcher-main .node-role { color: var(--accent-green); }
+  .node-dispatcher-main .arch-node-inner {
+    padding: 1.5rem 2rem;
+  }
+
+  .node-agent {
+    background: linear-gradient(135deg, #A78BFA, #FB7185);
+    max-width: 360px;
+  }
+  .node-agent .node-title { color: var(--accent-purple); }
+  .node-agent .node-role { color: var(--accent-purple); }
+
+  .node-codebase {
+    background: linear-gradient(135deg, #FBBF24, #FB7185);
+    max-width: 320px;
+  }
+  .node-codebase .node-title { color: var(--accent-amber); }
+  .node-codebase .node-role { color: var(--accent-amber); }
+
+  .node-result {
+    background: linear-gradient(135deg, rgba(52,211,153,0.5), rgba(96,165,250,0.5));
+    max-width: 280px;
+  }
+  .node-result .node-title { color: var(--accent-green); }
+
+  .node-pills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+  }
+  .node-pill {
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.04);
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  .arch-connector {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+  .conn-vert {
+    width: 2px;
+    height: 40px;
+    background: linear-gradient(to bottom, rgba(52,211,153,0.4), rgba(96,165,250,0.4));
+  }
+  .conn-vert-short {
+    width: 2px;
+    height: 24px;
+    background: linear-gradient(to bottom, rgba(52,211,153,0.3), rgba(96,165,250,0.3));
+  }
+  .conn-label {
+    text-align: center;
+    padding: 0.4rem 0;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+  }
+
+  /* Return arrow on left side */
+  .arch-return-arrow {
+    position: absolute;
+    left: 2rem;
+    top: 25%;
+    bottom: 25%;
+    width: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .return-line {
+    width: 2px;
+    flex: 1;
+    background: linear-gradient(to top, rgba(52,211,153,0.3), rgba(96,165,250,0.1), rgba(52,211,153,0.3));
+  }
+  .return-label {
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    color: var(--accent-green);
+    opacity: 0.6;
+    letter-spacing: 0.15em;
+    font-weight: 600;
+    padding: 0.5rem 0;
+  }
+
+  /* Dispatcher internal modules row */
+  .dispatcher-modules {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+  }
+  .d-module {
+    font-size: 0.6rem;
+    font-family: var(--font-mono);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(52,211,153,0.08);
+    color: var(--accent-green);
+    font-weight: 600;
+    border: 1px solid rgba(52,211,153,0.15);
+  }
+
+  /* ---- FEATURE CARDS ---- */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+  .feature-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .feature-card:hover {
+    border-color: var(--text-dim);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient-2);
+  }
+  .feature-card.alt::before {
+    background: linear-gradient(135deg, #60A5FA, #34D399);
+  }
+
+  .feature-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    margin-bottom: 1.25rem;
+    background: rgba(52,211,153,0.12);
+    color: var(--accent-green);
+    font-weight: 800;
+    font-family: var(--font-mono);
+  }
+  .feature-card.alt .feature-icon {
+    background: rgba(96,165,250,0.12);
+    color: var(--accent-blue);
+  }
+
+  .feature-card h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.01em;
+  }
+  .feature-card p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  .feature-card code {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    background: var(--bg-surface);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    color: var(--accent-green);
+  }
+
+  /* ---- FIRE AND REFINE ---- */
+  .fire-refine-visual {
+    display: flex;
+    gap: 2rem;
+    margin-top: 2rem;
+    align-items: stretch;
+  }
+  .phase-card {
+    flex: 1;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .phase-card:hover {
+    border-color: var(--text-dim);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+  }
+  .phase-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .phase-number {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    font-family: var(--font-mono);
+  }
+  .phase-1 .phase-number {
+    background: rgba(251,191,36,0.15);
+    color: var(--accent-amber);
+  }
+  .phase-2 .phase-number {
+    background: rgba(52,211,153,0.15);
+    color: var(--accent-green);
+  }
+  .phase-header h4 {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .phase-header .phase-tag {
+    margin-left: auto;
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+  }
+  .phase-1 .phase-tag {
+    background: rgba(251,191,36,0.1);
+    color: var(--accent-amber);
+  }
+  .phase-2 .phase-tag {
+    background: rgba(52,211,153,0.1);
+    color: var(--accent-green);
+  }
+  .phase-body {
+    padding: 1.5rem;
+  }
+  .phase-body .phase-step {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    align-items: flex-start;
+  }
+  .phase-body .phase-step:last-child { margin-bottom: 0; }
+  .phase-step-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 0.45rem;
+    flex-shrink: 0;
+  }
+  .phase-1 .phase-step-dot { background: var(--accent-amber); }
+  .phase-2 .phase-step-dot { background: var(--accent-green); }
+  .phase-step p {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .phase-step p strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .phase-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--text-dim);
+    flex-shrink: 0;
+    align-self: center;
+  }
+
+  .fire-refine-note {
+    text-align: center;
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .fire-refine-note p {
+    font-size: 0.925rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .fire-refine-note p strong {
+    color: var(--accent-green);
+    font-weight: 700;
+  }
+
+  /* ---- CONFIG SECTION ---- */
+  .config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  .config-block {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .config-block.full-width {
+    grid-column: 1 / -1;
+  }
+  .config-header {
+    padding: 0.75rem 1.25rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .config-header .config-type {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 3px;
+    background: rgba(52,211,153,0.1);
+    color: var(--accent-green);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .config-body {
+    padding: 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.85;
+    color: var(--text-muted);
+    overflow-x: auto;
+  }
+  .config-body .key { color: var(--accent-green); }
+  .config-body .str { color: var(--accent-amber); }
+  .config-body .num { color: var(--accent-purple); }
+  .config-body .cmt { color: var(--text-dim); }
+  .config-body .bool { color: var(--accent-blue); }
+  .config-body .var { color: var(--accent-blue); }
+  .config-body .val { color: var(--accent-amber); }
+
+  /* ---- CLI REFERENCE ---- */
+  .cli-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1rem;
+  }
+  .cli-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+  }
+  .cli-card:hover {
+    border-color: var(--text-dim);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .cli-command {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--accent-green);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .cli-command .cli-prefix {
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+  .cli-command .cli-flag {
+    color: var(--text-dim);
+    font-weight: 400;
+    font-size: 0.8rem;
+  }
+  .cli-desc {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ---- MODULE REFERENCE ---- */
+  .module-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1.5rem;
+  }
+  .module-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.75rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .module-card:hover {
+    border-color: var(--text-dim);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  }
+  .module-path {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent-green);
+    margin-bottom: 0.75rem;
+    display: inline-block;
+    background: rgba(52,211,153,0.08);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    border: 1px solid rgba(52,211,153,0.15);
+  }
+  .module-card h4 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .module-card p {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.55;
+    margin-bottom: 0.75rem;
+  }
+  .module-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+  .module-feat {
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    padding: 0.15rem 0.45rem;
+    border-radius: 3px;
+    background: var(--bg-surface);
+    color: var(--text-dim);
+    font-weight: 500;
+    border: 1px solid var(--border);
+  }
+
+  /* ---- QUICKSTART ---- */
+  .quickstart-block {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .qs-header {
+    padding: 0.75rem 1.25rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .qs-body {
+    padding: 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    color: var(--text-muted);
+    overflow-x: auto;
+  }
+  .qs-body .g { color: var(--accent-green); }
+  .qs-body .b { color: var(--accent-blue); }
+  .qs-body .a { color: var(--accent-amber); }
+  .qs-body .p { color: var(--accent-purple); }
+  .qs-body .c { color: var(--text-dim); }
+  .qs-body .w { color: var(--text); }
+
+  /* ---- STATS ---- */
+  .stats-bar {
+    display: flex;
+    justify-content: center;
+    gap: 4rem;
+    flex-wrap: wrap;
+    padding: 3rem 2rem;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin: 2rem 0;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    background: var(--gradient-2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    margin-top: 0.25rem;
+  }
+
+  /* ---- FOOTER ---- */
+  footer {
+    padding: 4rem 2rem;
+    text-align: center;
+    border-top: 1px solid var(--border);
+  }
+  footer .footer-inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+  }
+  footer .footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+  footer .footer-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: color 0.2s;
+  }
+  footer .footer-links a:hover { color: var(--text); }
+  footer .footer-note {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 1.8;
+  }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 768px) {
+    .nav-links { display: none; }
+    .hero { padding: 5rem 1.5rem 3rem; }
+    .hero h1 { font-size: 2.5rem; }
+    section { padding: 4rem 1.5rem; }
+    .features-grid { grid-template-columns: 1fr; }
+    .config-grid { grid-template-columns: 1fr; }
+    .fire-refine-visual { flex-direction: column; }
+    .phase-arrow { transform: rotate(90deg); }
+    .stats-bar { gap: 2rem; }
+    .terminal-body { font-size: 0.75rem; }
+    .arch-return-arrow { display: none; }
+    .cli-grid { grid-template-columns: 1fr; }
+    .module-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---- ANIMATIONS ---- */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Stagger children */
+  .stagger-in > * {
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .stagger-in.visible > *:nth-child(1) { transition-delay: 0.05s; opacity: 1; transform: translateY(0); }
+  .stagger-in.visible > *:nth-child(2) { transition-delay: 0.1s; opacity: 1; transform: translateY(0); }
+  .stagger-in.visible > *:nth-child(3) { transition-delay: 0.15s; opacity: 1; transform: translateY(0); }
+  .stagger-in.visible > *:nth-child(4) { transition-delay: 0.2s; opacity: 1; transform: translateY(0); }
+  .stagger-in.visible > *:nth-child(5) { transition-delay: 0.25s; opacity: 1; transform: translateY(0); }
+  .stagger-in.visible > *:nth-child(6) { transition-delay: 0.3s; opacity: 1; transform: translateY(0); }
+  .stagger-in.visible > *:nth-child(7) { transition-delay: 0.35s; opacity: 1; transform: translateY(0); }
+  .stagger-in.visible > *:nth-child(8) { transition-delay: 0.4s; opacity: 1; transform: translateY(0); }
+
+  /* Typing animation for terminal */
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 16px;
+    background: var(--accent-green);
+    animation: blink 1s infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+
+  /* ---- TECH SPECS BAR ---- */
+  .tech-specs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+  }
+  .tech-spec {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+  .tech-spec .spec-label {
+    font-weight: 700;
+    color: var(--accent-green);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-inner">
+    <div class="nav-left">
+      <a href="index.html" class="nav-brand">
+        <div class="logo-icon">Cx</div>
+        Cortex
+      </a>
+      <span class="nav-sep">/</span>
+      <a href="#" class="nav-project">
+        <div class="project-icon">D</div>
+        Dispatcher
+      </a>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#fire-refine">Algorithm</a></li>
+      <li><a href="#config">Config</a></li>
+      <li><a href="#cli">CLI</a></li>
+      <li><a href="#modules">Modules</a></li>
+      <li><a href="#quickstart">Quick Start</a></li>
+      <li><a href="https://github.com/zzhiyuann/dispatcher" class="nav-cta">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="dot"></span>
+    Command Layer &middot; Always-On Daemon
+  </div>
+  <h1>
+    Your Mobile<br>
+    <span class="gradient-text">JARVIS.</span>
+  </h1>
+  <p class="subtitle">
+    Dispatcher is the command layer of Cortex. Send a Telegram message from your phone,
+    and it classifies, routes, and executes tasks through CLI-based AI agents &mdash; Claude Code,
+    Aider, or any agent that speaks stdin/stdout.
+  </p>
+  <div class="hero-actions">
+    <a href="#quickstart" class="btn btn-primary">Get Started</a>
+    <a href="https://github.com/zzhiyuann/dispatcher" class="btn btn-secondary">View on GitHub</a>
+  </div>
+
+  <!-- Terminal Preview -->
+  <div class="terminal-preview">
+    <div class="terminal-bar">
+      <div class="terminal-dot red"></div>
+      <div class="terminal-dot yellow"></div>
+      <div class="terminal-dot green"></div>
+      <span class="terminal-title">dispatcher &mdash; daemon</span>
+    </div>
+    <div class="terminal-body">
+      <span class="comment"># You're on the subway. You have an idea.</span><br>
+      <span class="prompt">telegram&gt;</span> <span class="cmd">refactor the auth module, add proper error handling</span><br>
+      <br>
+      <span class="output">[dispatcher] Classified: task | Project: myapp</span><br>
+      <span class="output">[dispatcher] Phase 1: quick response in 1 turn...</span><br>
+      <span class="blue">[telegram]</span> <span class="dim">"On it (myapp). Spawning session."</span><br>
+      <br>
+      <span class="output">[dispatcher] Phase 2: full execution (50 turns max)...</span><br>
+      <span class="output">[runner] Agent session started (pid: 42891)</span><br>
+      <span class="dim">[progress] typing indicator... 4s interval</span><br>
+      <span class="dim">[progress] status update @ 3min</span><br>
+      <br>
+      <span class="output">[runner] Agent session complete (14 turns, 4m 22s)</span><br>
+      <span class="blue">[telegram]</span> <span class="accent">"Done. Refactored into 3 modules, 24 tests passing."</span><br>
+      <br>
+      <span class="comment"># 30 seconds later, you reply from your phone...</span><br>
+      <span class="prompt">telegram&gt;</span> <span class="cmd">also add rate limiting</span><br>
+      <span class="output">[session] Smart follow-up detected (24 chars, within 5min window)</span><br>
+      <span class="output">[session] Linking to session #42891, same project context</span><br>
+      <span class="output">[dispatcher] Phase 1: quick response...</span><span class="cursor"></span>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar fade-in">
+  <div class="stat">
+    <div class="stat-value">0</div>
+    <div class="stat-label">External Deps (Telegram)</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">3</div>
+    <div class="stat-label">Concurrent Sessions</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">2</div>
+    <div class="stat-label">Phase Algorithm</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">24/7</div>
+    <div class="stat-label">Always-On Daemon</div>
+  </div>
+</div>
+
+<!-- ARCHITECTURE -->
+<section id="architecture" class="fade-in">
+  <div class="section-label">Architecture</div>
+  <h2 class="section-title">Phone to codebase. One message.</h2>
+  <p class="section-desc">
+    Dispatcher bridges the gap between your phone and your AI coding agents.
+    Messages flow down, results flow back &mdash; with intelligent routing at every step.
+  </p>
+
+  <div class="arch-visual">
+    <!-- Return arrow -->
+    <div class="arch-return-arrow">
+      <div class="return-line"></div>
+      <div class="return-label">RESULT</div>
+      <div class="return-line"></div>
+    </div>
+
+    <div class="arch-flow">
+      <!-- YOU (Phone) -->
+      <div class="arch-node node-phone">
+        <div class="arch-node-inner">
+          <div class="node-title">YOU</div>
+          <div class="node-desc">Phone <span class="sep">/</span> Anywhere</div>
+        </div>
+      </div>
+
+      <div class="arch-connector"><div class="conn-vert"></div></div>
+      <div class="conn-label">Telegram Bot API</div>
+      <div class="arch-connector"><div class="conn-vert-short"></div></div>
+
+      <!-- TELEGRAM -->
+      <div class="arch-node node-telegram">
+        <div class="arch-node-inner">
+          <div class="node-title">TELEGRAM</div>
+          <div class="node-role">Transport Layer</div>
+          <div class="node-desc">Long polling <span class="sep">&middot;</span> Zero deps (urllib) <span class="sep">&middot;</span> Auto-reconnect</div>
+        </div>
+      </div>
+
+      <div class="arch-connector"><div class="conn-vert"></div></div>
+      <div class="conn-label">Classify &rarr; Route &rarr; Execute</div>
+      <div class="arch-connector"><div class="conn-vert-short"></div></div>
+
+      <!-- DISPATCHER (main) -->
+      <div class="arch-node node-dispatcher-main">
+        <div class="arch-node-inner">
+          <div class="node-title">DISPATCHER</div>
+          <div class="node-role">Command Layer</div>
+          <div class="node-desc">Message classification <span class="sep">&middot;</span> Project routing <span class="sep">&middot;</span> Fire-and-Refine <span class="sep">&middot;</span> Session management</div>
+          <div class="dispatcher-modules">
+            <span class="d-module">core.py</span>
+            <span class="d-module">config.py</span>
+            <span class="d-module">telegram.py</span>
+            <span class="d-module">runner.py</span>
+            <span class="d-module">session.py</span>
+            <span class="d-module">memory.py</span>
+            <span class="d-module">cli.py</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-connector"><div class="conn-vert"></div></div>
+      <div class="conn-label">Subprocess spawn <span class="sep">&middot;</span> stdin/stdout</div>
+      <div class="arch-connector"><div class="conn-vert-short"></div></div>
+
+      <!-- AI AGENT CLI -->
+      <div class="arch-node node-agent">
+        <div class="arch-node-inner">
+          <div class="node-title">AI AGENT CLI</div>
+          <div class="node-role">Execution Layer</div>
+          <div class="node-desc">Claude Code <span class="sep">&middot;</span> Aider <span class="sep">&middot;</span> Any CLI Agent</div>
+          <div class="node-pills">
+            <span class="node-pill">max_turns: 50</span>
+            <span class="node-pill">timeout: 1800s</span>
+            <span class="node-pill">--dangerously-skip-permissions</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-connector"><div class="conn-vert"></div></div>
+      <div class="conn-label">Read <span class="sep">&middot;</span> Write <span class="sep">&middot;</span> Execute <span class="sep">&middot;</span> Commit</div>
+      <div class="arch-connector"><div class="conn-vert-short"></div></div>
+
+      <!-- CODEBASE -->
+      <div class="arch-node node-codebase">
+        <div class="arch-node-inner">
+          <div class="node-title">YOUR CODEBASE</div>
+          <div class="node-role">Target</div>
+          <div class="node-desc">Project-aware routing via keyword matching</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tech-specs">
+    <div class="tech-spec">
+      <span class="spec-label">Python</span>
+      <span>>=3.10</span>
+    </div>
+    <div class="tech-spec">
+      <span class="spec-label">Deps</span>
+      <span>click>=8.0, pyyaml>=6.0</span>
+    </div>
+    <div class="tech-spec">
+      <span class="spec-label">Telegram</span>
+      <span>Zero deps (stdlib urllib)</span>
+    </div>
+    <div class="tech-spec">
+      <span class="spec-label">Async</span>
+      <span>asyncio event loop</span>
+    </div>
+    <div class="tech-spec">
+      <span class="spec-label">Signals</span>
+      <span>SIGTERM / SIGINT graceful shutdown</span>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="fade-in">
+  <div class="section-label">Features</div>
+  <h2 class="section-title">Everything you need. Nothing you don't.</h2>
+  <p class="section-desc">
+    Dispatcher is designed to be invisible &mdash; it just works. Send a message,
+    get a result. The intelligence is in the details.
+  </p>
+
+  <div class="features-grid stagger-in">
+    <!-- Smart Message Classification -->
+    <div class="feature-card">
+      <div class="feature-icon">?!</div>
+      <h3>Smart Message Classification</h3>
+      <p>
+        Every incoming message is classified as <code>task</code>, <code>status</code>,
+        or <code>cancel</code>. Status keywords like "status" check running sessions.
+        Cancel keywords like "stop" or "cancel" terminate them. Everything else is a task.
+      </p>
+    </div>
+
+    <!-- Project-Aware Routing -->
+    <div class="feature-card alt">
+      <div class="feature-icon">&#8644;</div>
+      <h3>Project-Aware Routing</h3>
+      <p>
+        Configure keyword-to-project mappings in YAML. Say "fix the webapp login" and
+        Dispatcher detects "webapp", sets the working directory to <code>~/projects/webapp</code>,
+        and spawns the agent there. No manual context switching.
+      </p>
+    </div>
+
+    <!-- Fire-and-Refine -->
+    <div class="feature-card">
+      <div class="feature-icon">&#9889;</div>
+      <h3>Fire-and-Refine Algorithm</h3>
+      <p>
+        Phase 1: instant 1-turn response ("On it. Detected project X."). Phase 2: full
+        multi-turn execution with up to 50 turns. You get immediate feedback while the
+        real work happens in the background.
+      </p>
+    </div>
+
+    <!-- Smart Follow-Up -->
+    <div class="feature-card alt">
+      <div class="feature-icon">&#8617;</div>
+      <h3>Smart Follow-Up Detection</h3>
+      <p>
+        Short replies under 30 characters sent within 5 minutes are automatically linked to the
+        most recent session. "also add tests" becomes a continuation, not a new task.
+        Configurable threshold and time window.
+      </p>
+    </div>
+
+    <!-- Concurrent Sessions -->
+    <div class="feature-card">
+      <div class="feature-icon">x3</div>
+      <h3>Concurrent Sessions</h3>
+      <p>
+        Run up to 3 parallel agent sessions simultaneously. "Refactor the API" and
+        "update the docs" can execute in parallel on different projects. Each session
+        is tracked independently with its own process ID.
+      </p>
+    </div>
+
+    <!-- Reply Threading -->
+    <div class="feature-card alt">
+      <div class="feature-icon">&#8629;</div>
+      <h3>Reply Threading</h3>
+      <p>
+        Bot responses are threaded back to your original message in Telegram. When you
+        have 3 concurrent tasks, you always know which result belongs to which request.
+        Clean, organized conversation history.
+      </p>
+    </div>
+
+    <!-- Progress Updates -->
+    <div class="feature-card">
+      <div class="feature-icon">...</div>
+      <h3>Progress Updates</h3>
+      <p>
+        Typing indicators every 4 seconds so you know the agent is alive. Status updates
+        every 3 minutes for long-running tasks. Never left wondering "is it still working?"
+        All intervals are configurable.
+      </p>
+    </div>
+
+    <!-- macOS LaunchAgent -->
+    <div class="feature-card alt">
+      <div class="feature-icon">&#8984;</div>
+      <h3>macOS LaunchAgent</h3>
+      <p>
+        One command to install as an always-on daemon: <code>dispatcher install</code>.
+        Starts on boot, auto-restarts on crash, runs in the background.
+        <code>dispatcher uninstall</code> to remove. Also supports foreground mode for debugging.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- FIRE AND REFINE -->
+<section id="fire-refine" class="fade-in">
+  <div class="section-label">Algorithm</div>
+  <h2 class="section-title">Fire-and-Refine</h2>
+  <p class="section-desc">
+    The core execution algorithm. Designed to give you instant feedback
+    while the real work happens asynchronously.
+  </p>
+
+  <div class="fire-refine-visual">
+    <!-- Phase 1 -->
+    <div class="phase-card phase-1">
+      <div class="phase-header">
+        <div class="phase-number">1</div>
+        <h4>Fire</h4>
+        <span class="phase-tag">~2 seconds</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-step">
+          <div class="phase-step-dot"></div>
+          <p><strong>Classify message</strong> &mdash; task, status, or cancel</p>
+        </div>
+        <div class="phase-step">
+          <div class="phase-step-dot"></div>
+          <p><strong>Detect project</strong> &mdash; keyword matching against configured projects</p>
+        </div>
+        <div class="phase-step">
+          <div class="phase-step-dot"></div>
+          <p><strong>Quick response</strong> &mdash; 1-turn agent call for instant acknowledgment</p>
+        </div>
+        <div class="phase-step">
+          <div class="phase-step-dot"></div>
+          <p><strong>Send to Telegram</strong> &mdash; "On it (myapp). Spawning full session."</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow -->
+    <div class="phase-arrow">&rarr;</div>
+
+    <!-- Phase 2 -->
+    <div class="phase-card phase-2">
+      <div class="phase-header">
+        <div class="phase-number">2</div>
+        <h4>Refine</h4>
+        <span class="phase-tag">Up to 30 min</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-step">
+          <div class="phase-step-dot"></div>
+          <p><strong>Spawn agent process</strong> &mdash; full CLI session with project context</p>
+        </div>
+        <div class="phase-step">
+          <div class="phase-step-dot"></div>
+          <p><strong>Multi-turn execution</strong> &mdash; up to 50 turns of autonomous work</p>
+        </div>
+        <div class="phase-step">
+          <div class="phase-step-dot"></div>
+          <p><strong>Progress updates</strong> &mdash; typing indicators (4s) + status (3min)</p>
+        </div>
+        <div class="phase-step">
+          <div class="phase-step-dot"></div>
+          <p><strong>Deliver result</strong> &mdash; threaded reply with full summary to Telegram</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fire-refine-note">
+    <p>
+      <strong>Why two phases?</strong> Because waiting 5 minutes for "I heard you" is painful.
+      Phase 1 confirms receipt in seconds. Phase 2 does the real work. You can keep walking,
+      keep meeting, keep living &mdash; the result arrives when it's ready.
+    </p>
+  </div>
+</section>
+
+<!-- CONFIGURATION -->
+<section id="config" class="fade-in">
+  <div class="section-label">Configuration</div>
+  <h2 class="section-title">YAML config. Environment overrides.</h2>
+  <p class="section-desc">
+    Everything is configured through a single YAML file. Every value can be overridden
+    with environment variables for deployment flexibility.
+  </p>
+
+  <div class="config-grid">
+    <!-- YAML Config -->
+    <div class="config-block full-width">
+      <div class="config-header">
+        <span>~/.config/dispatcher/config.yaml</span>
+        <span class="config-type">YAML</span>
+      </div>
+      <div class="config-body">
+        <span class="cmt"># Telegram connection</span><br>
+        <span class="key">telegram</span>:<br>
+        &nbsp;&nbsp;<span class="key">bot_token</span>: <span class="str">"YOUR_BOT_TOKEN"</span><br>
+        &nbsp;&nbsp;<span class="key">chat_id</span>: <span class="num">123456789</span><br>
+        <br>
+        <span class="cmt"># Agent configuration</span><br>
+        <span class="key">agent</span>:<br>
+        &nbsp;&nbsp;<span class="key">command</span>: <span class="str">"claude"</span><br>
+        &nbsp;&nbsp;<span class="key">args</span>: [<span class="str">"-p"</span>, <span class="str">"--dangerously-skip-permissions"</span>]<br>
+        &nbsp;&nbsp;<span class="key">max_concurrent</span>: <span class="num">3</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># parallel sessions</span><br>
+        &nbsp;&nbsp;<span class="key">timeout</span>: <span class="num">1800</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># 30 min max per session</span><br>
+        &nbsp;&nbsp;<span class="key">max_turns</span>: <span class="num">50</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># max agent turns</span><br>
+        <br>
+        <span class="cmt"># Behavior tuning</span><br>
+        <span class="key">behavior</span>:<br>
+        &nbsp;&nbsp;<span class="key">poll_timeout</span>: <span class="num">30</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># Telegram long-poll seconds</span><br>
+        &nbsp;&nbsp;<span class="key">progress_interval</span>: <span class="num">180</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># status update every 3min</span><br>
+        &nbsp;&nbsp;<span class="key">recent_window</span>: <span class="num">300</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># 5min follow-up window</span><br>
+        &nbsp;&nbsp;<span class="key">cancel_keywords</span>: [<span class="str">cancel</span>, <span class="str">stop</span>]<br>
+        &nbsp;&nbsp;<span class="key">status_keywords</span>: [<span class="str">status</span>]<br>
+        <br>
+        <span class="cmt"># Project routing (keyword &rarr; directory)</span><br>
+        <span class="key">projects</span>:<br>
+        &nbsp;&nbsp;<span class="key">webapp</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">path</span>: <span class="str">~/projects/webapp</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">keywords</span>: [<span class="str">web</span>, <span class="str">frontend</span>, <span class="str">webapp</span>]<br>
+        &nbsp;&nbsp;<span class="key">api</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">path</span>: <span class="str">~/projects/api-server</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">keywords</span>: [<span class="str">api</span>, <span class="str">backend</span>, <span class="str">server</span>]<br>
+        &nbsp;&nbsp;<span class="key">ml</span>:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">path</span>: <span class="str">~/research/ml-pipeline</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">keywords</span>: [<span class="str">ml</span>, <span class="str">model</span>, <span class="str">training</span>, <span class="str">data</span>]<br>
+      </div>
+    </div>
+
+    <!-- Environment Variables -->
+    <div class="config-block full-width">
+      <div class="config-header">
+        <span>Environment Variable Overrides</span>
+        <span class="config-type">ENV</span>
+      </div>
+      <div class="config-body">
+        <span class="cmt"># Every config value can be overridden via env vars</span><br>
+        <br>
+        <span class="var">DISPATCHER_BOT_TOKEN</span>=<span class="val">"your-token"</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># telegram.bot_token</span><br>
+        <span class="var">DISPATCHER_CHAT_ID</span>=<span class="val">123456789</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># telegram.chat_id</span><br>
+        <span class="var">DISPATCHER_AGENT_COMMAND</span>=<span class="val">"claude"</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># agent.command</span><br>
+        <span class="var">DISPATCHER_MAX_CONCURRENT</span>=<span class="val">3</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># agent.max_concurrent</span><br>
+        <span class="var">DISPATCHER_TIMEOUT</span>=<span class="val">1800</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt"># agent.timeout</span><br>
+        <span class="var">DISPATCHER_DATA_DIR</span>=<span class="val">"~/.dispatcher"</span> <span class="cmt"># data directory</span><br>
+        <br>
+        <span class="cmt"># Env vars take precedence over YAML config</span><br>
+        <span class="cmt"># Useful for Docker, CI/CD, or secrets management</span><br>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CLI REFERENCE -->
+<section id="cli" class="fade-in">
+  <div class="section-label">CLI Reference</div>
+  <h2 class="section-title">Six commands. That's it.</h2>
+  <p class="section-desc">
+    Dispatcher ships with a minimal, opinionated CLI built on Click.
+    Each command does one thing well.
+  </p>
+
+  <div class="cli-grid stagger-in">
+    <div class="cli-card">
+      <div class="cli-command">
+        <span class="cli-prefix">$</span> dispatcher init
+      </div>
+      <div class="cli-desc">
+        Interactive setup wizard. Walks you through Telegram bot token, chat ID,
+        project directories, and agent configuration. Generates <code>config.yaml</code>.
+        Run once, forget forever.
+      </div>
+    </div>
+
+    <div class="cli-card">
+      <div class="cli-command">
+        <span class="cli-prefix">$</span> dispatcher start
+      </div>
+      <div class="cli-desc">
+        Start the daemon in foreground mode. Begins polling Telegram for messages
+        immediately. Useful for development and debugging. Ctrl+C for graceful shutdown.
+      </div>
+    </div>
+
+    <div class="cli-card">
+      <div class="cli-command">
+        <span class="cli-prefix">$</span> dispatcher install
+      </div>
+      <div class="cli-desc">
+        Install as a macOS LaunchAgent. Starts on login, auto-restarts on crash,
+        runs silently in the background. The "set and forget" option for daily use.
+      </div>
+    </div>
+
+    <div class="cli-card">
+      <div class="cli-command">
+        <span class="cli-prefix">$</span> dispatcher uninstall
+      </div>
+      <div class="cli-desc">
+        Remove the LaunchAgent cleanly. Stops the running daemon, removes the plist
+        file, and unloads from launchd. Clean, reversible, no leftover artifacts.
+      </div>
+    </div>
+
+    <div class="cli-card">
+      <div class="cli-command">
+        <span class="cli-prefix">$</span> dispatcher status
+      </div>
+      <div class="cli-desc">
+        Check if the daemon is running, how many active sessions exist, uptime,
+        and last message processed. Quick health check from the terminal.
+      </div>
+    </div>
+
+    <div class="cli-card">
+      <div class="cli-command">
+        <span class="cli-prefix">$</span> dispatcher logs
+        <span class="cli-flag">[-n 50] [-f]</span>
+      </div>
+      <div class="cli-desc">
+        View daemon logs. <code>-n N</code> for last N lines, <code>-f</code> for live follow mode
+        (like <code>tail -f</code>). Streams structured logs with timestamps, levels, and context.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MODULE REFERENCE -->
+<section id="modules" class="fade-in">
+  <div class="section-label">Module Reference</div>
+  <h2 class="section-title">Seven modules. Clean boundaries.</h2>
+  <p class="section-desc">
+    Each module has a single responsibility. The dependency graph is acyclic.
+    Easy to understand, easy to extend, easy to test.
+  </p>
+
+  <div class="module-grid stagger-in">
+    <!-- core.py -->
+    <div class="module-card">
+      <div class="module-path">dispatcher/core.py</div>
+      <h4>Core</h4>
+      <p>
+        The brain. Main asyncio event loop, message classification (task/status/cancel),
+        project routing via keyword matching, and the Fire-and-Refine orchestration.
+        Entry point for all message processing.
+      </p>
+      <div class="module-features">
+        <span class="module-feat">event loop</span>
+        <span class="module-feat">message classifier</span>
+        <span class="module-feat">project router</span>
+        <span class="module-feat">fire-and-refine</span>
+      </div>
+    </div>
+
+    <!-- config.py -->
+    <div class="module-card">
+      <div class="module-path">dispatcher/config.py</div>
+      <h4>Config</h4>
+      <p>
+        YAML configuration loader with environment variable overrides. Handles default
+        values, path expansion, and validation. All configuration flows through this module.
+      </p>
+      <div class="module-features">
+        <span class="module-feat">YAML parser</span>
+        <span class="module-feat">env overrides</span>
+        <span class="module-feat">defaults</span>
+        <span class="module-feat">validation</span>
+      </div>
+    </div>
+
+    <!-- telegram.py -->
+    <div class="module-card">
+      <div class="module-path">dispatcher/telegram.py</div>
+      <h4>Telegram</h4>
+      <p>
+        Telegram Bot API client built on stdlib <code>urllib</code> only. Zero external
+        dependencies. Long polling, message sending, reply threading, typing indicators,
+        and auto-reconnect on network failures.
+      </p>
+      <div class="module-features">
+        <span class="module-feat">urllib only</span>
+        <span class="module-feat">long polling</span>
+        <span class="module-feat">reply threading</span>
+        <span class="module-feat">typing indicators</span>
+        <span class="module-feat">auto-reconnect</span>
+      </div>
+    </div>
+
+    <!-- runner.py -->
+    <div class="module-card">
+      <div class="module-path">dispatcher/runner.py</div>
+      <h4>Runner</h4>
+      <p>
+        Agent subprocess manager. Spawns CLI processes (Claude Code, Aider, etc.),
+        captures stdout/stderr, enforces timeouts, and manages concurrent session limits.
+        Graceful termination on cancel.
+      </p>
+      <div class="module-features">
+        <span class="module-feat">subprocess spawn</span>
+        <span class="module-feat">stdout capture</span>
+        <span class="module-feat">timeout enforcement</span>
+        <span class="module-feat">concurrent limits</span>
+      </div>
+    </div>
+
+    <!-- session.py -->
+    <div class="module-card">
+      <div class="module-path">dispatcher/session.py</div>
+      <h4>Session</h4>
+      <p>
+        Session tracking and smart follow-up detection. Tracks active sessions by ID,
+        links short replies (&lt;30 chars) within a 5-minute window to the most recent session.
+        Manages session lifecycle: create, update, complete.
+      </p>
+      <div class="module-features">
+        <span class="module-feat">session tracking</span>
+        <span class="module-feat">follow-up detection</span>
+        <span class="module-feat">30-char threshold</span>
+        <span class="module-feat">5-min window</span>
+      </div>
+    </div>
+
+    <!-- memory.py -->
+    <div class="module-card">
+      <div class="module-path">dispatcher/memory.py</div>
+      <h4>Memory</h4>
+      <p>
+        Persistent user preferences stored as markdown. Remembers project preferences,
+        common patterns, and user-specific context across sessions. Loaded into agent
+        prompts for personalized execution.
+      </p>
+      <div class="module-features">
+        <span class="module-feat">markdown storage</span>
+        <span class="module-feat">user preferences</span>
+        <span class="module-feat">cross-session</span>
+        <span class="module-feat">prompt injection</span>
+      </div>
+    </div>
+
+    <!-- cli.py -->
+    <div class="module-card">
+      <div class="module-path">dispatcher/cli.py</div>
+      <h4>CLI</h4>
+      <p>
+        Click-based command-line interface. Six commands: init, start, install, uninstall,
+        status, logs. Handles LaunchAgent plist generation, log streaming, and interactive
+        setup wizard with validation.
+      </p>
+      <div class="module-features">
+        <span class="module-feat">click framework</span>
+        <span class="module-feat">setup wizard</span>
+        <span class="module-feat">LaunchAgent</span>
+        <span class="module-feat">log streaming</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUICKSTART -->
+<section id="quickstart" class="fade-in">
+  <div class="section-label">Quick Start</div>
+  <h2 class="section-title">Four steps. Five minutes.</h2>
+  <p class="section-desc">
+    From zero to "controlling Claude from your phone" in under 5 minutes.
+    All you need is a Telegram bot token.
+  </p>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>1 &mdash; Install</span>
+      <span>Python >=3.10</span>
+    </div>
+    <div class="qs-body">
+      <span class="c"># Install from PyPI</span><br>
+      <span class="w">pip install</span> <span class="g">dispatcher-agent</span><br>
+      <br>
+      <span class="c"># Or from source</span><br>
+      <span class="w">git clone</span> <span class="b">https://github.com/zzhiyuann/dispatcher.git</span><br>
+      <span class="w">cd</span> dispatcher && <span class="w">pip install</span> <span class="g">-e .</span><br>
+    </div>
+  </div>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>2 &mdash; Initialize</span>
+      <span>Interactive wizard</span>
+    </div>
+    <div class="qs-body">
+      <span class="w">dispatcher</span> <span class="a">init</span><br>
+      <br>
+      <span class="b">&gt;</span> Telegram bot token: <span class="p">7740709485:AAF35Lk...</span><br>
+      <span class="b">&gt;</span> Your chat ID: <span class="p">REDACTED_CHAT_ID</span><br>
+      <span class="b">&gt;</span> Agent command: <span class="p">claude</span><br>
+      <span class="b">&gt;</span> Max concurrent sessions: <span class="p">3</span><br>
+      <span class="b">&gt;</span> Add project? (name): <span class="p">webapp</span><br>
+      <span class="b">&gt;</span>&nbsp;&nbsp;Path: <span class="p">~/projects/webapp</span><br>
+      <span class="b">&gt;</span>&nbsp;&nbsp;Keywords: <span class="p">web, frontend, webapp</span><br>
+      <span class="b">&gt;</span> Add another project? <span class="p">n</span><br>
+      <br>
+      <span class="g">&#10003; Config saved to ~/.config/dispatcher/config.yaml</span><br>
+      <span class="g">&#10003; Ready to start.</span><br>
+    </div>
+  </div>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>3 &mdash; Start</span>
+      <span>Choose your mode</span>
+    </div>
+    <div class="qs-body">
+      <span class="c"># Foreground (for testing)</span><br>
+      <span class="w">dispatcher</span> <span class="a">start</span><br>
+      <span class="g">&#10003; Dispatcher running &mdash; listening for Telegram messages</span><br>
+      <span class="g">&#10003; Ctrl+C to stop</span><br>
+      <br>
+      <span class="c"># Or install as always-on daemon (recommended)</span><br>
+      <span class="w">dispatcher</span> <span class="a">install</span><br>
+      <span class="g">&#10003; LaunchAgent installed</span><br>
+      <span class="g">&#10003; Starts on login, auto-restarts on crash</span><br>
+      <span class="g">&#10003; Dispatcher is now always on</span><br>
+    </div>
+  </div>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>4 &mdash; Use</span>
+      <span>From your phone</span>
+    </div>
+    <div class="qs-body">
+      <span class="c"># Open Telegram on your phone and message your bot</span><br>
+      <br>
+      <span class="a">You:</span> <span class="w">refactor the auth module, add error handling</span><br>
+      <span class="g">Bot:</span> <span class="g">On it (webapp). Spawning full session.</span><br>
+      <br>
+      <span class="c"># ...minutes later...</span><br>
+      <span class="g">Bot:</span> <span class="a">Done. Refactored auth into 3 modules.</span><br>
+      <span class="g">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Added try/catch blocks, custom error classes,</span><br>
+      <span class="g">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;and 24 unit tests. All passing. Pushed to git.</span><br>
+      <br>
+      <span class="c"># Quick follow-up (auto-linked to same session)</span><br>
+      <span class="a">You:</span> <span class="w">also add rate limiting</span><br>
+      <span class="g">Bot:</span> <span class="g">Got it. Continuing session...</span><br>
+      <br>
+      <span class="c"># Check on running tasks</span><br>
+      <span class="a">You:</span> <span class="w">status</span><br>
+      <span class="g">Bot:</span> <span class="b">2 active sessions: webapp (4m), api (1m)</span><br>
+      <br>
+      <span class="c"># Cancel a task</span><br>
+      <span class="a">You:</span> <span class="w">cancel</span><br>
+      <span class="g">Bot:</span> <span class="p">Cancelled most recent session (webapp).</span><br>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-links">
+      <a href="index.html">Back to Cortex</a>
+      <a href="https://github.com/zzhiyuann/dispatcher">Dispatcher GitHub</a>
+      <a href="https://github.com/zzhiyuann/a2a-hub">A2A Hub</a>
+      <a href="https://github.com/zzhiyuann/forge">Forge</a>
+      <a href="https://github.com/zzhiyuann/vibe-replay">Vibe Replay</a>
+    </div>
+    <p class="footer-note">
+      Dispatcher is open source under the MIT License.<br>
+      Part of the Cortex personal agent infrastructure stack.<br><br>
+      <span style="color: var(--text-dim);">
+        Zero external dependencies for Telegram (stdlib urllib only).<br>
+        Python >=3.10 &middot; click>=8.0 &middot; pyyaml>=6.0
+      </span>
+    </p>
+  </div>
+</footer>
+
+<!-- JS -->
+<script>
+  // Nav scroll effect
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 20);
+  });
+
+  // IntersectionObserver for fade-in and stagger-in animations
+  const animObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.fade-in, .stagger-in').forEach(el => animObserver.observe(el));
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        const navHeight = 64;
+        const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - navHeight;
+        window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+      }
+    });
+  });
+
+  // Animate stats on scroll
+  const statsObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.querySelectorAll('.stat-value').forEach(el => {
+          const target = el.textContent;
+          if (target === '24/7') return; // Skip non-numeric
+          const num = parseInt(target);
+          if (isNaN(num)) return;
+          let current = 0;
+          const step = Math.max(1, Math.floor(num / 20));
+          const interval = setInterval(() => {
+            current += step;
+            if (current >= num) {
+              current = num;
+              clearInterval(interval);
+            }
+            el.textContent = current;
+          }, 40);
+        });
+        statsObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  document.querySelectorAll('.stats-bar').forEach(el => statsObserver.observe(el));
+
+  // Terminal typing effect for the cursor
+  // (cursor blink is handled by CSS animation)
+</script>
+
+</body>
+</html>
