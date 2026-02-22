@@ -1793,84 +1793,76 @@
 <!-- QUICKSTART -->
 <section id="quickstart" class="fade-in">
   <div class="section-label">Quick Start</div>
-  <h2 class="section-title">Up and running in minutes</h2>
+  <h2 class="section-title">One install. Everything works.</h2>
   <p class="section-desc">
-    Each component installs independently. Start with what you need.
+    Cortex is one package. Install it, run the setup, and all four systems are ready.
   </p>
 
   <div class="quickstart-block">
     <div class="qs-header">
-      <span>Dispatcher — Mobile JARVIS</span>
+      <span>1 &mdash; Install</span>
       <span>Python 3.11+</span>
     </div>
     <div class="qs-body">
-      <span class="c"># Clone and configure</span><br>
-      <span class="w">git clone</span> <span class="b">https://github.com/zzhiyuann/dispatcher</span><br>
-      <span class="w">cp</span> .env.example .env  <span class="c"># Add your Telegram bot token &amp; chat ID</span><br>
-      <br>
-      <span class="c"># Install as always-on daemon (macOS)</span><br>
-      <span class="w">python3</span> dispatcher.py <span class="a">--install-daemon</span><br>
-      <br>
-      <span class="c"># Or run directly</span><br>
-      <span class="w">python3</span> dispatcher.py<br>
-      <span class="g">&#10003; Dispatcher running. Send a message on Telegram.</span>
+      <span class="w">pip install</span> <span class="b">cortex-agent</span><br>
     </div>
   </div>
 
   <div class="quickstart-block">
     <div class="qs-header">
-      <span>A2A Hub — Agent Communication</span>
-      <span>Python 3.11+ &middot; pip</span>
+      <span>2 &mdash; Setup (interactive, one time)</span>
     </div>
     <div class="qs-body">
-      <span class="c"># Install</span><br>
-      <span class="w">pip install</span> <span class="b">a2a-hub</span><br>
+      <span class="w">cortex</span> <span class="a">init</span><br>
       <br>
-      <span class="c"># Start the hub server</span><br>
-      <span class="w">a2a-hub</span> <span class="a">start</span>  <span class="c"># WebSocket on port 8765</span><br>
+      <span class="c"># Walks you through:</span><br>
+      <span class="b">&gt;</span> Telegram bot token: <span class="p">sk-...</span><br>
+      <span class="b">&gt;</span> Your chat ID: <span class="p">1234567</span><br>
+      <span class="b">&gt;</span> Project directories to register: <span class="p">~/projects/myapp, ~/work/api</span><br>
+      <span class="b">&gt;</span> Enable Vibe Replay hooks? <span class="p">Y</span><br>
       <br>
-      <span class="c"># Add MCP bridge to Claude Code</span><br>
-      <span class="w">a2a-hub</span> <span class="a">bridge</span>  <span class="c"># Starts MCP server for Claude Code</span><br>
-      <span class="g">&#10003; Hub running. 0 agents connected.</span>
+      <span class="g">&#10003; Config saved to ~/.config/cortex/config.yaml</span><br>
+      <span class="g">&#10003; Claude Code hooks installed</span><br>
+      <span class="g">&#10003; Ready to go.</span>
     </div>
   </div>
 
   <div class="quickstart-block">
     <div class="qs-header">
-      <span>Forge — Self-Evolving Tool Agent</span>
-      <span>Python 3.11+ &middot; pip</span>
+      <span>3 &mdash; Start</span>
     </div>
     <div class="qs-body">
-      <span class="c"># Install</span><br>
-      <span class="w">pip install</span> <span class="b">forge-agent</span><br>
+      <span class="w">cortex</span> <span class="a">start</span><br>
       <br>
-      <span class="c"># Create a tool from natural language</span><br>
-      <span class="w">forge</span> <span class="a">create</span> <span class="p">"convert CSV to JSON with column filtering"</span><br>
-      <span class="g">&#10003; Generated &middot; 8 tests passed &middot; Installed to ~/.forge/tools/</span><br>
+      <span class="g">&#10003; Dispatcher running &mdash; send a message on Telegram</span><br>
+      <span class="g">&#10003; A2A Hub listening on :8765</span><br>
+      <span class="g">&#10003; Forge MCP server registered</span><br>
+      <span class="g">&#10003; Vibe Replay capturing sessions</span><br>
       <br>
-      <span class="c"># Or install directly as MCP tool</span><br>
-      <span class="w">forge</span> <span class="a">create</span> <span class="p">"parse URL query parameters"</span> <span class="a">--type mcp --install mcp</span><br>
-      <span class="g">&#10003; Added to ~/.mcp.json. Available in Claude Code now.</span>
+      <span class="c"># Or install as always-on daemon (starts on boot)</span><br>
+      <span class="w">cortex</span> <span class="a">install</span>  <span class="c"># macOS LaunchAgent / Linux systemd</span><br>
     </div>
   </div>
 
   <div class="quickstart-block">
     <div class="qs-header">
-      <span>Vibe Replay — Session Wisdom</span>
-      <span>Python 3.11+ &middot; pip</span>
+      <span>4 &mdash; Use</span>
     </div>
     <div class="qs-body">
-      <span class="c"># Install</span><br>
-      <span class="w">pip install</span> <span class="b">vibe-replay</span><br>
+      <span class="c"># From your phone (Telegram)</span><br>
+      <span class="a">You:</span> <span class="w">refactor the auth module, add error handling</span><br>
+      <span class="a">Cortex:</span> <span class="g">On it (myapp). Will report back when done.</span><br>
       <br>
-      <span class="c"># Hook into Claude Code (one-time setup)</span><br>
-      <span class="w">vibe-replay</span> <span class="a">install</span>  <span class="c"># Adds hooks to ~/.claude/settings.json</span><br>
+      <span class="c"># Need a new tool?</span><br>
+      <span class="w">cortex</span> <span class="a">forge</span> <span class="p">"validate JWT tokens with role-based access"</span><br>
+      <span class="g">&#10003; Generated &middot; 12 tests passed &middot; Installed to MCP</span><br>
       <br>
-      <span class="c"># After coding sessions, view your replays</span><br>
-      <span class="w">vibe-replay</span> <span class="a">sessions</span>  <span class="c"># List captured sessions</span><br>
-      <span class="w">vibe-replay</span> <span class="a">replay</span> latest  <span class="c"># Open interactive HTML replay</span><br>
-      <span class="w">vibe-replay</span> <span class="a">wisdom</span>  <span class="c"># See aggregated learnings across sessions</span><br>
-      <span class="g">&#10003; 3 decisions &middot; 2 learnings &middot; 1 pattern detected</span>
+      <span class="c"># Review what happened</span><br>
+      <span class="w">cortex</span> <span class="a">replay</span> latest<br>
+      <span class="g">&#10003; Opening interactive replay &mdash; 4 decisions, 2 learnings</span><br>
+      <br>
+      <span class="c"># See what you've learned over time</span><br>
+      <span class="w">cortex</span> <span class="a">wisdom</span><br>
     </div>
   </div>
 </section>
