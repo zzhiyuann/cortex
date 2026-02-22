@@ -16,6 +16,7 @@ from cortex_cli.services import start_all, stop_all
 from cortex_cli.agent import start_agent, stop_agent, agent_status, agent_log
 from cortex_cli.health import run_health
 from cortex_cli.process import tail_log, log_file
+from cortex_cli.errors import get_recent_errors, clear_error_log, ERROR_LOG
 
 console = Console()
 
@@ -115,6 +116,50 @@ def logs(service, lines):
             console.print(f"  {line[:200]}")
 
     console.print()
+
+
+@cli.command()
+@click.option("--limit", "-n", default=20, help="Number of recent errors to show.")
+@click.option("--clear", is_flag=True, help="Clear the error log.")
+def errors(limit, clear):
+    """View recent errors from all Cortex components."""
+    if clear:
+        clear_error_log()
+        console.print("[green]Error log cleared.[/green]")
+        return
+
+    recent = get_recent_errors(limit)
+    if not recent:
+        console.print("[dim]No errors recorded.[/dim]")
+        return
+
+    from rich.table import Table
+    table = Table(title=f"Recent Errors (last {len(recent)})", show_header=True)
+    table.add_column("Time", style="dim", max_width=19)
+    table.add_column("Component", style="bold")
+    table.add_column("Severity")
+    table.add_column("Message", max_width=60)
+
+    severity_styles = {
+        "critical": "[red bold]CRIT[/red bold]",
+        "error": "[red]ERR[/red]",
+        "warning": "[yellow]WARN[/yellow]",
+        "info": "[blue]INFO[/blue]",
+        "debug": "[dim]DBG[/dim]",
+    }
+
+    for err in recent:
+        ts = err.get("timestamp", "?")[:19]
+        sev = err.get("severity", "error")
+        table.add_row(
+            ts,
+            err.get("component", "?"),
+            severity_styles.get(sev, sev),
+            err.get("message", "")[:60],
+        )
+
+    console.print(table)
+    console.print(f"\n[dim]Full log: {ERROR_LOG}[/dim]")
 
 
 @cli.group()

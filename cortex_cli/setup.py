@@ -22,6 +22,8 @@ from rich.table import Table
 
 from cortex_cli.detect import Component, detect_all
 from cortex_cli.process import is_running, read_pid
+from cortex_cli.config import load_config, save_config, CORTEX_DIR
+from cortex_cli.errors import log_error, ConfigError
 
 console = Console()
 
@@ -77,6 +79,9 @@ def run_init(
     # Step 4: Configure Dispatcher
     if not skip_dispatcher and "dispatcher" in found:
         _setup_dispatcher(found["dispatcher"], telegram_token, telegram_chat_id)
+
+    # Step 5: Generate shared config (~/.cortex/config.yaml)
+    _generate_shared_config(components, telegram_token, telegram_chat_id)
 
     # Done
     console.print()
@@ -475,6 +480,46 @@ def _setup_dispatcher(
     console.print(f"[green]+ Dispatcher config[/green] → {DISPATCHER_CONFIG}")
 
 
+# ---- Shared Config ----
+
+def _generate_shared_config(
+    components: dict[str, Component],
+    telegram_token: str | None = None,
+    telegram_chat_id: int | None = None,
+):
+    """Generate ~/.cortex/config.yaml with detected project paths and credentials."""
+    config = load_config()
+
+    # Populate project paths from detected components
+    for name, comp in components.items():
+        if comp.project_dir:
+            config.setdefault("projects", {})[name] = str(comp.project_dir)
+
+    # Populate Telegram credentials if provided
+    if telegram_token:
+        config.setdefault("telegram", {})["bot_token"] = telegram_token
+    if telegram_chat_id:
+        config.setdefault("telegram", {})["chat_id"] = telegram_chat_id
+
+    # Try reading Telegram creds from existing dispatcher config if not already set
+    tg = config.get("telegram", {})
+    if not tg.get("bot_token") and DISPATCHER_CONFIG.exists():
+        try:
+            import yaml
+            dconf = yaml.safe_load(DISPATCHER_CONFIG.read_text()) or {}
+            dtg = dconf.get("telegram", {})
+            if dtg.get("bot_token"):
+                tg["bot_token"] = dtg["bot_token"]
+            if dtg.get("chat_id"):
+                tg["chat_id"] = dtg["chat_id"]
+            config["telegram"] = tg
+        except Exception:
+            pass
+
+    save_config(config)
+    console.print(f"[green]+ Shared config[/green] → ~/.cortex/config.yaml")
+
+
 # ---- Status ----
 
 def run_status():
@@ -553,5 +598,21 @@ def run_status():
         console.print(f"  [green]{len(sessions)}[/green] sessions captured")
     else:
         console.print("  [dim]No sessions yet[/dim]")
+
+    # Shared config
+    console.print()
+    console.print("[bold]Shared Config[/bold] (~/.cortex/config.yaml)")
+    from cortex_cli.config import CONFIG_PATH
+    if CONFIG_PATH.exists():
+        config = load_config()
+        projects = config.get("projects", {})
+        tg = config.get("telegram", {})
+        tg_status = "configured" if tg.get("bot_token") else "not set"
+        console.print(f"  [green]Telegram[/green] → {tg_status}")
+        console.print(f"  [green]Projects[/green] → {len(projects)} registered")
+        for name, path in projects.items():
+            console.print(f"    {name}: {path}")
+    else:
+        console.print("  [dim]Not generated (run cortex init)[/dim]")
 
     console.print()
