@@ -17,6 +17,7 @@ from cortex_cli.agent import start_agent, stop_agent, agent_status, agent_log
 from cortex_cli.health import run_health
 from cortex_cli.process import tail_log, log_file
 from cortex_cli.errors import get_recent_errors, clear_error_log, ERROR_LOG
+from cortex_cli.info import run_info
 
 console = Console()
 
@@ -75,6 +76,12 @@ def status():
 def health():
     """Run health checks on all Cortex components and wiring."""
     run_health()
+
+
+@cli.command()
+def info():
+    """Show cross-project stats: sessions, tools, agents, routes."""
+    run_info()
 
 
 @cli.command()
