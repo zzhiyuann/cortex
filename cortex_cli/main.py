@@ -13,6 +13,7 @@ from rich.console import Console
 
 from cortex_cli.setup import run_init, run_status
 from cortex_cli.services import start_all, stop_all
+from cortex_cli.agent import start_agent, stop_agent, agent_status, agent_log
 
 console = Console()
 
@@ -65,3 +66,35 @@ def stop():
 def status():
     """Show what's installed, configured, and running."""
     run_status()
+
+
+@cli.group()
+def agent():
+    """Manage the autonomous improvement agent."""
+
+
+@agent.command(name="start")
+@click.option("--max-turns", default=50, help="Max agent turns before stopping.")
+@click.option("--prompt", default=None, help="Additional instructions for the agent.")
+def agent_start(max_turns, prompt):
+    """Launch the autonomous agent to improve Cortex projects."""
+    start_agent(max_turns=max_turns, custom_prompt=prompt)
+
+
+@agent.command(name="stop")
+def agent_stop_cmd():
+    """Stop the running agent."""
+    stop_agent()
+
+
+@agent.command(name="status")
+def agent_status_cmd():
+    """Check agent state and progress."""
+    agent_status()
+
+
+@agent.command(name="log")
+@click.option("--lines", "-n", default=50, help="Number of log lines to show.")
+def agent_log_cmd(lines):
+    """Tail the agent log."""
+    agent_log(lines=lines)
