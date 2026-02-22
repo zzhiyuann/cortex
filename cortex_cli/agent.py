@@ -10,6 +10,9 @@ from __future__ import annotations
 
 import json
 import os
+import signal
+import subprocess
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -108,12 +111,20 @@ def _default_tasks() -> list[dict]:
 
 
 def _build_agent_prompt(tasks: list[dict], custom_prompt: str | None = None) -> str:
-    """Build the autonomous agent prompt with task queue."""
+    """Build the autonomous agent prompt with task queue and feedback issues."""
     pending_tasks = [t for t in tasks if t["status"] == "pending"]
     task_list = "\n".join(
         f"  {t['id']}. [{t['project']}] {t['title']}: {t['description']}"
         for t in pending_tasks
     )
+
+    # Include open feedback issues from user interactions
+    feedback_section = ""
+    try:
+        from cortex_cli.feedback import build_improvement_prompt
+        feedback_section = build_improvement_prompt()
+    except Exception:
+        pass
 
     prompt = f"""You are the Cortex Autonomous Improvement Agent. Work through the task queue systematically.
 
@@ -146,6 +157,9 @@ curl -s -X POST "https://api.telegram.org/botREDACTED_BOT_TOKEN/sendMessage" \\
 Write progress to {STATE_FILE} as JSON after each task:
 python3 -c "import json; json.dump({{'current_task': N, 'completed': [...], 'status': 'running'}}, open('{STATE_FILE}', 'w'))"
 """
+
+    if feedback_section:
+        prompt += f"\n{feedback_section}\n"
 
     if custom_prompt:
         prompt += f"\n## Additional Instructions\n{custom_prompt}\n"

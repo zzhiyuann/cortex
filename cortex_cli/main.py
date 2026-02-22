@@ -18,6 +18,10 @@ from cortex_cli.health import run_health
 from cortex_cli.process import tail_log, log_file
 from cortex_cli.errors import get_recent_errors, clear_error_log, ERROR_LOG
 from cortex_cli.info import run_info
+from cortex_cli.feedback import (
+    get_open_issues, get_issue_summary, resolver_status,
+    get_resolution_history, RESOLVER_LOG,
+)
 
 console = Console()
 
@@ -167,6 +171,78 @@ def errors(limit, clear):
 
     console.print(table)
     console.print(f"\n[dim]Full log: {ERROR_LOG}[/dim]")
+
+
+@cli.command()
+@click.option("--limit", "-n", default=10, help="Number of issues to show.")
+@click.option("--resolved", is_flag=True, help="Show resolution history instead.")
+def feedback(limit, resolved):
+    """View self-healing feedback issues and resolver status."""
+    from rich.table import Table
+
+    # Show resolver status
+    rs = resolver_status()
+    if rs["running"]:
+        console.print(f"[bold green]Resolver running[/bold green] (pid {rs['pid']})")
+    else:
+        console.print("[dim]Resolver sleeping[/dim]")
+
+    console.print(
+        f"  Open issues: {rs['open_issues']}  |  "
+        f"Total resolved: {rs['total_resolved']}"
+    )
+    console.print(f"  Log: {rs['log_file']}\n")
+
+    if resolved:
+        history = get_resolution_history(limit=limit)
+        if not history:
+            console.print("[dim]No resolutions yet.[/dim]")
+            return
+
+        table = Table(title="Resolution History", show_header=True)
+        table.add_column("Time", style="dim", max_width=16)
+        table.add_column("Issue ID", style="bold", max_width=30)
+        table.add_column("Resolution", max_width=60)
+
+        for h in history:
+            table.add_row(
+                h.get("resolved_at", "?")[:16],
+                h.get("id", "?"),
+                h.get("resolution", "")[:60],
+            )
+        console.print(table)
+    else:
+        issues = get_open_issues(limit=limit)
+        if not issues:
+            console.print("[green]No open issues.[/green]")
+            return
+
+        table = Table(title=f"Open Issues ({len(issues)})", show_header=True)
+        table.add_column("Time", style="dim", max_width=16)
+        table.add_column("Source", style="bold")
+        table.add_column("Category")
+        table.add_column("Description", max_width=50)
+
+        cat_styles = {
+            "error": "[red]error[/red]",
+            "timeout": "[yellow]timeout[/yellow]",
+            "user_cancel": "[dim]cancel[/dim]",
+            "ux_friction": "[cyan]ux[/cyan]",
+            "crash": "[red bold]crash[/red bold]",
+            "empty_response": "[yellow]empty[/yellow]",
+        }
+
+        for issue in issues:
+            cat = issue.get("category", "?")
+            table.add_row(
+                issue.get("timestamp", "?")[:16],
+                issue.get("source", "?"),
+                cat_styles.get(cat, cat),
+                issue.get("description", "")[:50],
+            )
+        console.print(table)
+
+    console.print()
 
 
 @cli.group()
