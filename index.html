@@ -638,6 +638,344 @@
     .terminal-body { font-size: 0.75rem; }
   }
 
+  /* ---- STORY / WHY ---- */
+  .story {
+    position: relative;
+  }
+  .story-scene {
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 6rem 2rem;
+    max-width: var(--max-w);
+    margin: 0 auto;
+    position: relative;
+  }
+  .story-scene.centered { align-items: center; text-align: center; }
+
+  /* Scene 1: The Paradox */
+  .scene-paradox .scene-number {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent-blue);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.6s ease;
+  }
+  .scene-paradox .scene-headline {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+    max-width: 700px;
+    margin-bottom: 2rem;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.8s ease 0.15s;
+  }
+  .scene-paradox .scene-sub {
+    font-size: 1.15rem;
+    color: var(--text-muted);
+    max-width: 600px;
+    line-height: 1.7;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.8s ease 0.3s;
+  }
+  .scene-paradox .scene-sub em {
+    color: var(--text);
+    font-style: normal;
+    font-weight: 600;
+  }
+  .story-scene.visible .scene-number,
+  .story-scene.visible .scene-headline,
+  .story-scene.visible .scene-sub,
+  .story-scene.visible .scene-body {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Scene 2: The Day */
+  .day-timeline {
+    position: relative;
+    max-width: 680px;
+    width: 100%;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.8s ease 0.2s;
+  }
+  .day-entry {
+    display: flex;
+    gap: 1.5rem;
+    padding: 1.25rem 0;
+    border-bottom: 1px solid rgba(42, 48, 80, 0.5);
+    transition: all 0.4s ease;
+    opacity: 0.35;
+  }
+  .day-entry.lit { opacity: 1; }
+  .day-entry .time {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+    min-width: 52px;
+    padding-top: 2px;
+  }
+  .day-entry .event-content { flex: 1; }
+  .day-entry .event-action {
+    font-size: 0.95rem;
+    color: var(--text);
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+  }
+  .day-entry .event-pain {
+    font-size: 0.85rem;
+    color: var(--accent-rose);
+    font-style: italic;
+  }
+  .day-entry .event-ok {
+    font-size: 0.85rem;
+    color: var(--accent-green);
+  }
+  .day-entry .tag-pain {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 3px;
+    background: rgba(251, 113, 133, 0.12);
+    color: var(--accent-rose);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+  }
+  .day-punchline {
+    text-align: center;
+    padding: 3rem 0 1rem;
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.6s ease 0.5s;
+  }
+  .story-scene.visible .day-punchline { opacity: 1; transform: translateY(0); }
+
+  /* Scene 3: The Diagnosis */
+  .diagnosis-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    max-width: 800px;
+    width: 100%;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.8s ease 0.2s;
+  }
+  .diagnosis-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    transition: all 0.5s ease;
+  }
+  .diagnosis-card .diag-status {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    line-height: 1;
+  }
+  .diagnosis-card .diag-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.75rem;
+  }
+  .diagnosis-card.ok .diag-label { color: var(--accent-green); }
+  .diagnosis-card.missing .diag-label { color: var(--accent-rose); }
+  .diagnosis-card .diag-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .diagnosis-card.missing {
+    border-color: rgba(251, 113, 133, 0.3);
+    background: rgba(251, 113, 133, 0.05);
+    animation: subtle-glow 3s ease-in-out infinite;
+  }
+  @keyframes subtle-glow {
+    0%, 100% { box-shadow: 0 0 0 rgba(251,113,133,0); }
+    50% { box-shadow: 0 0 30px rgba(251,113,133,0.08); }
+  }
+  .diagnosis-insight {
+    text-align: center;
+    margin-top: 3rem;
+    font-size: 1.15rem;
+    color: var(--text-muted);
+    max-width: 600px;
+    line-height: 1.7;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.6s ease 0.6s;
+  }
+  .diagnosis-insight strong {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .story-scene.visible .diagnosis-insight { opacity: 1; transform: translateY(0); }
+
+  /* Scene 4: The Shift (Before/After) */
+  .shift-toggle-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.6s ease 0.2s;
+  }
+  .story-scene.visible .shift-toggle-wrap { opacity: 1; transform: translateY(0); }
+  .shift-toggle {
+    display: flex;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .shift-toggle .toggle-opt {
+    padding: 0.6rem 1.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    transition: all 0.3s ease;
+    user-select: none;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: var(--font-sans);
+  }
+  .shift-toggle .toggle-opt.active {
+    background: var(--bg-card-hover);
+    color: var(--text);
+  }
+  .shift-toggle .toggle-opt:first-child.active { color: var(--accent-rose); }
+  .shift-toggle .toggle-opt:last-child.active { color: var(--accent-green); }
+
+  .shift-panels {
+    max-width: 800px;
+    width: 100%;
+    position: relative;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.8s ease 0.3s;
+  }
+  .story-scene.visible .shift-panels { opacity: 1; transform: translateY(0); }
+  .shift-panel {
+    display: none;
+  }
+  .shift-panel.active { display: block; }
+  .shift-chat {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .shift-chat-header {
+    padding: 0.75rem 1.25rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: var(--font-mono);
+  }
+  .panel-without .shift-chat-header { color: var(--accent-rose); }
+  .panel-with .shift-chat-header { color: var(--accent-green); }
+  .shift-chat-body {
+    padding: 1.5rem;
+  }
+  .chat-msg {
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+  .chat-msg:last-child { margin-bottom: 0; }
+  .chat-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    flex-shrink: 0;
+  }
+  .chat-avatar.user { background: rgba(96,165,250,0.15); color: var(--accent-blue); }
+  .chat-avatar.system { background: rgba(90,99,128,0.2); color: var(--text-dim); }
+  .chat-avatar.agent { background: rgba(52,211,153,0.15); color: var(--accent-green); }
+  .chat-bubble {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+  .chat-bubble .pain { color: var(--accent-rose); }
+  .chat-bubble .win { color: var(--accent-green); }
+  .chat-bubble .dim { color: var(--text-dim); font-style: italic; }
+  .chat-divider {
+    text-align: center;
+    padding: 0.75rem 0;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+  }
+
+  .shift-summary {
+    text-align: center;
+    margin-top: 2.5rem;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.6s ease 0.5s;
+  }
+  .story-scene.visible .shift-summary { opacity: 1; transform: translateY(0); }
+  .shift-summary p {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 560px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+  .shift-summary p strong { color: var(--text); }
+
+  /* Scene transition dividers */
+  .scene-divider {
+    text-align: center;
+    padding: 2rem 0;
+    position: relative;
+  }
+  .scene-divider::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--border), transparent);
+  }
+
+  @media (max-width: 768px) {
+    .story-scene { min-height: auto; padding: 4rem 1.5rem; }
+    .diagnosis-grid { grid-template-columns: 1fr; max-width: 320px; }
+    .shift-toggle .toggle-opt { padding: 0.5rem 1rem; font-size: 0.8rem; }
+  }
+
   /* ---- ANIMATIONS ---- */
   .fade-in {
     opacity: 0;
@@ -660,6 +998,7 @@
       Cortex
     </a>
     <ul class="nav-links">
+      <li><a href="#why">Why</a></li>
       <li><a href="#architecture">Architecture</a></li>
       <li><a href="#components">Components</a></li>
       <li><a href="#how-it-works">How It Works</a></li>
@@ -715,17 +1054,180 @@
   </div>
 </section>
 
-<!-- PHILOSOPHY -->
-<div class="philosophy fade-in">
-  <blockquote>
-    "The best tools don't just help you do things faster.<br>
-    They <span class="gradient-text">change what's possible</span> for one person to do."
-  </blockquote>
-  <p>
-    Cortex is built on a simple belief: with the right agent infrastructure,
-    a single person can run a research lab, ship products, and automate their entire digital life.
-    No team of 10. No enterprise software. Just you and your agents.
-  </p>
+<!-- WHY: THE STORY -->
+<div class="story" id="why">
+
+  <!-- Scene 1: The Paradox -->
+  <div class="story-scene scene-paradox centered">
+    <div class="scene-number">The Paradox</div>
+    <h2 class="scene-headline">
+      It's 2026. AI can code, research, analyze, and deploy.<br>
+      <span style="color: var(--accent-rose);">So why does it still feel like juggling?</span>
+    </h2>
+    <p class="scene-sub">
+      Claude Code is extraordinary. MCP servers are powerful. Skills and plugins keep multiplying.
+      <em>Each tool, individually, is the best it's ever been.</em><br><br>
+      But string them together across a real workday, and something breaks down.
+    </p>
+  </div>
+
+  <div class="scene-divider"></div>
+
+  <!-- Scene 2: A Real Day -->
+  <div class="story-scene scene-day">
+    <div class="scene-number" style="opacity:0;transform:translateY(10px);transition:all 0.6s ease;">A Real Day</div>
+    <h2 class="scene-headline" style="font-size:clamp(1.5rem,3.5vw,2.5rem);margin-bottom:2.5rem;">
+      Sound familiar?
+    </h2>
+    <div class="day-timeline">
+      <div class="day-entry" data-index="0">
+        <div class="time">9:15</div>
+        <div class="event-content">
+          <div class="event-action">Open laptop. Start Claude Code. "Refactor the data pipeline."</div>
+          <div class="event-ok">Works beautifully. AI reads 20 files, plans the refactor.</div>
+        </div>
+      </div>
+      <div class="day-entry" data-index="1">
+        <div class="time">9:47</div>
+        <div class="event-content">
+          <div class="event-action">Need a custom CSV parser. Claude can't find one from last week's session.</div>
+          <div class="event-pain">Write it from scratch. Again. <span class="tag-pain">CONTEXT LOST</span></div>
+        </div>
+      </div>
+      <div class="day-entry" data-index="2">
+        <div class="time">10:22</div>
+        <div class="event-content">
+          <div class="event-action">Walking to get coffee. Great idea for the API design.</div>
+          <div class="event-pain">Can't execute from phone. Text yourself a note. <span class="tag-pain">UNREACHABLE</span></div>
+        </div>
+      </div>
+      <div class="day-entry" data-index="3">
+        <div class="time">11:08</div>
+        <div class="event-content">
+          <div class="event-action">Back at laptop. "Where was I?" Re-read the codebase.</div>
+          <div class="event-pain">20 minutes to rebuild the context you already had. <span class="tag-pain">START OVER</span></div>
+        </div>
+      </div>
+      <div class="day-entry" data-index="4">
+        <div class="time">2:30</div>
+        <div class="event-content">
+          <div class="event-action">Refactoring done. 24 tests passing. Solid work.</div>
+          <div class="event-pain">But what decisions were made? Why 3 modules instead of 2? Already gone. <span class="tag-pain">WISDOM LOST</span></div>
+        </div>
+      </div>
+      <div class="day-entry" data-index="5">
+        <div class="time">3:15</div>
+        <div class="event-content">
+          <div class="event-action">Colleague: "How did you approach that refactor? I need to do something similar."</div>
+          <div class="event-pain">You can't reconstruct the reasoning. It lived and died in one session. <span class="tag-pain">NOT SHAREABLE</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="day-punchline">
+      Every day. Every session. <strong style="color:var(--text);">Starting from zero.</strong>
+    </div>
+  </div>
+
+  <div class="scene-divider"></div>
+
+  <!-- Scene 3: The Diagnosis -->
+  <div class="story-scene scene-diagnosis centered">
+    <div class="scene-number" style="opacity:0;transform:translateY(10px);transition:all 0.6s ease;">The Diagnosis</div>
+    <h2 class="scene-headline" style="font-size:clamp(1.5rem,3.5vw,2.5rem);margin-bottom:2.5rem;">
+      The tools are there. The glue isn't.
+    </h2>
+    <div class="diagnosis-grid scene-body" style="opacity:0;transform:translateY(20px);transition:all 0.8s ease 0.2s;">
+      <div class="diagnosis-card ok">
+        <div class="diag-status">&#10003;</div>
+        <div class="diag-label">The Brain</div>
+        <div class="diag-desc">LLMs are superhuman. Claude, GPT, Gemini — reasoning, coding, analysis. Solved.</div>
+      </div>
+      <div class="diagnosis-card ok">
+        <div class="diag-status">&#10003;</div>
+        <div class="diag-label">The Hands</div>
+        <div class="diag-desc">MCP servers, skills, plugins, tool use. Agents can read, write, search, deploy. Solved.</div>
+      </div>
+      <div class="diagnosis-card missing">
+        <div class="diag-status">?</div>
+        <div class="diag-label">The Nervous System</div>
+        <div class="diag-desc">What connects them? What makes them work as one organism instead of scattered limbs?</div>
+      </div>
+    </div>
+    <div class="diagnosis-insight">
+      We have <strong>superhuman intelligence</strong> and <strong>powerful tools</strong>.<br>
+      What's missing is the <strong style="background:var(--gradient-4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">infrastructure between them</strong> —
+      the layer that lets you command from anywhere, agents discover and delegate to each other,
+      new tools emerge on demand, and every session compounds into wisdom.
+    </div>
+  </div>
+
+  <div class="scene-divider"></div>
+
+  <!-- Scene 4: The Shift (Before / After) -->
+  <div class="story-scene scene-shift centered">
+    <div class="scene-number" style="opacity:0;transform:translateY(10px);transition:all 0.6s ease;">The Shift</div>
+    <h2 class="scene-headline" style="font-size:clamp(1.5rem,3.5vw,2.5rem);margin-bottom:1rem;">
+      Same person. Same tools. Different infrastructure.
+    </h2>
+
+    <div class="shift-toggle-wrap">
+      <div class="shift-toggle" role="tablist">
+        <button class="toggle-opt active" data-panel="without" role="tab" aria-selected="true">Without Cortex</button>
+        <button class="toggle-opt" data-panel="with" role="tab" aria-selected="false">With Cortex</button>
+      </div>
+    </div>
+
+    <div class="shift-panels">
+      <!-- WITHOUT -->
+      <div class="shift-panel panel-without active" id="panel-without">
+        <div class="shift-chat">
+          <div class="shift-chat-header">A Thursday afternoon &mdash; Without Cortex</div>
+          <div class="shift-chat-body">
+            <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><em class="dim">Opens Claude Code on laptop...</em><br>"Refactor the sims data pipeline"</div></div>
+            <div class="chat-msg"><div class="chat-avatar agent">C</div><div class="chat-bubble">I'll read the codebase first...<br><span class="dim">[reads 20 files, plans refactor, starts working]</span></div></div>
+            <div class="chat-divider">&mdash; 32 min later &mdash;</div>
+            <div class="chat-msg"><div class="chat-avatar agent">C</div><div class="chat-bubble">I need a custom CSV parser for the sensor data format.</div></div>
+            <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><span class="pain">I built one last week but it was in a different session... let me re-describe it.</span></div></div>
+            <div class="chat-divider">&mdash; 15 min rebuilding what existed &mdash;</div>
+            <div class="chat-msg"><div class="chat-avatar system">!</div><div class="chat-bubble"><span class="pain">Phone buzzes. You're walking to a meeting. Great idea for the API design. Can't do anything about it.</span></div></div>
+            <div class="chat-divider">&mdash; 45 min meeting &mdash;</div>
+            <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><span class="pain">Back at laptop. "Where was I?" Session context is stale. Re-reading everything.</span></div></div>
+            <div class="chat-divider">&mdash; 2 hours later, task done &mdash;</div>
+            <div class="chat-msg"><div class="chat-avatar system">!</div><div class="chat-bubble"><span class="pain">Colleague asks how you approached it. You can't remember the key decisions. The reasoning is gone.</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WITH -->
+      <div class="shift-panel panel-with" id="panel-with">
+        <div class="shift-chat">
+          <div class="shift-chat-header">A Thursday afternoon &mdash; With Cortex</div>
+          <div class="shift-chat-body">
+            <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><em class="dim">Sends Telegram message from phone while walking...</em><br>"Refactor the sims data pipeline, add proper error handling"</div></div>
+            <div class="chat-msg"><div class="chat-avatar agent">D</div><div class="chat-bubble"><span class="win">On it (sims). Detected project, spawning session.</span></div></div>
+            <div class="chat-divider">&mdash; Agents working &mdash;</div>
+            <div class="chat-msg"><div class="chat-avatar agent">H</div><div class="chat-bubble"><span class="win">Agent needs CSV parser. Found Forge via A2A Hub. Delegating.</span></div></div>
+            <div class="chat-msg"><div class="chat-avatar agent">F</div><div class="chat-bubble"><span class="win">Built sensor_csv_parser. 12 tests passing. Installed to MCP.</span></div></div>
+            <div class="chat-divider">&mdash; You're still in your meeting &mdash;</div>
+            <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><em class="dim">Quick Telegram reply between meetings...</em><br>"Also add timestamp filtering to that parser"</div></div>
+            <div class="chat-msg"><div class="chat-avatar agent">D</div><div class="chat-bubble"><span class="win">Got it. Resuming session. Adding filter.</span></div></div>
+            <div class="chat-divider">&mdash; 20 min later &mdash;</div>
+            <div class="chat-msg"><div class="chat-avatar agent">D</div><div class="chat-bubble"><span class="win">Done. Refactored into 3 modules, 24 tests, new parser tool installed. Pushed to git.</span></div></div>
+            <div class="chat-msg"><div class="chat-avatar agent">V</div><div class="chat-bubble"><span class="win">Session captured: 4 decisions, 2 learnings, 1 new tool. Replay ready. Shareable link generated.</span></div></div>
+            <div class="chat-msg"><div class="chat-avatar user">Y</div><div class="chat-bubble"><em class="dim">Forwards the replay link to colleague.</em> "Here's exactly how and why."</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="shift-summary">
+      <p>
+        Same person. Same AI. Same tools.<br>
+        The difference is <strong>the layer between them</strong> — the infrastructure that turns
+        isolated capabilities into a <strong style="background:var(--gradient-2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">unified, compounding system</strong>.
+      </p>
+    </div>
+  </div>
 </div>
 
 <!-- STATS -->
@@ -1155,6 +1657,40 @@
   }, { threshold: 0.1 });
 
   document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Story scenes — trigger on scroll
+  const sceneObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        // Animate day timeline entries sequentially
+        if (entry.target.classList.contains('scene-day')) {
+          const entries = entry.target.querySelectorAll('.day-entry');
+          entries.forEach((e, i) => {
+            setTimeout(() => e.classList.add('lit'), i * 400);
+          });
+        }
+      }
+    });
+  }, { threshold: 0.15 });
+
+  document.querySelectorAll('.story-scene').forEach(el => sceneObserver.observe(el));
+
+  // Before/After toggle
+  document.querySelectorAll('.shift-toggle .toggle-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const panel = btn.dataset.panel;
+      // Update toggle buttons
+      document.querySelectorAll('.shift-toggle .toggle-opt').forEach(b => {
+        b.classList.toggle('active', b.dataset.panel === panel);
+        b.setAttribute('aria-selected', b.dataset.panel === panel ? 'true' : 'false');
+      });
+      // Update panels
+      document.querySelectorAll('.shift-panel').forEach(p => {
+        p.classList.toggle('active', p.id === 'panel-' + panel);
+      });
+    });
+  });
 
   // Smooth scroll for anchor links
   document.querySelectorAll('a[href^="#"]').forEach(a => {
