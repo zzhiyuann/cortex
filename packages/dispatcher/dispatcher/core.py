@@ -775,7 +775,8 @@ class Dispatcher:
         is_quick = not is_project
 
         # 4. If nothing running, try to resume last session for continuity
-        if not self.sm.force_new:
+        #    SKIP for quick questions — they go through the fast plain-mode path
+        if not is_quick and not self.sm.force_new:
             last = self.sm.last_session()
             if not active and last and last.status in ("done", "failed"):
                 self._spawn(self._do_followup(mid, text, last, attachments, model=model_override, model_sticky=is_sticky))
