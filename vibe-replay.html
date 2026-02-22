@@ -1,0 +1,2167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vibe Replay — Memory Layer of Cortex</title>
+<style>
+  :root {
+    --bg: #0B0F19;
+    --bg-surface: #131825;
+    --bg-card: #1A1F2E;
+    --bg-card-hover: #222840;
+    --border: #2A3050;
+    --text: #E2E8F0;
+    --text-muted: #8892B0;
+    --text-dim: #5A6380;
+    --accent-blue: #60A5FA;
+    --accent-purple: #A78BFA;
+    --accent-green: #34D399;
+    --accent-amber: #FBBF24;
+    --accent-rose: #FB7185;
+    --gradient-1: linear-gradient(135deg, #60A5FA, #A78BFA);
+    --gradient-2: linear-gradient(135deg, #34D399, #60A5FA);
+    --gradient-3: linear-gradient(135deg, #FBBF24, #FB7185);
+    --gradient-4: linear-gradient(135deg, #A78BFA, #FB7185);
+    --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    --max-w: 1200px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---- NAV ---- */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(11, 15, 25, 0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    transition: box-shadow 0.3s;
+  }
+  nav.scrolled { box-shadow: 0 4px 30px rgba(0,0,0,0.4); }
+  .nav-inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .nav-brand {
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .nav-brand .logo-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--gradient-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--bg);
+  }
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+    align-items: center;
+  }
+  .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-links .active-link { color: var(--accent-purple); }
+  .nav-cta {
+    background: var(--gradient-4);
+    color: var(--bg) !important;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    font-weight: 600 !important;
+  }
+  .nav-separator {
+    color: var(--text-dim);
+    font-size: 1rem;
+    user-select: none;
+  }
+
+  /* ---- HERO ---- */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 6rem 2rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(167,139,250,0.1) 0%, rgba(251,113,133,0.05) 40%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -20%;
+    right: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(251,113,133,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 1rem;
+    border: 1px solid rgba(167,139,250,0.3);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    background: var(--bg-surface);
+  }
+  .hero-badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-purple);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .hero h1 {
+    font-size: clamp(3rem, 7vw, 5.5rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 .gradient-text {
+    background: var(--gradient-4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero .subtitle {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    max-width: 640px;
+    margin: 0 auto 1.5rem;
+    line-height: 1.6;
+  }
+  .hero .tagline {
+    font-size: 1.1rem;
+    font-family: var(--font-mono);
+    color: var(--accent-purple);
+    margin-bottom: 3rem;
+    letter-spacing: -0.01em;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: none;
+    font-family: var(--font-sans);
+  }
+  .btn-primary {
+    background: var(--gradient-4);
+    color: var(--bg);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(167,139,250,0.25); }
+  .btn-secondary {
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--bg-card-hover); border-color: var(--text-dim); }
+
+  /* ---- SECTIONS ---- */
+  section {
+    padding: 6rem 2rem;
+    max-width: var(--max-w);
+    margin: 0 auto;
+  }
+  .section-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent-purple);
+    margin-bottom: 0.75rem;
+  }
+  .section-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 1rem;
+  }
+  .section-desc {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 640px;
+    margin-bottom: 3rem;
+    line-height: 1.6;
+  }
+
+  /* ---- FLOW DIAGRAM ---- */
+  .flow-visual {
+    position: relative;
+    padding: 3rem 2rem 4rem;
+    margin-bottom: 2rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .flow-visual::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(167,139,250,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(167,139,250,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+  .flow-pipeline {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    z-index: 1;
+    flex-wrap: wrap;
+  }
+  .flow-stage {
+    position: relative;
+    border-radius: 12px;
+    padding: 2px;
+    min-width: 180px;
+    flex: 1;
+    max-width: 220px;
+  }
+  .flow-stage-inner {
+    background: var(--bg-card);
+    border-radius: 10px;
+    padding: 1.5rem 1.25rem;
+    text-align: center;
+    height: 100%;
+  }
+  .flow-stage .stage-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    margin: 0 auto 1rem;
+    font-weight: 800;
+    font-family: var(--font-mono);
+  }
+  .flow-stage .stage-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+  }
+  .flow-stage .stage-desc {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .stage-capture { background: linear-gradient(135deg, rgba(167,139,250,0.5), rgba(167,139,250,0.3)); }
+  .stage-capture .stage-icon { background: rgba(167,139,250,0.15); color: var(--accent-purple); }
+  .stage-capture .stage-title { color: var(--accent-purple); }
+
+  .stage-store { background: linear-gradient(135deg, rgba(96,165,250,0.5), rgba(96,165,250,0.3)); }
+  .stage-store .stage-icon { background: rgba(96,165,250,0.15); color: var(--accent-blue); }
+  .stage-store .stage-title { color: var(--accent-blue); }
+
+  .stage-analyze { background: linear-gradient(135deg, rgba(251,191,36,0.5), rgba(251,191,36,0.3)); }
+  .stage-analyze .stage-icon { background: rgba(251,191,36,0.15); color: var(--accent-amber); }
+  .stage-analyze .stage-title { color: var(--accent-amber); }
+
+  .stage-render { background: linear-gradient(135deg, rgba(251,113,133,0.5), rgba(251,113,133,0.3)); }
+  .stage-render .stage-icon { background: rgba(251,113,133,0.15); color: var(--accent-rose); }
+  .stage-render .stage-title { color: var(--accent-rose); }
+
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    flex-shrink: 0;
+    color: var(--text-dim);
+    font-size: 1.2rem;
+  }
+
+  /* ---- PHASE CARDS ---- */
+  .phases-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem;
+  }
+  .phase-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.75rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .phase-card:hover {
+    border-color: var(--text-dim);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .phase-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient-4);
+  }
+  .phase-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    background: rgba(167,139,250,0.12);
+    color: var(--accent-purple);
+    font-weight: 700;
+  }
+  .phase-card h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.01em;
+  }
+  .phase-card .phase-detect {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    margin-bottom: 0.5rem;
+  }
+  .phase-card p {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+  }
+
+  /* Alternate phase icon colors */
+  .phase-card:nth-child(2) .phase-icon { background: rgba(96,165,250,0.12); color: var(--accent-blue); }
+  .phase-card:nth-child(3) .phase-icon { background: rgba(251,113,133,0.12); color: var(--accent-rose); }
+  .phase-card:nth-child(4) .phase-icon { background: rgba(52,211,153,0.12); color: var(--accent-green); }
+  .phase-card:nth-child(5) .phase-icon { background: rgba(251,191,36,0.12); color: var(--accent-amber); }
+  .phase-card:nth-child(6) .phase-icon { background: rgba(96,165,250,0.12); color: var(--accent-blue); }
+  .phase-card:nth-child(7) .phase-icon { background: rgba(167,139,250,0.12); color: var(--accent-purple); }
+
+  .phase-card:nth-child(2)::before { background: var(--gradient-1); }
+  .phase-card:nth-child(3)::before { background: var(--gradient-3); }
+  .phase-card:nth-child(4)::before { background: var(--gradient-2); }
+  .phase-card:nth-child(5)::before { background: var(--gradient-3); }
+  .phase-card:nth-child(6)::before { background: var(--gradient-1); }
+  .phase-card:nth-child(7)::before { background: var(--gradient-4); }
+
+  /* ---- INSIGHT CARDS ---- */
+  .insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem;
+  }
+  .insight-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.75rem;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+  .insight-card:hover {
+    border-color: rgba(167,139,250,0.4);
+    box-shadow: 0 8px 30px rgba(167,139,250,0.08);
+  }
+  .insight-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.2rem 0.7rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+  }
+  .insight-badge.decision { background: rgba(167,139,250,0.15); color: var(--accent-purple); }
+  .insight-badge.learning { background: rgba(96,165,250,0.15); color: var(--accent-blue); }
+  .insight-badge.mistake { background: rgba(251,113,133,0.15); color: var(--accent-rose); }
+  .insight-badge.pattern { background: rgba(52,211,153,0.15); color: var(--accent-green); }
+  .insight-badge.turning { background: rgba(251,191,36,0.15); color: var(--accent-amber); }
+  .insight-badge.hotspot { background: rgba(251,113,133,0.15); color: var(--accent-rose); }
+  .insight-badge.exploration { background: rgba(96,165,250,0.15); color: var(--accent-blue); }
+
+  .insight-card h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .insight-card p {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+  .insight-card .insight-trigger {
+    margin-top: 0.75rem;
+    font-size: 0.78rem;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+  }
+
+  /* ---- REPLAY MOCKUP ---- */
+  .replay-mockup {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .replay-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+  }
+  .replay-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .replay-dot.red { background: #FF5F57; }
+  .replay-dot.yellow { background: #FEBC2E; }
+  .replay-dot.green { background: #28C840; }
+  .replay-titlebar-text {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .replay-body {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: 500px;
+  }
+
+  /* Sidebar */
+  .replay-sidebar {
+    border-right: 1px solid var(--border);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background: rgba(19, 24, 37, 0.5);
+  }
+  .replay-stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+  }
+  .replay-stat-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 0.25rem;
+  }
+  .replay-stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+  }
+  .replay-stat-value.purple { color: var(--accent-purple); }
+  .replay-stat-value.blue { color: var(--accent-blue); }
+  .replay-stat-value.green { color: var(--accent-green); }
+  .replay-stat-value.amber { color: var(--accent-amber); }
+  .replay-stat-value.rose { color: var(--accent-rose); }
+
+  .replay-insight-list {
+    list-style: none;
+  }
+  .replay-insight-list li {
+    font-size: 0.78rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(42,48,80,0.4);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .replay-insight-list li:last-child { border-bottom: none; }
+  .replay-insight-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .replay-insight-dot.purple { background: var(--accent-purple); }
+  .replay-insight-dot.amber { background: var(--accent-amber); }
+  .replay-insight-dot.rose { background: var(--accent-rose); }
+  .replay-insight-dot.green { background: var(--accent-green); }
+
+  /* Timeline */
+  .replay-timeline {
+    padding: 1.25rem 1.5rem;
+    overflow-y: auto;
+    max-height: 500px;
+  }
+  .replay-filter-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .replay-filter {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.7rem;
+    border-radius: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .replay-filter.active {
+    background: rgba(167,139,250,0.15);
+    border-color: rgba(167,139,250,0.3);
+    color: var(--accent-purple);
+  }
+
+  .replay-phase {
+    margin-bottom: 1.25rem;
+  }
+  .replay-phase-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .replay-phase-bar {
+    height: 3px;
+    flex: 1;
+    border-radius: 2px;
+    opacity: 0.4;
+  }
+  .replay-phase-bar.exploration { background: var(--accent-blue); }
+  .replay-phase-bar.implementation { background: var(--accent-purple); }
+  .replay-phase-bar.debugging { background: var(--accent-rose); }
+  .replay-phase-bar.testing { background: var(--accent-green); }
+
+  .replay-phase-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  .replay-phase-name.exploration { color: var(--accent-blue); }
+  .replay-phase-name.implementation { color: var(--accent-purple); }
+  .replay-phase-name.debugging { color: var(--accent-rose); }
+  .replay-phase-name.testing { color: var(--accent-green); }
+
+  .replay-phase-count {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+  }
+
+  .replay-event {
+    padding: 0.6rem 0 0.6rem 1.25rem;
+    border-left: 2px solid var(--border);
+    margin-left: 0.5rem;
+    position: relative;
+  }
+  .replay-event::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 0.85rem;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 2px solid var(--text-dim);
+  }
+  .replay-event.decision::before { border-color: var(--accent-purple); background: rgba(167,139,250,0.2); }
+  .replay-event.turning::before { border-color: var(--accent-amber); background: rgba(251,191,36,0.2); }
+  .replay-event.error::before { border-color: var(--accent-rose); background: rgba(251,113,133,0.2); }
+
+  .replay-event-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+  .replay-event-tool {
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--accent-purple);
+  }
+  .replay-event-time {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+  }
+  .replay-event-marker {
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+  }
+  .replay-event-marker.decision { background: rgba(167,139,250,0.15); color: var(--accent-purple); }
+  .replay-event-marker.turning { background: rgba(251,191,36,0.15); color: var(--accent-amber); }
+
+  .replay-event-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .replay-diff {
+    margin-top: 0.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.6rem 0.8rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    line-height: 1.6;
+    overflow-x: auto;
+  }
+  .diff-add { color: var(--accent-green); }
+  .diff-del { color: var(--accent-rose); }
+  .diff-file { color: var(--text-dim); }
+
+  /* ---- STORAGE SECTION ---- */
+  .storage-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    align-items: start;
+  }
+  .storage-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .storage-block::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
+  .storage-block:first-child::before { background: var(--gradient-4); }
+  .storage-block:last-child::before { background: var(--gradient-1); }
+  .storage-block h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .storage-block .storage-tech {
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    color: var(--accent-purple);
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+  .storage-block:last-child .storage-tech { color: var(--accent-blue); }
+  .storage-block p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+  .storage-features {
+    list-style: none;
+  }
+  .storage-features li {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    padding: 0.35rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .storage-features li::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent-purple);
+    flex-shrink: 0;
+  }
+  .storage-block:last-child .storage-features li::before { background: var(--accent-blue); }
+
+  /* File tree */
+  .file-tree {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    line-height: 2;
+    color: var(--text-muted);
+    margin-top: 2rem;
+  }
+  .file-tree .dir { color: var(--accent-purple); font-weight: 600; }
+  .file-tree .file { color: var(--text-muted); }
+  .file-tree .comment { color: var(--text-dim); font-size: 0.72rem; }
+
+  /* ---- HOOKS SECTION ---- */
+  .hooks-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+  .hook-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    transition: all 0.3s ease;
+  }
+  .hook-card:hover {
+    border-color: rgba(167,139,250,0.3);
+    box-shadow: 0 8px 30px rgba(167,139,250,0.06);
+  }
+  .hook-name {
+    font-size: 1rem;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--accent-purple);
+    margin-bottom: 0.75rem;
+  }
+  .hook-card p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+  .hook-events {
+    list-style: none;
+  }
+  .hook-events li {
+    font-size: 0.8rem;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    padding: 0.3rem 0;
+  }
+  .hook-events li span {
+    color: var(--accent-blue);
+  }
+  .hook-principles {
+    margin-top: 2rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.75rem;
+  }
+  .hook-principles h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--text);
+  }
+  .hook-principles ul {
+    list-style: none;
+  }
+  .hook-principles ul li {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    padding: 0.4rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+  .hook-principles ul li .check {
+    color: var(--accent-green);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* ---- CLI REFERENCE ---- */
+  .cli-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .cli-table thead {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .cli-table th {
+    text-align: left;
+    padding: 1rem 1.25rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+  .cli-table td {
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid rgba(42,48,80,0.4);
+    font-size: 0.875rem;
+    vertical-align: top;
+  }
+  .cli-table tr:last-child td { border-bottom: none; }
+  .cli-table .cli-cmd {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--accent-purple);
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  .cli-table .cli-args {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+  .cli-table .cli-desc {
+    color: var(--text-muted);
+  }
+
+  /* ---- MCP TOOLS ---- */
+  .mcp-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+  .mcp-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.75rem;
+    transition: all 0.3s ease;
+  }
+  .mcp-card:hover {
+    border-color: rgba(167,139,250,0.3);
+    transform: translateY(-2px);
+  }
+  .mcp-tool-name {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent-purple);
+    margin-bottom: 0.5rem;
+  }
+  .mcp-card p {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+  }
+  .mcp-params {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    background: var(--bg-surface);
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+  }
+  .mcp-params span { color: var(--accent-blue); }
+
+  /* ---- QUICKSTART ---- */
+  .quickstart-block {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .qs-header {
+    padding: 0.75rem 1.25rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .qs-body {
+    padding: 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    color: var(--text-muted);
+    overflow-x: auto;
+  }
+  .qs-body .g { color: var(--accent-green); }
+  .qs-body .b { color: var(--accent-blue); }
+  .qs-body .a { color: var(--accent-amber); }
+  .qs-body .p { color: var(--accent-purple); }
+  .qs-body .c { color: var(--text-dim); }
+  .qs-body .w { color: var(--text); }
+  .qs-body .r { color: var(--accent-rose); }
+
+  /* ---- MODULE CARDS ---- */
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+  .module-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    transition: all 0.3s ease;
+  }
+  .module-card:hover {
+    border-color: rgba(167,139,250,0.3);
+  }
+  .module-file {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent-purple);
+    margin-bottom: 0.4rem;
+  }
+  .module-card p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  /* ---- STATS BAR ---- */
+  .stats-bar {
+    display: flex;
+    justify-content: center;
+    gap: 4rem;
+    flex-wrap: wrap;
+    padding: 3rem 2rem;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin: 2rem 0;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    background: var(--gradient-4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    margin-top: 0.25rem;
+  }
+
+  /* ---- FOOTER ---- */
+  footer {
+    padding: 4rem 2rem;
+    text-align: center;
+    border-top: 1px solid var(--border);
+  }
+  footer .footer-inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+  }
+  footer .footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+  footer .footer-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: color 0.2s;
+  }
+  footer .footer-links a:hover { color: var(--text); }
+  footer .footer-note {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 1.8;
+  }
+
+  /* ---- EVENT TYPES ---- */
+  .event-types-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 1rem;
+  }
+  .event-type-tag {
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    padding: 0.3rem 0.75rem;
+    border-radius: 6px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    transition: all 0.2s;
+  }
+  .event-type-tag:hover {
+    border-color: rgba(167,139,250,0.3);
+    color: var(--accent-purple);
+  }
+
+  /* ---- ANIMATIONS ---- */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .fade-in-delay-1 { transition-delay: 0.1s; }
+  .fade-in-delay-2 { transition-delay: 0.2s; }
+  .fade-in-delay-3 { transition-delay: 0.3s; }
+
+  .slide-in-left {
+    opacity: 0;
+    transform: translateX(-30px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .slide-in-left.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .slide-in-right {
+    opacity: 0;
+    transform: translateX(30px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .slide-in-right.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Stagger children */
+  .stagger-children > * {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .stagger-children.visible > *:nth-child(1) { transition-delay: 0.05s; opacity: 1; transform: translateY(0); }
+  .stagger-children.visible > *:nth-child(2) { transition-delay: 0.1s; opacity: 1; transform: translateY(0); }
+  .stagger-children.visible > *:nth-child(3) { transition-delay: 0.15s; opacity: 1; transform: translateY(0); }
+  .stagger-children.visible > *:nth-child(4) { transition-delay: 0.2s; opacity: 1; transform: translateY(0); }
+  .stagger-children.visible > *:nth-child(5) { transition-delay: 0.25s; opacity: 1; transform: translateY(0); }
+  .stagger-children.visible > *:nth-child(6) { transition-delay: 0.3s; opacity: 1; transform: translateY(0); }
+  .stagger-children.visible > *:nth-child(7) { transition-delay: 0.35s; opacity: 1; transform: translateY(0); }
+  .stagger-children.visible > *:nth-child(8) { transition-delay: 0.4s; opacity: 1; transform: translateY(0); }
+
+  /* Purple glow behind hero */
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  /* ---- TERMINAL PREVIEW ---- */
+  .terminal-preview {
+    max-width: 720px;
+    width: 100%;
+    margin: 4rem auto 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    text-align: left;
+  }
+  .terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+  }
+  .terminal-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .terminal-dot.red { background: #FF5F57; }
+  .terminal-dot.yellow { background: #FEBC2E; }
+  .terminal-dot.green { background: #28C840; }
+  .terminal-title {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .terminal-body {
+    padding: 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    color: var(--text-muted);
+    overflow-x: auto;
+  }
+  .terminal-body .prompt { color: var(--accent-purple); }
+  .terminal-body .cmd { color: var(--text); }
+  .terminal-body .comment { color: var(--text-dim); }
+  .terminal-body .output { color: var(--accent-purple); }
+  .terminal-body .accent { color: var(--accent-amber); }
+  .terminal-body .success { color: var(--accent-green); }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 768px) {
+    .nav-links { display: none; }
+    .hero { padding: 5rem 1.5rem 3rem; }
+    .hero h1 { font-size: 2.5rem; }
+    section { padding: 4rem 1.5rem; }
+    .replay-body { grid-template-columns: 1fr; }
+    .replay-sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+    .storage-grid { grid-template-columns: 1fr; }
+    .hooks-layout { grid-template-columns: 1fr; }
+    .mcp-grid { grid-template-columns: 1fr; }
+    .stats-bar { gap: 2rem; }
+    .flow-pipeline { flex-direction: column; }
+    .flow-arrow { transform: rotate(90deg); width: auto; height: 30px; }
+    .flow-stage { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-brand">
+      <div class="logo-icon">Cx</div>
+      Cortex
+    </a>
+    <ul class="nav-links">
+      <li><span class="nav-separator">/</span></li>
+      <li><a href="#" class="active-link">Vibe Replay</a></li>
+      <li><a href="#the-flow">Flow</a></li>
+      <li><a href="#phases">Phases</a></li>
+      <li><a href="#insights">Insights</a></li>
+      <li><a href="#replay-preview">Replay</a></li>
+      <li><a href="#cli">CLI</a></li>
+      <li><a href="#quickstart">Quick Start</a></li>
+      <li><a href="https://github.com/zzhiyuann/vibe-replay" class="nav-cta">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="dot"></span>
+    Memory Layer &middot; Part of Cortex
+  </div>
+  <h1>
+    <span class="gradient-text">Vibe Replay</span>
+  </h1>
+  <p class="subtitle">
+    Every AI coding session generates decisions, patterns, and hard-won insights.
+    Vibe Replay captures them all and turns raw events into structured wisdom you can replay, search, and share.
+  </p>
+  <p class="tagline">"Not just logs &mdash; structured wisdom."</p>
+  <div class="hero-actions">
+    <a href="#quickstart" class="btn btn-primary">Get Started</a>
+    <a href="#the-flow" class="btn btn-secondary">See How It Works</a>
+  </div>
+
+  <!-- Terminal Preview -->
+  <div class="terminal-preview">
+    <div class="terminal-bar">
+      <div class="terminal-dot red"></div>
+      <div class="terminal-dot yellow"></div>
+      <div class="terminal-dot green"></div>
+      <span class="terminal-title">vibe-replay &mdash; zsh</span>
+    </div>
+    <div class="terminal-body">
+      <span class="comment"># Your coding session just ended. What happened?</span><br>
+      <span class="prompt">$</span> <span class="cmd">vibe-replay replay latest</span><br>
+      <br>
+      <span class="output">Session: refactor-auth-module</span><br>
+      <span class="output">Duration: 47m &middot; 142 events &middot; 8 files changed</span><br>
+      <br>
+      <span class="success">Phases detected:</span><br>
+      &nbsp;&nbsp;<span class="accent">EXPLORATION</span> <span class="comment">(12m)</span> &rarr; <span class="accent">IMPLEMENTATION</span> <span class="comment">(28m)</span> &rarr; <span class="accent">TESTING</span> <span class="comment">(7m)</span><br>
+      <br>
+      <span class="success">Insights extracted:</span><br>
+      &nbsp;&nbsp;<span class="output">[DECISION]</span> Chose 3-module split over monolith at event #34<br>
+      &nbsp;&nbsp;<span class="output">[LEARNING]</span> JWT edge case: expired tokens need grace period<br>
+      &nbsp;&nbsp;<span class="output">[MISTAKE]</span> Import cycle debugged for 8 events (events #67-#75)<br>
+      &nbsp;&nbsp;<span class="output">[PATTERN]</span> Read-heavy session (62% exploration)<br>
+      <br>
+      <span class="success">&#10003; HTML replay generated &mdash; opening in browser</span>
+    </div>
+  </div>
+</section>
+
+<!-- THE FLOW -->
+<section id="the-flow" class="fade-in">
+  <div class="section-label">The Flow</div>
+  <h2 class="section-title">Capture. Store. Analyze. Render.</h2>
+  <p class="section-desc">
+    Four stages turn raw Claude Code events into structured, searchable, shareable wisdom.
+    Every stage is designed to be crash-safe, non-blocking, and zero-config.
+  </p>
+
+  <div class="flow-visual">
+    <div class="flow-pipeline stagger-children">
+      <div class="flow-stage stage-capture">
+        <div class="flow-stage-inner">
+          <div class="stage-icon">&#9881;</div>
+          <div class="stage-title">Capture</div>
+          <div class="stage-desc">Claude Code hooks fire on every tool use and session stop. Events stream into an append-only log.</div>
+        </div>
+      </div>
+
+      <div class="flow-arrow">&rarr;</div>
+
+      <div class="flow-stage stage-store">
+        <div class="flow-stage-inner">
+          <div class="stage-icon">&#9744;</div>
+          <div class="stage-title">Store</div>
+          <div class="stage-desc">JSONL for durability and streaming. SQLite index for fast queries and search.</div>
+        </div>
+      </div>
+
+      <div class="flow-arrow">&rarr;</div>
+
+      <div class="flow-stage stage-analyze">
+        <div class="flow-stage-inner">
+          <div class="stage-icon">&#9733;</div>
+          <div class="stage-title">Analyze</div>
+          <div class="stage-desc">Phase detection, insight extraction, decision tracking, statistics computation.</div>
+        </div>
+      </div>
+
+      <div class="flow-arrow">&rarr;</div>
+
+      <div class="flow-stage stage-render">
+        <div class="flow-stage-inner">
+          <div class="stage-icon">&#9998;</div>
+          <div class="stage-title">Render</div>
+          <div class="stage-desc">Interactive HTML replays, Markdown summaries, JSON exports. All self-contained.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Architecture text diagram -->
+  <div class="file-tree fade-in">
+    <span class="dir">Claude Code Session</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&darr;<br>
+    &nbsp;&nbsp;<span class="dir">[Hooks]</span> <span class="comment">PostToolUse, Stop</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&darr;<br>
+    &nbsp;&nbsp;<span class="file">events.jsonl</span> <span class="comment">append-only log</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&darr;<br>
+    &nbsp;&nbsp;<span class="dir">[Analyzer]</span> <span class="comment">&rarr; Phase detection, insights, statistics</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&darr;<br>
+    &nbsp;&nbsp;<span class="dir">[Renderers]</span> <span class="comment">&rarr; HTML / Markdown / JSON</span>
+  </div>
+</section>
+
+<!-- SESSION PHASES -->
+<section id="phases" class="fade-in">
+  <div class="section-label">Session Phases</div>
+  <h2 class="section-title">Auto-detected from your workflow</h2>
+  <p class="section-desc">
+    Vibe Replay watches which tools you use and what keywords appear, then automatically
+    segments your session into meaningful phases. Brief interruptions are merged; tiny runs
+    are absorbed into their neighbors.
+  </p>
+
+  <div class="phases-grid stagger-children">
+    <div class="phase-card">
+      <div class="phase-icon">&#128269;</div>
+      <h3>Exploration</h3>
+      <div class="phase-detect">Read / Glob / Grep &rarr; EXPLORATION</div>
+      <p>Reading files, searching codebases, browsing structures. The discovery phase before writing code.</p>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-icon">&#128295;</div>
+      <h3>Implementation</h3>
+      <div class="phase-detect">Edit / Write &rarr; IMPLEMENTATION</div>
+      <p>Writing code, creating new files, making changes. The core building phase of any session.</p>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-icon">&#128027;</div>
+      <h3>Debugging</h3>
+      <div class="phase-detect">error / fail / bug keywords &rarr; DEBUGGING</div>
+      <p>Fixing errors, tracing issues, resolving failures. Detected by error-related keywords in tool output.</p>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-icon">&#10003;</div>
+      <h3>Testing</h3>
+      <div class="phase-detect">Bash + test / pytest / assert &rarr; TESTING</div>
+      <p>Running tests, checking assertions, validating behavior. Bash commands with test keywords trigger this.</p>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-icon">&#8634;</div>
+      <h3>Refactoring</h3>
+      <div class="phase-detect">refactor / restructure keywords</div>
+      <p>Restructuring existing code without changing behavior. Clean-up and architecture improvements.</p>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-icon">&#9881;</div>
+      <h3>Configuration</h3>
+      <div class="phase-detect">config / setup / install keywords</div>
+      <p>Setting up dependencies, configuring tools, deployment preparation. Infrastructure work.</p>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-icon">&#128196;</div>
+      <h3>Documentation</h3>
+      <div class="phase-detect">README / doc / comment keywords</div>
+      <p>Writing READMEs, adding comments, creating documentation. Making the work understandable.</p>
+    </div>
+  </div>
+</section>
+
+<!-- INSIGHT TYPES -->
+<section id="insights" class="fade-in">
+  <div class="section-label">Insight Types</div>
+  <h2 class="section-title">Wisdom extraction, automated</h2>
+  <p class="section-desc">
+    Not all events are equal. The analyzer identifies the moments that matter most &mdash;
+    the decisions, the patterns, the mistakes &mdash; and surfaces them as structured insights.
+  </p>
+
+  <div class="insights-grid stagger-children">
+    <div class="insight-card">
+      <div class="insight-badge decision">Decision</div>
+      <h3>Key Choices</h3>
+      <p>Captured when the session transitions to implementation, or when the first code change hits a new file. These mark the "why" behind architectural decisions.</p>
+      <div class="insight-trigger">Trigger: phase transition to IMPLEMENTATION</div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-badge learning">Learning</div>
+      <h3>Discovered Patterns</h3>
+      <p>New knowledge gained during the session. API quirks, library behaviors, edge cases that weren't obvious before coding started.</p>
+      <div class="insight-trigger">Trigger: extracted from session context</div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-badge mistake">Mistake</div>
+      <h3>Debugging Detours</h3>
+      <p>When an error appears at event N and the fix doesn't land until event M, with a gap greater than 5 events. These teach what not to repeat.</p>
+      <div class="insight-trigger">Trigger: error at event N, fix at M, gap &gt; 5</div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-badge pattern">Pattern</div>
+      <h3>Recurring Behaviors</h3>
+      <p>Read-heavy sessions (&gt;60% exploration), implementation-heavy sessions (&gt;50% coding). Helps you understand your own workflow tendencies.</p>
+      <div class="insight-trigger">Trigger: ratio thresholds across events</div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-badge turning">Turning Point</div>
+      <h3>Session Pivots</h3>
+      <p>Moments where the session direction changes dramatically &mdash; encountering unexpected errors, running tests that fail, switching strategies entirely.</p>
+      <div class="insight-trigger">Trigger: errors, failed tests, strategy changes</div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-badge hotspot">Hotspot</div>
+      <h3>Heavily Modified Files</h3>
+      <p>Files that were modified 4 or more times during a session. These are the focal points &mdash; the files where the real work concentrated.</p>
+      <div class="insight-trigger">Trigger: file modified &ge;4 times</div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-badge exploration">Multiple Exploration</div>
+      <h3>Deep Dives</h3>
+      <p>Two or more runs of 5+ consecutive read/search operations. Indicates deep codebase exploration, usually before a major decision or design change.</p>
+      <div class="insight-trigger">Trigger: &ge;2 runs of 5+ consecutive reads</div>
+    </div>
+  </div>
+</section>
+
+<!-- HTML REPLAY PREVIEW -->
+<section id="replay-preview" class="fade-in">
+  <div class="section-label">Interactive Replay</div>
+  <h2 class="section-title">Your session, visualized</h2>
+  <p class="section-desc">
+    Self-contained HTML replays with dark/light themes, collapsible phases,
+    expandable events, code diffs, and filtering. No external dependencies &mdash;
+    just open the file and browse.
+  </p>
+
+  <div class="replay-mockup fade-in">
+    <div class="replay-titlebar">
+      <div class="replay-dot red"></div>
+      <div class="replay-dot yellow"></div>
+      <div class="replay-dot green"></div>
+      <span class="replay-titlebar-text">refactor-auth-module &mdash; replay.html</span>
+    </div>
+    <div class="replay-body">
+      <!-- Sidebar -->
+      <div class="replay-sidebar">
+        <div class="replay-stat-card">
+          <div class="replay-stat-label">Duration</div>
+          <div class="replay-stat-value purple">47m 23s</div>
+        </div>
+        <div class="replay-stat-card">
+          <div class="replay-stat-label">Events</div>
+          <div class="replay-stat-value blue">142</div>
+        </div>
+        <div class="replay-stat-card">
+          <div class="replay-stat-label">Files Changed</div>
+          <div class="replay-stat-value green">8</div>
+        </div>
+        <div class="replay-stat-card">
+          <div class="replay-stat-label">Code Changes</div>
+          <div class="replay-stat-value amber">24</div>
+        </div>
+        <div class="replay-stat-card">
+          <div class="replay-stat-label">Errors</div>
+          <div class="replay-stat-value rose">3</div>
+        </div>
+
+        <div style="margin-top:0.5rem;">
+          <div class="replay-stat-label" style="margin-bottom:0.5rem;">Insights (9)</div>
+          <ul class="replay-insight-list">
+            <li><span class="replay-insight-dot purple"></span> Chose 3-module architecture</li>
+            <li><span class="replay-insight-dot purple"></span> JWT grace period design</li>
+            <li><span class="replay-insight-dot amber"></span> Import cycle pivot</li>
+            <li><span class="replay-insight-dot rose"></span> 8-event debugging detour</li>
+            <li><span class="replay-insight-dot green"></span> Read-heavy pattern (62%)</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="replay-timeline">
+        <div class="replay-filter-bar">
+          <div class="replay-filter active">All</div>
+          <div class="replay-filter">Code Changes</div>
+          <div class="replay-filter">Errors</div>
+          <div class="replay-filter">Tool Calls</div>
+          <div class="replay-filter">Decisions</div>
+        </div>
+
+        <!-- Phase: Exploration -->
+        <div class="replay-phase">
+          <div class="replay-phase-header">
+            <span class="replay-phase-name exploration">Exploration</span>
+            <div class="replay-phase-bar exploration"></div>
+            <span class="replay-phase-count">38 events &middot; 12m</span>
+          </div>
+          <div class="replay-event">
+            <div class="replay-event-header">
+              <span class="replay-event-tool">Glob</span>
+              <span class="replay-event-time">09:15:02</span>
+            </div>
+            <div class="replay-event-desc">Search for auth-related files: **/*auth*</div>
+          </div>
+          <div class="replay-event">
+            <div class="replay-event-header">
+              <span class="replay-event-tool">Read</span>
+              <span class="replay-event-time">09:15:14</span>
+            </div>
+            <div class="replay-event-desc">Read src/auth/middleware.py (248 lines)</div>
+          </div>
+          <div class="replay-event">
+            <div class="replay-event-header">
+              <span class="replay-event-tool">Grep</span>
+              <span class="replay-event-time">09:16:31</span>
+            </div>
+            <div class="replay-event-desc">Search for JWT token handling: pattern "jwt|token" in src/</div>
+          </div>
+        </div>
+
+        <!-- Phase: Implementation -->
+        <div class="replay-phase">
+          <div class="replay-phase-header">
+            <span class="replay-phase-name implementation">Implementation</span>
+            <div class="replay-phase-bar implementation"></div>
+            <span class="replay-phase-count">72 events &middot; 28m</span>
+          </div>
+          <div class="replay-event decision">
+            <div class="replay-event-header">
+              <span class="replay-event-tool">Edit</span>
+              <span class="replay-event-time">09:27:45</span>
+              <span class="replay-event-marker decision">Key Decision</span>
+            </div>
+            <div class="replay-event-desc">Split auth module into 3 files: validators.py, middleware.py, tokens.py</div>
+            <div class="replay-diff">
+              <span class="diff-file">src/auth/validators.py (new)</span><br>
+              <span class="diff-add">+ class JWTValidator:</span><br>
+              <span class="diff-add">+     def validate(self, token: str) -> Claims:</span><br>
+              <span class="diff-add">+         """Validate JWT with grace period for expired tokens."""</span>
+            </div>
+          </div>
+          <div class="replay-event">
+            <div class="replay-event-header">
+              <span class="replay-event-tool">Write</span>
+              <span class="replay-event-time">09:31:12</span>
+            </div>
+            <div class="replay-event-desc">Create src/auth/tokens.py &mdash; Token refresh and rotation logic</div>
+          </div>
+          <div class="replay-event error">
+            <div class="replay-event-header">
+              <span class="replay-event-tool">Bash</span>
+              <span class="replay-event-time">09:42:08</span>
+              <span class="replay-event-marker turning">Turning Point</span>
+            </div>
+            <div class="replay-event-desc">ImportError: circular import between validators and middleware</div>
+            <div class="replay-diff">
+              <span class="diff-del">- from .validators import JWTValidator  # circular!</span><br>
+              <span class="diff-add">+ from .tokens import TokenManager  # break cycle</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase: Testing -->
+        <div class="replay-phase">
+          <div class="replay-phase-header">
+            <span class="replay-phase-name testing">Testing</span>
+            <div class="replay-phase-bar testing"></div>
+            <span class="replay-phase-count">32 events &middot; 7m</span>
+          </div>
+          <div class="replay-event">
+            <div class="replay-event-header">
+              <span class="replay-event-tool">Bash</span>
+              <span class="replay-event-time">09:55:44</span>
+            </div>
+            <div class="replay-event-desc">pytest tests/auth/ -v &mdash; 24 passed, 0 failed</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Replay features list -->
+  <div style="margin-top: 2rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;" class="stagger-children">
+    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem;">
+      <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.4rem;">Dark / Light Toggle</div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">Theme preference saved to localStorage. Respects system preference on first load.</div>
+    </div>
+    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem;">
+      <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.4rem;">Collapsible Phases</div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">Click any phase header to expand/collapse its events. Navigate quickly through long sessions.</div>
+    </div>
+    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem;">
+      <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.4rem;">Code Diff Display</div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">Green/red syntax-highlighted diffs inline with events. See exactly what changed and why.</div>
+    </div>
+    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem;">
+      <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.4rem;">Event Filtering</div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">Filter by All, Code Changes, Errors, Tool Calls, or Decisions. Focus on what matters.</div>
+    </div>
+    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem;">
+      <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.4rem;">Sticky Header</div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">Project name, date, duration, and key counts always visible as you scroll through events.</div>
+    </div>
+    <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem;">
+      <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.4rem;">Self-Contained</div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">Single HTML file, zero external dependencies. Share via email, Slack, or just open locally.</div>
+    </div>
+  </div>
+</section>
+
+<!-- STORAGE ARCHITECTURE -->
+<section id="storage" class="fade-in">
+  <div class="section-label">Storage Architecture</div>
+  <h2 class="section-title">Dual storage. Best of both worlds.</h2>
+  <p class="section-desc">
+    JSONL for reliability and streaming. SQLite for speed and queries.
+    Each serves a different need &mdash; together they cover every access pattern.
+  </p>
+
+  <div class="storage-grid">
+    <div class="storage-block slide-in-left">
+      <h3>JSONL Event Log</h3>
+      <div class="storage-tech">events.jsonl</div>
+      <p>Append-only, one JSON object per line. The source of truth for every event that happened during a session.</p>
+      <ul class="storage-features">
+        <li>Append-only: crash-safe, never corrupts existing data</li>
+        <li>Streaming-friendly: read line by line, no need to load the whole file</li>
+        <li>Human-readable: inspect with any text editor or jq</li>
+        <li>Portable: copy a session directory to share the complete record</li>
+      </ul>
+    </div>
+
+    <div class="storage-block slide-in-right">
+      <h3>SQLite Index</h3>
+      <div class="storage-tech">index.db</div>
+      <p>Fast metadata queries, session search, and cross-session aggregation. The query layer over your event logs.</p>
+      <ul class="storage-features">
+        <li>Fast queries: list sessions by project, date, or keyword</li>
+        <li>Full-text search: find sessions by content or tool usage</li>
+        <li>Cross-session: aggregate learnings across all sessions</li>
+        <li>Lightweight: single file, no server, instant startup</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- File tree -->
+  <div class="file-tree fade-in" style="margin-top: 2rem;">
+    <span class="dir">~/.vibe-replay/</span><br>
+    <span class="dir">&boxvr;&boxh;&boxh; sessions/</span><br>
+    <span class="dir">&boxv;&nbsp;&nbsp;&boxvr;&boxh;&boxh; {session_id}/</span><br>
+    <span class="file">&boxv;&nbsp;&nbsp;&boxv;&nbsp;&nbsp;&boxvr;&boxh;&boxh; events.jsonl</span> &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Raw events (append-only)</span><br>
+    <span class="file">&boxv;&nbsp;&nbsp;&boxv;&nbsp;&nbsp;&boxvr;&boxh;&boxh; metadata.json</span> &nbsp;&nbsp;<span class="comment"># Session metadata</span><br>
+    <span class="file">&boxv;&nbsp;&nbsp;&boxv;&nbsp;&nbsp;&boxur;&boxh;&boxh; replay.json</span> &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Processed analysis</span><br>
+    <span class="dir">&boxv;&nbsp;&nbsp;&boxur;&boxh;&boxh; ...</span><br>
+    <span class="file">&boxvr;&boxh;&boxh; index.db</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># SQLite index</span><br>
+    <span class="file">&boxvr;&boxh;&boxh; capture-hook.py</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># PostToolUse hook</span><br>
+    <span class="file">&boxvr;&boxh;&boxh; stop-hook.py</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Stop hook</span><br>
+    <span class="file">&boxur;&boxh;&boxh; capture-errors.log</span> &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Error log</span>
+  </div>
+</section>
+
+<!-- HOOK INTEGRATION -->
+<section id="hooks" class="fade-in">
+  <div class="section-label">Hook Integration</div>
+  <h2 class="section-title">Zero-friction capture via Claude Code hooks</h2>
+  <p class="section-desc">
+    Vibe Replay plugs into Claude Code's hook system. Two hooks &mdash; PostToolUse and Stop &mdash;
+    capture every meaningful event without interfering with your workflow.
+  </p>
+
+  <div class="hooks-layout">
+    <div class="hook-card">
+      <div class="hook-name">PostToolUse</div>
+      <p>Fires after every tool call Claude makes. Captures the tool name, input, output, timing, and any file changes.</p>
+      <ul class="hook-events">
+        <li>Captures: <span>TOOL_CALL</span>, <span>CODE_CHANGE</span>, <span>ERROR</span></li>
+        <li>Monitors: <span>Read</span>, <span>Write</span>, <span>Edit</span>, <span>Bash</span>, <span>Glob</span>, <span>Grep</span></li>
+        <li>Extracts: file paths, diff content, error messages</li>
+        <li>Timing: millisecond-precision timestamps</li>
+      </ul>
+    </div>
+
+    <div class="hook-card">
+      <div class="hook-name">Stop</div>
+      <p>Fires when a session ends. Triggers analysis, generates the replay, and updates the SQLite index.</p>
+      <ul class="hook-events">
+        <li>Triggers: <span>SESSION_END</span> event</li>
+        <li>Runs: <span>Analyzer</span> (phase detection + insights)</li>
+        <li>Generates: <span>replay.json</span>, updates <span>index.db</span></li>
+        <li>Optional: auto-generate HTML replay</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="hook-principles fade-in">
+    <h4>Design Principles</h4>
+    <ul>
+      <li><span class="check">&#10003;</span> Non-blocking: hooks run asynchronously, never slow down Claude Code</li>
+      <li><span class="check">&#10003;</span> Never crash: all errors are caught and logged to capture-errors.log</li>
+      <li><span class="check">&#10003;</span> Append-only: no data is ever deleted or overwritten during capture</li>
+      <li><span class="check">&#10003;</span> Zero config: install once, forget about it. Everything is automatic</li>
+      <li><span class="check">&#10003;</span> Lightweight: minimal overhead, no network calls during capture</li>
+    </ul>
+  </div>
+
+  <!-- Event Types -->
+  <div style="margin-top: 2rem;" class="fade-in">
+    <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem;">Event Types</h4>
+    <div class="event-types-grid">
+      <div class="event-type-tag">TOOL_CALL</div>
+      <div class="event-type-tag">CODE_CHANGE</div>
+      <div class="event-type-tag">DECISION</div>
+      <div class="event-type-tag">ERROR</div>
+      <div class="event-type-tag">USER_MESSAGE</div>
+      <div class="event-type-tag">SESSION_START</div>
+      <div class="event-type-tag">SESSION_END</div>
+      <div class="event-type-tag">NOTIFICATION</div>
+    </div>
+  </div>
+</section>
+
+<!-- MODULE STRUCTURE -->
+<section class="fade-in">
+  <div class="section-label">Module Structure</div>
+  <h2 class="section-title">Clean, composable Python</h2>
+  <p class="section-desc">
+    Eight focused modules. Pydantic for data models, Click for CLI, Jinja2 for rendering, Rich for terminal output.
+  </p>
+
+  <div class="modules-grid stagger-children">
+    <div class="module-card">
+      <div class="module-file">models.py</div>
+      <p>Pydantic data models &mdash; Event, SessionMetadata, Insight, SessionReplay, Phase, and more.</p>
+    </div>
+    <div class="module-card">
+      <div class="module-file">capture.py</div>
+      <p>Event capture from Claude Code hooks. Parses tool calls, extracts diffs, timestamps events.</p>
+    </div>
+    <div class="module-card">
+      <div class="module-file">store.py</div>
+      <p>SessionStore &mdash; JSONL append, SQLite indexing, session listing, search, and metadata queries.</p>
+    </div>
+    <div class="module-card">
+      <div class="module-file">analyzer.py</div>
+      <p>Phase detection, insight extraction, statistics computation. The intelligence layer.</p>
+    </div>
+    <div class="module-card">
+      <div class="module-file">renderer.py</div>
+      <p>HTML, Markdown, and JSON rendering with Jinja2 templates. Self-contained output generation.</p>
+    </div>
+    <div class="module-card">
+      <div class="module-file">hooks.py</div>
+      <p>Claude Code hook installation and uninstallation. Manages settings.json integration.</p>
+    </div>
+    <div class="module-card">
+      <div class="module-file">cli.py</div>
+      <p>Click-based CLI &mdash; install, replay, export, analyze, sessions, wisdom, serve.</p>
+    </div>
+    <div class="module-card">
+      <div class="module-file">mcp_server.py</div>
+      <p>MCP server for querying sessions programmatically. Enables other agents to access your wisdom.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CLI REFERENCE -->
+<section id="cli" class="fade-in">
+  <div class="section-label">CLI Reference</div>
+  <h2 class="section-title">Everything from the terminal</h2>
+  <p class="section-desc">
+    A complete Click-based CLI for managing hooks, browsing sessions, generating replays, and extracting wisdom.
+  </p>
+
+  <div style="overflow-x: auto;">
+    <table class="cli-table">
+      <thead>
+        <tr>
+          <th>Command</th>
+          <th>Arguments</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="cli-cmd">install</td>
+          <td class="cli-args">&mdash;</td>
+          <td class="cli-desc">Install PostToolUse and Stop hooks into Claude Code settings</td>
+        </tr>
+        <tr>
+          <td class="cli-cmd">uninstall</td>
+          <td class="cli-args">&mdash;</td>
+          <td class="cli-desc">Remove Vibe Replay hooks from Claude Code settings</td>
+        </tr>
+        <tr>
+          <td class="cli-cmd">status</td>
+          <td class="cli-args">&mdash;</td>
+          <td class="cli-desc">Check if hooks are installed and functioning correctly</td>
+        </tr>
+        <tr>
+          <td class="cli-cmd">sessions</td>
+          <td class="cli-args">[-p PROJECT] [-n LIMIT]</td>
+          <td class="cli-desc">List captured sessions, optionally filtered by project name</td>
+        </tr>
+        <tr>
+          <td class="cli-cmd">show</td>
+          <td class="cli-args">SESSION_ID</td>
+          <td class="cli-desc">Display a terminal summary of a session with Rich formatting</td>
+        </tr>
+        <tr>
+          <td class="cli-cmd">replay</td>
+          <td class="cli-args">SESSION_ID</td>
+          <td class="cli-desc">Generate an interactive HTML replay and open it in the browser</td>
+        </tr>
+        <tr>
+          <td class="cli-cmd">export</td>
+          <td class="cli-args">SESSION_ID [-f FORMAT] [-o OUTPUT]</td>
+          <td class="cli-desc">Export a session as HTML, Markdown, or JSON to a specified path</td>
+        </tr>
+        <tr>
+          <td class="cli-cmd">analyze</td>
+          <td class="cli-args">SESSION_ID</td>
+          <td class="cli-desc">Run or re-run analysis on a session (phases, insights, stats)</td>
+        </tr>
+        <tr>
+          <td class="cli-cmd">wisdom</td>
+          <td class="cli-args">[-n LIMIT]</td>
+          <td class="cli-desc">Aggregate and display cross-session learnings and patterns</td>
+        </tr>
+        <tr>
+          <td class="cli-cmd">serve</td>
+          <td class="cli-args">[-p PORT]</td>
+          <td class="cli-desc">Start a local web server for browsing sessions interactively</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- MCP TOOLS -->
+<section id="mcp" class="fade-in">
+  <div class="section-label">MCP Server</div>
+  <h2 class="section-title">Queryable by other agents</h2>
+  <p class="section-desc">
+    Vibe Replay exposes an MCP server so other agents in your Cortex stack can query
+    session history, search for learnings, and access structured wisdom programmatically.
+  </p>
+
+  <div class="mcp-grid stagger-children">
+    <div class="mcp-card">
+      <div class="mcp-tool-name">search_sessions</div>
+      <p>Search across all sessions by keyword. Matches project names, tool calls, file paths, and insight descriptions.</p>
+      <div class="mcp-params"><span>query</span>: string, <span>limit</span>: int = 10</div>
+    </div>
+
+    <div class="mcp-card">
+      <div class="mcp-tool-name">get_learnings</div>
+      <p>Retrieve aggregated insights across recent sessions. Returns decisions, patterns, mistakes, and learnings.</p>
+      <div class="mcp-params"><span>limit</span>: int = 20</div>
+    </div>
+
+    <div class="mcp-card">
+      <div class="mcp-tool-name">get_session_summary</div>
+      <p>Get the full analysis of a specific session including phases, insights, statistics, and timeline.</p>
+      <div class="mcp-params"><span>session_id</span>: string</div>
+    </div>
+
+    <div class="mcp-card">
+      <div class="mcp-tool-name">list_recent_sessions</div>
+      <p>List the most recent captured sessions with basic metadata: project, duration, event count, date.</p>
+      <div class="mcp-params"><span>limit</span>: int = 10</div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar fade-in">
+  <div class="stat">
+    <div class="stat-value">7</div>
+    <div class="stat-label">Phase Types</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">7</div>
+    <div class="stat-label">Insight Types</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">8</div>
+    <div class="stat-label">Event Types</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">3</div>
+    <div class="stat-label">Output Formats</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">4</div>
+    <div class="stat-label">MCP Tools</div>
+  </div>
+</div>
+
+<!-- QUICKSTART -->
+<section id="quickstart" class="fade-in">
+  <div class="section-label">Quick Start</div>
+  <h2 class="section-title">Three commands to structured wisdom</h2>
+  <p class="section-desc">
+    Install, hook into Claude Code, code as usual, then replay. Your sessions are now
+    permanently captured with zero extra effort.
+  </p>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>1 &mdash; Install</span>
+      <span>Python 3.11+</span>
+    </div>
+    <div class="qs-body">
+      <span class="w">pip install</span> <span class="p">vibe-replay</span><br>
+    </div>
+  </div>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>2 &mdash; Install Hooks</span>
+    </div>
+    <div class="qs-body">
+      <span class="w">vibe-replay</span> <span class="p">install</span><br>
+      <br>
+      <span class="g">&#10003; PostToolUse hook installed</span><br>
+      <span class="g">&#10003; Stop hook installed</span><br>
+      <span class="g">&#10003; Storage directory created at ~/.vibe-replay/</span><br>
+      <span class="g">&#10003; SQLite index initialized</span><br>
+      <br>
+      <span class="c"># Verify everything is working</span><br>
+      <span class="w">vibe-replay</span> <span class="p">status</span><br>
+      <span class="g">Hooks: installed &middot; Storage: ready &middot; Sessions: 0</span>
+    </div>
+  </div>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>3 &mdash; Code as Usual</span>
+    </div>
+    <div class="qs-body">
+      <span class="c"># Just use Claude Code normally. Everything is captured automatically.</span><br>
+      <span class="w">claude</span> <span class="p">"refactor the auth module"</span><br>
+      <br>
+      <span class="c"># Events stream into ~/.vibe-replay/sessions/{id}/events.jsonl</span><br>
+      <span class="c"># When the session ends, analysis runs automatically</span>
+    </div>
+  </div>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>4 &mdash; Replay &amp; Learn</span>
+    </div>
+    <div class="qs-body">
+      <span class="c"># Generate and open an interactive HTML replay</span><br>
+      <span class="w">vibe-replay</span> <span class="p">replay</span> <span class="b">latest</span><br>
+      <span class="g">&#10003; Opening replay in browser &mdash; 4 decisions, 2 learnings</span><br>
+      <br>
+      <span class="c"># Export as Markdown for documentation</span><br>
+      <span class="w">vibe-replay</span> <span class="p">export</span> <span class="b">latest</span> <span class="c">-f md -o session-notes.md</span><br>
+      <br>
+      <span class="c"># See what you've learned across all sessions</span><br>
+      <span class="w">vibe-replay</span> <span class="p">wisdom</span><br>
+      <br>
+      <span class="a">Cross-session patterns:</span><br>
+      &nbsp;&nbsp;<span class="p">[PATTERN]</span> You tend to explore deeply before implementing (avg 35% read phase)<br>
+      &nbsp;&nbsp;<span class="p">[PATTERN]</span> Debugging detours average 6.2 events before resolution<br>
+      &nbsp;&nbsp;<span class="p">[LEARNING]</span> JWT tokens: always add grace period for clock skew<br>
+      &nbsp;&nbsp;<span class="p">[HOTSPOT]</span> src/auth/middleware.py modified in 12 of last 20 sessions<br>
+      <br>
+      <span class="c"># Start a web server for browsing all sessions</span><br>
+      <span class="w">vibe-replay</span> <span class="p">serve</span><br>
+      <span class="g">&#10003; Serving at http://localhost:8420</span>
+    </div>
+  </div>
+
+  <!-- Tech specs -->
+  <div style="margin-top: 2rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem;" class="fade-in">
+    <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem; color: var(--text);">Technical Specs</h4>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+      <div>
+        <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 0.35rem;">Runtime</div>
+        <div style="font-size: 0.875rem; color: var(--text-muted);">Python &ge;3.11</div>
+      </div>
+      <div>
+        <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 0.35rem;">Dependencies</div>
+        <div style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted);">click, pydantic, jinja2, rich</div>
+      </div>
+      <div>
+        <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 0.35rem;">Storage</div>
+        <div style="font-size: 0.875rem; color: var(--text-muted);">JSONL + SQLite (local)</div>
+      </div>
+      <div>
+        <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 0.35rem;">Output</div>
+        <div style="font-size: 0.875rem; color: var(--text-muted);">HTML, Markdown, JSON</div>
+      </div>
+      <div>
+        <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 0.35rem;">Hook Overhead</div>
+        <div style="font-size: 0.875rem; color: var(--text-muted);">Non-blocking, &lt;5ms per event</div>
+      </div>
+      <div>
+        <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 0.35rem;">HTML Output</div>
+        <div style="font-size: 0.875rem; color: var(--text-muted);">Self-contained, zero external deps</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-links">
+      <a href="index.html">Cortex</a>
+      <a href="https://github.com/zzhiyuann/dispatcher">Dispatcher</a>
+      <a href="https://github.com/zzhiyuann/a2a-hub">A2A Hub</a>
+      <a href="https://github.com/zzhiyuann/forge">Forge</a>
+      <a href="https://github.com/zzhiyuann/vibe-replay">Vibe Replay</a>
+      <a href="https://github.com/zzhiyuann">GitHub</a>
+    </div>
+    <p class="footer-note">
+      Vibe Replay is part of the Cortex agent infrastructure stack.<br>
+      Open source under the MIT License.<br><br>
+      <span style="color: var(--text-dim);">Not just logs &mdash; structured wisdom.
+      Every session compounds into knowledge.</span>
+    </p>
+  </div>
+</footer>
+
+<!-- JS -->
+<script>
+  // Nav scroll effect
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 20);
+  });
+
+  // Intersection observer for all animated elements
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  // Observe all animated elements
+  document.querySelectorAll('.fade-in, .slide-in-left, .slide-in-right, .stagger-children').forEach(el => {
+    observer.observe(el);
+  });
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      const href = a.getAttribute('href');
+      if (href === '#') return;
+      e.preventDefault();
+      const target = document.querySelector(href);
+      if (target) {
+        const navHeight = 64;
+        const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - navHeight;
+        window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+      }
+    });
+  });
+
+  // Replay filter interaction (visual only)
+  document.querySelectorAll('.replay-filter').forEach(filter => {
+    filter.addEventListener('click', () => {
+      document.querySelectorAll('.replay-filter').forEach(f => f.classList.remove('active'));
+      filter.classList.add('active');
+    });
+  });
+
+  // Typing animation for terminal
+  (function() {
+    const heroTerminal = document.querySelector('.hero .terminal-body');
+    if (!heroTerminal) return;
+    heroTerminal.style.opacity = '0';
+    heroTerminal.style.transition = 'opacity 0.8s ease';
+
+    const heroObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setTimeout(() => {
+            heroTerminal.style.opacity = '1';
+          }, 500);
+          heroObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.3 });
+
+    heroObserver.observe(heroTerminal);
+  })();
+
+  // Parallax glow effect on hero
+  document.addEventListener('mousemove', (e) => {
+    const hero = document.querySelector('.hero');
+    if (!hero) return;
+    const rect = hero.getBoundingClientRect();
+    if (e.clientY > rect.bottom) return;
+    const x = ((e.clientX / window.innerWidth) - 0.5) * 30;
+    const y = ((e.clientY / window.innerHeight) - 0.5) * 30;
+    hero.style.setProperty('--glow-x', x + 'px');
+    hero.style.setProperty('--glow-y', y + 'px');
+  });
+</script>
+
+</body>
+</html>
