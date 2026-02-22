@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cortex — Personal Agent Infrastructure</title>
+<style>
+  :root {
+    --bg: #0B0F19;
+    --bg-surface: #131825;
+    --bg-card: #1A1F2E;
+    --bg-card-hover: #222840;
+    --border: #2A3050;
+    --text: #E2E8F0;
+    --text-muted: #8892B0;
+    --text-dim: #5A6380;
+    --accent-blue: #60A5FA;
+    --accent-purple: #A78BFA;
+    --accent-green: #34D399;
+    --accent-amber: #FBBF24;
+    --accent-rose: #FB7185;
+    --gradient-1: linear-gradient(135deg, #60A5FA, #A78BFA);
+    --gradient-2: linear-gradient(135deg, #34D399, #60A5FA);
+    --gradient-3: linear-gradient(135deg, #FBBF24, #FB7185);
+    --gradient-4: linear-gradient(135deg, #A78BFA, #FB7185);
+    --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    --max-w: 1200px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    font-size: 16px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---- NAV ---- */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(11, 15, 25, 0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    transition: box-shadow 0.3s;
+  }
+  nav.scrolled { box-shadow: 0 4px 30px rgba(0,0,0,0.4); }
+  .nav-inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .nav-brand {
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .nav-brand .logo-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--gradient-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--bg);
+  }
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+  }
+  .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta {
+    background: var(--gradient-1);
+    color: var(--bg) !important;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    font-weight: 600 !important;
+  }
+
+  /* ---- HERO ---- */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 6rem 2rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(96,165,250,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    background: var(--bg-surface);
+  }
+  .hero-badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .hero h1 {
+    font-size: clamp(3rem, 7vw, 5.5rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 .gradient-text {
+    background: var(--gradient-1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero .subtitle {
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    max-width: 640px;
+    margin: 0 auto 3rem;
+    line-height: 1.6;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: none;
+    font-family: var(--font-sans);
+  }
+  .btn-primary {
+    background: var(--gradient-1);
+    color: var(--bg);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(96,165,250,0.25); }
+  .btn-secondary {
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--bg-card-hover); border-color: var(--text-dim); }
+
+  /* ---- TERMINAL PREVIEW ---- */
+  .terminal-preview {
+    max-width: 720px;
+    width: 100%;
+    margin: 4rem auto 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    text-align: left;
+  }
+  .terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+  }
+  .terminal-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .terminal-dot.red { background: #FF5F57; }
+  .terminal-dot.yellow { background: #FEBC2E; }
+  .terminal-dot.green { background: #28C840; }
+  .terminal-title {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .terminal-body {
+    padding: 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    color: var(--text-muted);
+    overflow-x: auto;
+  }
+  .terminal-body .prompt { color: var(--accent-green); }
+  .terminal-body .cmd { color: var(--text); }
+  .terminal-body .comment { color: var(--text-dim); }
+  .terminal-body .output { color: var(--accent-blue); }
+  .terminal-body .accent { color: var(--accent-amber); }
+
+  /* ---- SECTIONS ---- */
+  section {
+    padding: 6rem 2rem;
+    max-width: var(--max-w);
+    margin: 0 auto;
+  }
+  .section-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent-blue);
+    margin-bottom: 0.75rem;
+  }
+  .section-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 1rem;
+  }
+  .section-desc {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 640px;
+    margin-bottom: 3rem;
+    line-height: 1.6;
+  }
+
+  /* ---- PHILOSOPHY ---- */
+  .philosophy {
+    text-align: center;
+    padding: 8rem 2rem;
+    position: relative;
+  }
+  .philosophy::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(ellipse at center, rgba(167,139,250,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .philosophy blockquote {
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.4;
+    max-width: 800px;
+    margin: 0 auto 2rem;
+    position: relative;
+  }
+  .philosophy blockquote .gradient-text {
+    background: var(--gradient-4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .philosophy p {
+    color: var(--text-muted);
+    font-size: 1rem;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  /* ---- ARCHITECTURE ---- */
+  .arch-diagram {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    margin-bottom: 4rem;
+    overflow-x: auto;
+  }
+  .arch-diagram pre {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+    text-align: center;
+    white-space: pre;
+  }
+  .arch-diagram .highlight { color: var(--accent-blue); font-weight: 700; }
+  .arch-diagram .green { color: var(--accent-green); }
+  .arch-diagram .purple { color: var(--accent-purple); }
+  .arch-diagram .amber { color: var(--accent-amber); }
+  .arch-diagram .rose { color: var(--accent-rose); }
+
+  /* ---- COMPONENT CARDS ---- */
+  .components-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+  .comp-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .comp-card:hover {
+    border-color: var(--text-dim);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .comp-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
+  .comp-card:nth-child(1)::before { background: var(--gradient-2); }
+  .comp-card:nth-child(2)::before { background: var(--gradient-1); }
+  .comp-card:nth-child(3)::before { background: var(--gradient-3); }
+  .comp-card:nth-child(4)::before { background: var(--gradient-4); }
+
+  .comp-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    margin-bottom: 1.25rem;
+    font-weight: 800;
+    font-family: var(--font-mono);
+  }
+  .comp-card:nth-child(1) .comp-icon { background: rgba(52,211,153,0.15); color: var(--accent-green); }
+  .comp-card:nth-child(2) .comp-icon { background: rgba(96,165,250,0.15); color: var(--accent-blue); }
+  .comp-card:nth-child(3) .comp-icon { background: rgba(251,191,36,0.15); color: var(--accent-amber); }
+  .comp-card:nth-child(4) .comp-icon { background: rgba(167,139,250,0.15); color: var(--accent-purple); }
+
+  .comp-card h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    letter-spacing: -0.01em;
+  }
+  .comp-card .comp-role {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+  .comp-card p {
+    color: var(--text-muted);
+    font-size: 0.925rem;
+    margin-bottom: 1.25rem;
+  }
+  .comp-features {
+    list-style: none;
+    font-size: 0.85rem;
+  }
+  .comp-features li {
+    color: var(--text-muted);
+    padding: 0.3rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .comp-features li::before {
+    content: '~';
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* ---- HOW IT WORKS ---- */
+  .flow-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    position: relative;
+    padding-left: 3rem;
+  }
+  .flow-steps::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+  .flow-step {
+    position: relative;
+  }
+  .flow-step .step-marker {
+    position: absolute;
+    left: -3rem;
+    top: 0.15rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--accent-blue);
+    z-index: 1;
+  }
+  .flow-step h4 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .flow-step p {
+    color: var(--text-muted);
+    font-size: 0.925rem;
+  }
+  .flow-step code {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    background: var(--bg-surface);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    color: var(--accent-blue);
+  }
+
+  /* ---- USE CASES ---- */
+  .usecases-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+  .usecase {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+  }
+  .usecase h4 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+  }
+  .usecase p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+  .usecase .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .tag {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    background: var(--bg-surface);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+
+  /* ---- QUICKSTART ---- */
+  .quickstart-block {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .qs-header {
+    padding: 0.75rem 1.25rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .qs-body {
+    padding: 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.8;
+    color: var(--text-muted);
+    overflow-x: auto;
+  }
+  .qs-body .g { color: var(--accent-green); }
+  .qs-body .b { color: var(--accent-blue); }
+  .qs-body .a { color: var(--accent-amber); }
+  .qs-body .p { color: var(--accent-purple); }
+  .qs-body .c { color: var(--text-dim); }
+  .qs-body .w { color: var(--text); }
+
+  /* ---- STATS ---- */
+  .stats-bar {
+    display: flex;
+    justify-content: center;
+    gap: 4rem;
+    flex-wrap: wrap;
+    padding: 3rem 2rem;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin: 2rem 0;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    background: var(--gradient-1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    margin-top: 0.25rem;
+  }
+
+  /* ---- FOOTER ---- */
+  footer {
+    padding: 4rem 2rem;
+    text-align: center;
+    border-top: 1px solid var(--border);
+  }
+  footer .footer-inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+  }
+  footer .footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+  footer .footer-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: color 0.2s;
+  }
+  footer .footer-links a:hover { color: var(--text); }
+  footer .footer-note {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 1.8;
+  }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 768px) {
+    .nav-links { display: none; }
+    .hero { padding: 5rem 1.5rem 3rem; }
+    .hero h1 { font-size: 2.5rem; }
+    section { padding: 4rem 1.5rem; }
+    .components-grid { grid-template-columns: 1fr; }
+    .stats-bar { gap: 2rem; }
+    .flow-steps { padding-left: 2.5rem; }
+    .arch-diagram { padding: 2rem 1rem; }
+    .arch-diagram pre { font-size: 0.65rem; }
+    .terminal-body { font-size: 0.75rem; }
+  }
+
+  /* ---- ANIMATIONS ---- */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-brand">
+      <div class="logo-icon">Cx</div>
+      Cortex
+    </a>
+    <ul class="nav-links">
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#components">Components</a></li>
+      <li><a href="#how-it-works">How It Works</a></li>
+      <li><a href="#quickstart">Quick Start</a></li>
+      <li><a href="https://github.com/zzhiyuann" class="nav-cta">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="dot"></span>
+    Open Source &middot; Built with AI Agents
+  </div>
+  <h1>
+    One person.<br>
+    <span class="gradient-text">Infinite agents.</span>
+  </h1>
+  <p class="subtitle">
+    Cortex is a personal agent infrastructure stack. Four integrated systems that let a single person
+    command, orchestrate, create tools, and capture wisdom — all through AI agents.
+  </p>
+  <div class="hero-actions">
+    <a href="#quickstart" class="btn btn-primary">Get Started</a>
+    <a href="#architecture" class="btn btn-secondary">See Architecture</a>
+  </div>
+
+  <!-- Terminal Preview -->
+  <div class="terminal-preview">
+    <div class="terminal-bar">
+      <div class="terminal-dot red"></div>
+      <div class="terminal-dot yellow"></div>
+      <div class="terminal-dot green"></div>
+      <span class="terminal-title">cortex &mdash; zsh</span>
+    </div>
+    <div class="terminal-body">
+      <span class="comment"># Message your AI from your phone</span><br>
+      <span class="prompt">telegram&gt;</span> <span class="cmd">refactor the auth module in sims</span><br>
+      <span class="output">Dispatcher: on it (sims) &mdash; 3 agents mobilized</span><br>
+      <br>
+      <span class="comment"># Agents discover and delegate to each other</span><br>
+      <span class="prompt">a2a-hub&gt;</span> <span class="output">code-reviewer registered &middot; test-runner registered</span><br>
+      <span class="prompt">a2a-hub&gt;</span> <span class="output">task delegated: review &rarr; code-reviewer</span><br>
+      <br>
+      <span class="comment"># Need a new tool? Forge builds it on the fly</span><br>
+      <span class="prompt">forge&gt;</span> <span class="cmd">create "parse SIMS sensor CSV with filtering"</span><br>
+      <span class="output">Generated &middot; 12 tests passed &middot; Installed to MCP</span><br>
+      <br>
+      <span class="comment"># Every session becomes structured wisdom</span><br>
+      <span class="prompt">vibe-replay&gt;</span> <span class="accent">Session captured: 4 decisions &middot; 2 learnings &middot; replay ready</span>
+    </div>
+  </div>
+</section>
+
+<!-- PHILOSOPHY -->
+<div class="philosophy fade-in">
+  <blockquote>
+    "The best tools don't just help you do things faster.<br>
+    They <span class="gradient-text">change what's possible</span> for one person to do."
+  </blockquote>
+  <p>
+    Cortex is built on a simple belief: with the right agent infrastructure,
+    a single person can run a research lab, ship products, and automate their entire digital life.
+    No team of 10. No enterprise software. Just you and your agents.
+  </p>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar fade-in">
+  <div class="stat">
+    <div class="stat-value">4</div>
+    <div class="stat-label">Integrated Systems</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">141</div>
+    <div class="stat-label">Tests Passing</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">0</div>
+    <div class="stat-label">External Dependencies*</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">1</div>
+    <div class="stat-label">Person Needed</div>
+  </div>
+</div>
+
+<!-- ARCHITECTURE -->
+<section id="architecture" class="fade-in">
+  <div class="section-label">Architecture</div>
+  <h2 class="section-title">Four systems. One brain.</h2>
+  <p class="section-desc">
+    Each component handles a distinct cognitive function. Together, they form a complete
+    agent operating system — from receiving commands to building tools to remembering what worked.
+  </p>
+
+  <div class="arch-diagram">
+    <pre>
+                        ┌──────────────────────────────────────┐
+                        │          <span class="highlight">YOU</span> (Phone / Desktop)         │
+                        └──────────────────┬───────────────────┘
+                                           │
+                          Telegram / CLI / Natural Language
+                                           │
+                        ┌──────────────────▼───────────────────┐
+                        │      <span class="green">DISPATCHER</span>  (Command Layer)      │
+                        │                                      │
+                        │  Classify &rarr; Route &rarr; Execute &rarr; Reply  │
+                        │  Mobile JARVIS &middot; Always-on Daemon    │
+                        └──────┬──────────────┬────────────────┘
+                               │              │
+                ┌──────────────▼──┐    ┌──────▼──────────────┐
+                │   <span class="highlight">A2A HUB</span>       │    │     <span class="amber">FORGE</span>           │
+                │ (Comm Layer)    │    │  (Creation Layer)   │
+                │                 │    │                     │
+                │ Agent Registry  │    │ Describe &rarr; Clarify  │
+                │ Task Routing    │◄──►│ Generate &rarr; Test     │
+                │ Discovery       │    │ Iterate &rarr; Install   │
+                │ WebSocket Proto │    │ CLI + MCP Server    │
+                └──────┬──────────┘    └─────────────────────┘
+                       │
+              ┌────────▼──────────────────────────────────────┐
+              │              <span class="purple">VIBE REPLAY</span>  (Memory Layer)       │
+              │                                               │
+              │  Capture Events &rarr; Analyze &rarr; Extract Insights   │
+              │  Generate Replay &rarr; Aggregate Wisdom &rarr; Share     │
+              │  Claude Code Hooks &middot; HTML Timeline &middot; MCP Query │
+              └───────────────────────────────────────────────┘
+    </pre>
+  </div>
+</section>
+
+<!-- COMPONENTS -->
+<section id="components" class="fade-in">
+  <div class="section-label">Components</div>
+  <h2 class="section-title">Built to work alone. Better together.</h2>
+  <p class="section-desc">
+    Each component is a standalone, open-source project. Use one, use all four.
+    They're designed to compose naturally.
+  </p>
+
+  <div class="components-grid">
+    <!-- Dispatcher -->
+    <div class="comp-card">
+      <div class="comp-icon">D</div>
+      <h3>Dispatcher</h3>
+      <div class="comp-role">Command Layer</div>
+      <p>
+        Your mobile JARVIS. Message Claude from your phone via Telegram.
+        It classifies, routes, and manages concurrent tasks — always on, always ready.
+      </p>
+      <ul class="comp-features">
+        <li>Smart message classification (task / status / cancel)</li>
+        <li>Project-aware routing with auto directory detection</li>
+        <li>Concurrent task management (3 parallel sessions)</li>
+        <li>Intelligent follow-up detection (no explicit reply needed)</li>
+        <li>Progress updates and typing indicators</li>
+        <li>570 lines, zero dependencies, LaunchAgent daemon</li>
+      </ul>
+    </div>
+
+    <!-- A2A Hub -->
+    <div class="comp-card">
+      <div class="comp-icon">H</div>
+      <h3>A2A Hub</h3>
+      <div class="comp-role">Communication Layer</div>
+      <p>
+        Agent-to-Agent protocol hub. Agents discover each other, delegate tasks,
+        and collaborate through a lightweight WebSocket-based protocol.
+      </p>
+      <ul class="comp-features">
+        <li>Agent registry with capability-based discovery</li>
+        <li>Task delegation with routing and result collection</li>
+        <li>Broadcast messaging for multi-agent coordination</li>
+        <li>Heartbeat and automatic disconnection cleanup</li>
+        <li>MCP bridge — use directly from Claude Code</li>
+        <li>Python SDK with decorator-based agent creation</li>
+      </ul>
+    </div>
+
+    <!-- Forge -->
+    <div class="comp-card">
+      <div class="comp-icon">F</div>
+      <h3>Forge</h3>
+      <div class="comp-role">Creation Layer</div>
+      <p>
+        Self-evolving tool agent. Describe what you need in plain English —
+        Forge builds it, tests it, and installs it into your toolkit.
+      </p>
+      <ul class="comp-features">
+        <li>Natural language to working tool in one command</li>
+        <li>Intelligent clarification questions for ambiguous requests</li>
+        <li>Auto-generated tests with iterative refinement (max 5 rounds)</li>
+        <li>Multiple output types: MCP tool, CLI command, Python module</li>
+        <li>Direct installation into MCP config or system PATH</li>
+        <li>Both CLI and MCP server interfaces</li>
+      </ul>
+    </div>
+
+    <!-- Vibe Replay -->
+    <div class="comp-card">
+      <div class="comp-icon">V</div>
+      <h3>Vibe Replay</h3>
+      <div class="comp-role">Memory Layer</div>
+      <p>
+        Not just logs — structured wisdom. Captures coding sessions, extracts
+        decisions and learnings, generates beautiful shareable replays.
+      </p>
+      <ul class="comp-features">
+        <li>Claude Code hooks for automatic event capture</li>
+        <li>Phase detection (exploration, implementation, debugging)</li>
+        <li>Decision point and turning point identification</li>
+        <li>Auto-extracted reflections, learnings, and patterns</li>
+        <li>Interactive HTML replay with timeline and code diffs</li>
+        <li>Cross-session wisdom aggregation</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works" class="fade-in">
+  <div class="section-label">How It Works</div>
+  <h2 class="section-title">From thought to execution to wisdom</h2>
+  <p class="section-desc">
+    A real workflow: you're on your phone, you have an idea, and your agent
+    infrastructure handles the rest.
+  </p>
+
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="step-marker">01</div>
+      <h4>You send a message from your phone</h4>
+      <p>
+        "Refactor the data pipeline in sims, add proper error handling and tests."
+        <br>Sent via Telegram. You're on the subway. No laptop needed.
+      </p>
+    </div>
+
+    <div class="flow-step">
+      <div class="step-marker">02</div>
+      <h4>Dispatcher classifies and routes</h4>
+      <p>
+        Detects project <code>sims</code>, sets working directory, classifies as engineering task.
+        Spawns a Claude Code session with 50 max turns and your memory context.
+        Sends you: "On it (sims)."
+      </p>
+    </div>
+
+    <div class="flow-step">
+      <div class="step-marker">03</div>
+      <h4>Agent discovers it needs a CSV parser tool</h4>
+      <p>
+        During refactoring, Claude realizes it needs a custom CSV parser.
+        Through A2A Hub, it finds Forge and delegates: "Build a SIMS sensor CSV parser with timestamp filtering."
+      </p>
+    </div>
+
+    <div class="flow-step">
+      <div class="step-marker">04</div>
+      <h4>Forge builds, tests, and installs the tool</h4>
+      <p>
+        Forge generates the parser, creates 12 tests, runs them, all pass.
+        Installs as an MCP tool. The refactoring agent now uses it directly.
+      </p>
+    </div>
+
+    <div class="flow-step">
+      <div class="step-marker">05</div>
+      <h4>Task completes. Results sent to your phone</h4>
+      <p>
+        "Done. Refactored data_loader into 3 modules, added error handling and 24 tests.
+        Also created a new sensor_csv_parser tool (installed to MCP)."
+      </p>
+    </div>
+
+    <div class="flow-step">
+      <div class="step-marker">06</div>
+      <h4>Vibe Replay captures everything</h4>
+      <p>
+        The entire session is captured: 4 key decisions (why 3 modules instead of 2),
+        2 learnings (SIMS timestamp format quirks), 1 new tool created.
+        HTML replay generated. Wisdom aggregated.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- USE CASES -->
+<section class="fade-in">
+  <div class="section-label">Use Cases</div>
+  <h2 class="section-title">What one person can do now</h2>
+  <p class="section-desc">
+    Cortex isn't theoretical. It's built by a researcher who uses it daily
+    to run experiments, ship projects, and automate everything in between.
+  </p>
+
+  <div class="usecases-grid">
+    <div class="usecase">
+      <h4>One-Person Research Lab</h4>
+      <p>
+        Run literature reviews, design experiments, analyze data, and draft papers —
+        all orchestrated by agents. Your phone becomes your lab terminal.
+      </p>
+      <div class="tag-row">
+        <span class="tag">Dispatcher</span>
+        <span class="tag">A2A Hub</span>
+        <span class="tag">Vibe Replay</span>
+      </div>
+    </div>
+
+    <div class="usecase">
+      <h4>Rapid Tool Building</h4>
+      <p>
+        Hit a wall during development? Describe the tool you wish existed.
+        Forge builds it, tests it, and injects it into your workflow in minutes.
+      </p>
+      <div class="tag-row">
+        <span class="tag">Forge</span>
+        <span class="tag">A2A Hub</span>
+      </div>
+    </div>
+
+    <div class="usecase">
+      <h4>Vibe Coding Knowledge Base</h4>
+      <p>
+        Every AI coding session generates structured learnings. Over time,
+        you build a personal knowledge base of what works — shareable with your team or community.
+      </p>
+      <div class="tag-row">
+        <span class="tag">Vibe Replay</span>
+      </div>
+    </div>
+
+    <div class="usecase">
+      <h4>Mobile-First Engineering</h4>
+      <p>
+        Commuting? At dinner? Send a Telegram message and your agents handle the rest.
+        Concurrent tasks, progress updates, smart follow-ups — like texting a senior engineer.
+      </p>
+      <div class="tag-row">
+        <span class="tag">Dispatcher</span>
+      </div>
+    </div>
+
+    <div class="usecase">
+      <h4>Multi-Agent Workflows</h4>
+      <p>
+        Chain specialized agents together. One researches, another codes, a third reviews,
+        and a fourth writes docs. All coordinated through a shared protocol.
+      </p>
+      <div class="tag-row">
+        <span class="tag">A2A Hub</span>
+        <span class="tag">Forge</span>
+        <span class="tag">Dispatcher</span>
+      </div>
+    </div>
+
+    <div class="usecase">
+      <h4>Personal Automation</h4>
+      <p>
+        Flight lookups, visa research, calendar management, daily book generation —
+        set up once, runs forever as an always-on daemon.
+      </p>
+      <div class="tag-row">
+        <span class="tag">Dispatcher</span>
+        <span class="tag">Forge</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUICKSTART -->
+<section id="quickstart" class="fade-in">
+  <div class="section-label">Quick Start</div>
+  <h2 class="section-title">Up and running in minutes</h2>
+  <p class="section-desc">
+    Each component installs independently. Start with what you need.
+  </p>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>Dispatcher — Mobile JARVIS</span>
+      <span>Python 3.11+</span>
+    </div>
+    <div class="qs-body">
+      <span class="c"># Clone and configure</span><br>
+      <span class="w">git clone</span> <span class="b">https://github.com/zzhiyuann/cortex-dispatcher</span><br>
+      <span class="w">cp</span> .env.example .env  <span class="c"># Add your Telegram bot token &amp; chat ID</span><br>
+      <br>
+      <span class="c"># Install as always-on daemon (macOS)</span><br>
+      <span class="w">python3</span> dispatcher.py <span class="a">--install-daemon</span><br>
+      <br>
+      <span class="c"># Or run directly</span><br>
+      <span class="w">python3</span> dispatcher.py<br>
+      <span class="g">&#10003; Dispatcher running. Send a message on Telegram.</span>
+    </div>
+  </div>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>A2A Hub — Agent Communication</span>
+      <span>Python 3.11+ &middot; pip</span>
+    </div>
+    <div class="qs-body">
+      <span class="c"># Install</span><br>
+      <span class="w">pip install</span> <span class="b">a2a-hub</span><br>
+      <br>
+      <span class="c"># Start the hub server</span><br>
+      <span class="w">a2a-hub</span> <span class="a">start</span>  <span class="c"># WebSocket on port 8765</span><br>
+      <br>
+      <span class="c"># Add MCP bridge to Claude Code</span><br>
+      <span class="w">a2a-hub</span> <span class="a">bridge</span>  <span class="c"># Starts MCP server for Claude Code</span><br>
+      <span class="g">&#10003; Hub running. 0 agents connected.</span>
+    </div>
+  </div>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>Forge — Self-Evolving Tool Agent</span>
+      <span>Python 3.11+ &middot; pip</span>
+    </div>
+    <div class="qs-body">
+      <span class="c"># Install</span><br>
+      <span class="w">pip install</span> <span class="b">forge-agent</span><br>
+      <br>
+      <span class="c"># Create a tool from natural language</span><br>
+      <span class="w">forge</span> <span class="a">create</span> <span class="p">"convert CSV to JSON with column filtering"</span><br>
+      <span class="g">&#10003; Generated &middot; 8 tests passed &middot; Installed to ~/.forge/tools/</span><br>
+      <br>
+      <span class="c"># Or install directly as MCP tool</span><br>
+      <span class="w">forge</span> <span class="a">create</span> <span class="p">"parse URL query parameters"</span> <span class="a">--type mcp --install mcp</span><br>
+      <span class="g">&#10003; Added to ~/.mcp.json. Available in Claude Code now.</span>
+    </div>
+  </div>
+
+  <div class="quickstart-block">
+    <div class="qs-header">
+      <span>Vibe Replay — Session Wisdom</span>
+      <span>Python 3.11+ &middot; pip</span>
+    </div>
+    <div class="qs-body">
+      <span class="c"># Install</span><br>
+      <span class="w">pip install</span> <span class="b">vibe-replay</span><br>
+      <br>
+      <span class="c"># Hook into Claude Code (one-time setup)</span><br>
+      <span class="w">vibe-replay</span> <span class="a">install</span>  <span class="c"># Adds hooks to ~/.claude/settings.json</span><br>
+      <br>
+      <span class="c"># After coding sessions, view your replays</span><br>
+      <span class="w">vibe-replay</span> <span class="a">sessions</span>  <span class="c"># List captured sessions</span><br>
+      <span class="w">vibe-replay</span> <span class="a">replay</span> latest  <span class="c"># Open interactive HTML replay</span><br>
+      <span class="w">vibe-replay</span> <span class="a">wisdom</span>  <span class="c"># See aggregated learnings across sessions</span><br>
+      <span class="g">&#10003; 3 decisions &middot; 2 learnings &middot; 1 pattern detected</span>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-links">
+      <a href="https://github.com/zzhiyuann/cortex-dispatcher">Dispatcher</a>
+      <a href="https://github.com/zzhiyuann/a2a-hub">A2A Hub</a>
+      <a href="https://github.com/zzhiyuann/forge">Forge</a>
+      <a href="https://github.com/zzhiyuann/vibe-replay">Vibe Replay</a>
+      <a href="https://github.com/zzhiyuann">GitHub</a>
+    </div>
+    <p class="footer-note">
+      Cortex is open source under the MIT License.<br>
+      Built by one person and their AI agents. Naturally.<br><br>
+      <span style="color: var(--text-dim);">* Dispatcher has zero external dependencies (stdlib only).
+      Other components use minimal, well-chosen libraries.</span>
+    </p>
+  </div>
+</footer>
+
+<!-- JS -->
+<script>
+  // Nav scroll effect
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 20);
+  });
+
+  // Fade-in on scroll
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+
+</body>
+</html>
