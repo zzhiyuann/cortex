@@ -50,11 +50,8 @@ class AgentRunner:
         max_turns: int = 50,
         model: str | None = None,
         stream: bool = True,
-        ephemeral: bool = False,
     ) -> str:
-        """Spawn agent process. stream=False for fast plain mode.
-        ephemeral=True skips session persistence for throwaway Q&A.
-        """
+        """Spawn agent process. stream=False for fast plain mode."""
         cmd = [self.command] + list(self.args)
 
         # Claude-specific: session management
@@ -62,7 +59,7 @@ class AgentRunner:
         if self._is_claude():
             if resume:
                 cmd += ["--resume", session.sid]
-            elif not ephemeral:
+            else:
                 cmd += ["--session-id", session.sid]
             cmd += ["--max-turns", str(max_turns)]
             if use_stream:

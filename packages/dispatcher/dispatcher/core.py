@@ -775,11 +775,10 @@ class Dispatcher:
         is_quick = not is_project
 
         # 4. If nothing running, try to resume last session for continuity
-        #    SKIP for quick questions — they go through the fast plain-mode path
-        if not is_quick and not self.sm.force_new:
+        if not self.sm.force_new:
             last = self.sm.last_session()
             if not active and last and last.status in ("done", "failed"):
-                self._spawn(self._do_followup(mid, text, last, attachments, model=model_override, model_sticky=is_sticky))
+                self._spawn(self._do_followup(mid, text, last, attachments, model=model_override, model_sticky=is_sticky, quick=is_quick))
                 return
         self.sm.force_new = False
 
@@ -804,7 +803,6 @@ class Dispatcher:
         """Run a task with progress feedback."""
         session.model_override = model
         if quick:
-            # Quick Q&A: minimal prompt, 1 turn, no session persistence
             prompt = self._build_prompt_quick(text, attachments)
             max_turns = 1
         else:
@@ -815,7 +813,7 @@ class Dispatcher:
         runner = asyncio.create_task(
             self.runner.invoke(
                 session, prompt, resume=False, max_turns=max_turns,
-                model=model, stream=not quick, ephemeral=quick,
+                model=model, stream=not quick,
             )
         )
         # Quick questions: typing only, no progress messages (no noise)
@@ -829,19 +827,25 @@ class Dispatcher:
         attachments: list[dict] | None = None,
         model: str | None = None,
         model_sticky: bool = False,
+        quick: bool = False,
     ):
         """Wait for a running session to finish, then resume with the new message."""
         while target.status in ("pending", "running"):
             await asyncio.sleep(1)
-        await self._do_followup(mid, text, target, attachments, model=model, model_sticky=model_sticky)
+        await self._do_followup(mid, text, target, attachments, model=model, model_sticky=model_sticky, quick=quick)
 
     async def _do_followup(
         self, mid: int, text: str, prev: Session,
         attachments: list[dict] | None = None,
         model: str | None = None,
         model_sticky: bool = False,
+        quick: bool = False,
     ):
-        """Resume a previous session for follow-up."""
+        """Resume a previous session for follow-up.
+
+        quick=True uses plain mode and 1 turn for fast responses
+        while still maintaining session continuity via --resume.
+        """
         effective_model = model or self._sticky_model
         effective_sticky = model_sticky or (prev.model_sticky if not model else False)
 
@@ -894,13 +898,17 @@ class Dispatcher:
             follow_text, session.cwd,
         )
 
+        max_turns = 1 if quick else self.cfg.max_turns_followup
+        use_stream = not quick
+
         runner = asyncio.create_task(
             self.runner.invoke(
                 session, prompt, resume=resume,
-                max_turns=self.cfg.max_turns_followup, model=effective_model,
+                max_turns=max_turns, model=effective_model,
+                stream=use_stream,
             )
         )
-        monitor = asyncio.create_task(self._progress_loop(mid, session))
+        monitor = asyncio.create_task(self._progress_loop(mid, session, quiet=quick))
         result = await runner
         monitor.cancel()
         self._send_result(mid, session, result)
