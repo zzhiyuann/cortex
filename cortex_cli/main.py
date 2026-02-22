@@ -27,7 +27,7 @@ console = Console()
 
 
 @click.group()
-@click.version_option("0.1.0", prog_name="cortex")
+@click.version_option("0.1.1", prog_name="cortex")
 def cli():
     """Cortex — Personal Agent Infrastructure Stack.
 
