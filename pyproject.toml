@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "cortex-agent"
+name = "cortex-cli-agent"
 version = "0.1.0"
 description = "Personal Agent Infrastructure Stack — one install, infinite agents."
 readme = "README.md"
