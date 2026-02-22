@@ -24,16 +24,25 @@ When to send:
 ## Git
 Auto commit + push after each meaningful change. Do NOT batch everything into one giant commit. Each commit should be one logical improvement.
 
-## Project Locations
-- `/Users/zwang/projects/cortex/` — Umbrella project, CLI, website
-- `/Users/zwang/projects/vibe-replay/` — Session capture & visualization (PRIMARY FOCUS)
-- `/Users/zwang/projects/forge/` — Tool generation agent
-- `/Users/zwang/projects/a2a-hub/` — Agent communication hub
-- `/Users/zwang/projects/dispatcher/` — Telegram agent bridge
+## Monorepo Structure
+This is a uv workspace monorepo. All packages live under `packages/`:
+
+```
+cortex/                         # repo root
+├── packages/
+│   ├── cortex-cli/             # Umbrella CLI
+│   ├── vibe-replay/            # Session capture & visualization (PRIMARY FOCUS)
+│   ├── forge/                  # Tool generation agent
+│   ├── a2a-hub/                # Agent communication hub
+│   └── dispatcher/             # Telegram agent bridge
+├── pyproject.toml              # workspace definition
+├── index.html                  # GitHub Pages website
+└── CLAUDE.md                   # this file
+```
 
 ## Current Priority: Vibe Replay v1.0
 
-Read `/Users/zwang/projects/vibe-replay/PRODUCT_BRIEF.md` for full context.
+Read `packages/vibe-replay/PRODUCT_BRIEF.md` for full context.
 
 ### P0 Improvements (do these in order):
 
@@ -58,16 +67,18 @@ Read `/Users/zwang/projects/vibe-replay/PRODUCT_BRIEF.md` for full context.
 - Add missing tests
 
 ## Testing
-After modifying any project, run its tests:
+Run all tests from the repo root:
 ```bash
-# Vibe Replay
-/Users/zwang/projects/vibe-replay/.venv/bin/python3 -m pytest /Users/zwang/projects/vibe-replay/tests/ -v
+uv run pytest
+```
 
-# Forge
-/Users/zwang/projects/forge/.venv/bin/python3 -m pytest /Users/zwang/projects/forge/tests/ -v
-
-# A2A Hub
-/Users/zwang/projects/a2a-hub/.venv/bin/python3 -m pytest /Users/zwang/projects/a2a-hub/tests/ -v
+Or test a specific package:
+```bash
+uv run pytest packages/vibe-replay/tests/ -v
+uv run pytest packages/forge/tests/ -v
+uv run pytest packages/a2a-hub/tests/ -v
+uv run pytest packages/cortex-cli/tests/ -v
+uv run pytest packages/dispatcher/tests/ -v
 ```
 
 ## Quality Standards
@@ -80,7 +91,7 @@ After modifying any project, run its tests:
 ## Verification
 After making changes to replay.html template, regenerate a test replay to verify:
 ```bash
-/Users/zwang/projects/vibe-replay/.venv/bin/vibe-replay replay bb15505a
+uv run vibe-replay replay bb15505a
 ```
 Then open the HTML file to visually verify.
 

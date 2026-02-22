@@ -32,14 +32,25 @@ HISTORY_FILE = FEEDBACK_DIR / "history.jsonl"  # rich resolution context
 RESOLVER_PID = FEEDBACK_DIR / "resolver.pid"
 RESOLVER_LOG = FEEDBACK_DIR / "resolver.log"
 
-# Project locations for the resolver
-PROJECTS = {
-    "dispatcher": "/Users/zwang/projects/dispatcher",
-    "vibe-replay": "/Users/zwang/projects/vibe-replay",
-    "cortex": "/Users/zwang/projects/cortex",
-    "forge": "/Users/zwang/projects/forge",
-    "a2a-hub": "/Users/zwang/projects/a2a-hub",
-}
+def _get_project_paths() -> dict[str, str]:
+    """Dynamically resolve project paths (monorepo or filesystem)."""
+    from cortex_cli.detect import get_monorepo_root, detect_all
+
+    monorepo_root = get_monorepo_root()
+    if monorepo_root:
+        paths = {"cortex": str(monorepo_root)}
+        for name in ("dispatcher", "vibe-replay", "forge", "a2a-hub"):
+            pkg_dir = monorepo_root / "packages" / name
+            if pkg_dir.exists():
+                paths[name] = str(pkg_dir)
+        return paths
+
+    # Fallback: use detect_all() to find components
+    paths = {"cortex": str(Path.home() / "projects" / "cortex")}
+    for name, comp in detect_all().items():
+        if comp.project_dir:
+            paths[name] = str(comp.project_dir)
+    return paths
 
 
 def _ensure_dir():
@@ -213,7 +224,8 @@ def _wake_resolver(trigger_issue: dict):
 
     # Determine working directory from the issue source
     source = trigger_issue.get("source", "cortex")
-    cwd = PROJECTS.get(source, PROJECTS.get("cortex", str(Path.home())))
+    projects = _get_project_paths()
+    cwd = projects.get(source, projects.get("cortex", str(Path.home())))
 
     try:
         with open(RESOLVER_LOG, "a") as logf:
@@ -298,8 +310,9 @@ def _build_resolver_prompt(
         parts.append("")
 
     # Project locations
+    projects = _get_project_paths()
     parts.append("## Project Locations")
-    for name, path in PROJECTS.items():
+    for name, path in projects.items():
         parts.append(f"- {name}: {path}")
     parts.append("")
 
@@ -317,10 +330,7 @@ def _build_resolver_prompt(
     parts.append("9. Keep fixes minimal — don't refactor unrelated code")
     parts.append("")
     parts.append("## Testing")
-    for name, path in PROJECTS.items():
-        venv = Path(path) / ".venv" / "bin" / "python3"
-        if name != "cortex":
-            parts.append(f"{venv} -m pytest {path}/tests/ -v")
+    parts.append("uv run pytest  # runs all tests in the monorepo")
     parts.append("")
     parts.append("Go. Fix it.")
 

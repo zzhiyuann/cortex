@@ -20,6 +20,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from cortex_cli.detect import get_monorepo_root
 from cortex_cli.process import read_pid, write_pid, stop_process, log_size, tail_log
 
 console = Console()
@@ -126,10 +127,12 @@ def _build_agent_prompt(tasks: list[dict], custom_prompt: str | None = None) -> 
     except Exception:
         pass
 
+    monorepo_root = get_monorepo_root() or Path.home() / "projects" / "cortex"
+
     prompt = f"""You are the Cortex Autonomous Improvement Agent. Work through the task queue systematically.
 
 ## First Steps
-1. Read /Users/zwang/projects/cortex/CLAUDE.md for project instructions
+1. Read {monorepo_root}/CLAUDE.md for project instructions
 2. Send a Telegram message (in Chinese) announcing you've started
 3. Begin working through tasks in order
 
@@ -150,8 +153,7 @@ curl -s -X POST "https://api.telegram.org/botREDACTED_BOT_TOKEN/sendMessage" \\
   -d "$(python3 -c "import json; print(json.dumps({{'chat_id': REDACTED_CHAT_ID, 'text': '你的消息'}}))\")"
 
 ## Testing
-/Users/zwang/projects/vibe-replay/.venv/bin/python3 -m pytest /Users/zwang/projects/vibe-replay/tests/ -v
-/Users/zwang/projects/forge/.venv/bin/python3 -m pytest /Users/zwang/projects/forge/tests/ -v
+uv run pytest  # runs all tests in the monorepo
 
 ## State File
 Write progress to {STATE_FILE} as JSON after each task:
@@ -219,7 +221,7 @@ def start_agent(
             stderr=log,
             start_new_session=True,
             env=env,
-            cwd="/Users/zwang/projects/cortex",
+            cwd=str(get_monorepo_root() or Path.home() / "projects" / "cortex"),
         )
 
     PID_FILE.write_text(str(proc.pid))

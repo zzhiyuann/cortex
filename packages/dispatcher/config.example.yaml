@@ -1,0 +1,33 @@
+# Dispatcher configuration
+# Copy to ~/.config/dispatcher/config.yaml and fill in your values.
+# Or run `dispatcher init` for interactive setup.
+
+telegram:
+  bot_token: "YOUR_BOT_TOKEN"        # Get from @BotFather on Telegram
+  chat_id: 0                          # Your Telegram user ID (message @userinfobot)
+
+agent:
+  command: "claude"                    # AI agent CLI command (claude, aider, etc.)
+  args: ["-p", "--dangerously-skip-permissions"]
+  max_concurrent: 3                    # Max parallel agent sessions
+  timeout: 1800                        # Task timeout in seconds (30 min)
+  max_turns: 50                        # Max agent turns for project tasks
+  max_turns_chat: 10                   # Max turns for casual chat
+  max_turns_followup: 20               # Max turns for follow-up messages
+
+behavior:
+  poll_timeout: 30                     # Telegram long-poll seconds
+  progress_interval: 180               # Seconds between progress updates
+  recent_window: 300                   # Seconds to consider for smart follow-ups
+  cancel_keywords: [cancel, stop]      # Keywords that cancel a running task
+  status_keywords: [status]            # Keywords that show status
+
+# Project routing: map keywords to project directories.
+# When a message contains a keyword, the agent runs in that project's directory.
+projects:
+  myproject:
+    path: ~/projects/myproject
+    keywords: [myproject, mp]
+  # webapp:
+  #   path: ~/projects/webapp
+  #   keywords: [webapp, web, frontend]

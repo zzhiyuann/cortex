@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dispatcher — Control your AI coder from your phone</title>
+<meta name="description" content="Dispatcher bridges Telegram and CLI-based AI coding agents. Send a message from your phone, get code written.">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;
+  --bg-card:#161b22;
+  --border:#30363d;
+  --accent:#00d4aa;
+  --accent-dim:#00a88a;
+  --text:#e6edf3;
+  --text-muted:#8b949e;
+  --text-dim:#484f58;
+  --code-bg:#161b22;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
+  --font-mono:"SF Mono","Fira Code","Fira Mono","Roboto Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --max-w:1120px;
+  --radius:12px;
+  --radius-sm:8px;
+}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+body{
+  font-family:var(--font-sans);
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+a{color:var(--accent);text-decoration:none;transition:color .2s}
+a:hover{color:#33e0be}
+
+/* ---- NAV ---- */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(13,17,23,.85);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+}
+.nav-inner{
+  max-width:var(--max-w);margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:64px;
+}
+.nav-logo{font-weight:700;font-size:1.15rem;color:var(--text);display:flex;align-items:center;gap:8px}
+.nav-logo span{color:var(--accent)}
+.nav-links{display:flex;gap:28px;list-style:none}
+.nav-links a{color:var(--text-muted);font-size:.9rem;font-weight:500;transition:color .2s}
+.nav-links a:hover{color:var(--text)}
+.nav-cta{
+  background:var(--accent);color:var(--bg);
+  padding:8px 18px;border-radius:6px;font-weight:600;font-size:.85rem;
+  transition:background .2s,transform .15s;
+}
+.nav-cta:hover{background:#33e0be;color:var(--bg);transform:translateY(-1px)}
+.hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px}
+.hamburger span{display:block;width:22px;height:2px;background:var(--text);margin:5px 0;border-radius:2px;transition:transform .3s,opacity .3s}
+
+/* ---- HERO ---- */
+.hero{
+  max-width:var(--max-w);margin:0 auto;
+  padding:140px 24px 80px;
+  display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;
+}
+.hero-text h1{
+  font-size:clamp(2rem,5vw,3.2rem);
+  font-weight:800;line-height:1.15;
+  letter-spacing:-.02em;
+  margin-bottom:20px;
+}
+.hero-text h1 .highlight{color:var(--accent)}
+.hero-text p{
+  font-size:1.15rem;color:var(--text-muted);
+  max-width:480px;margin-bottom:32px;line-height:1.7;
+}
+.hero-buttons{display:flex;gap:14px;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:14px 28px;border-radius:8px;font-weight:600;font-size:.95rem;
+  transition:all .2s;border:none;cursor:pointer;
+}
+.btn-primary{background:var(--accent);color:var(--bg)}
+.btn-primary:hover{background:#33e0be;color:var(--bg);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,212,170,.25)}
+.btn-secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--text-muted);color:var(--text);transform:translateY(-2px)}
+
+/* Terminal mockup */
+.terminal{
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+  box-shadow:0 16px 48px rgba(0,0,0,.35);
+}
+.terminal-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:12px 16px;background:rgba(0,0,0,.3);border-bottom:1px solid var(--border);
+}
+.terminal-dot{width:12px;height:12px;border-radius:50%}
+.terminal-dot:nth-child(1){background:#ff5f56}
+.terminal-dot:nth-child(2){background:#ffbd2e}
+.terminal-dot:nth-child(3){background:#27c93f}
+.terminal-title{
+  flex:1;text-align:center;font-size:.75rem;color:var(--text-dim);
+  font-family:var(--font-mono);
+}
+.chat{padding:20px;display:flex;flex-direction:column;gap:12px}
+.chat-msg{
+  max-width:82%;padding:10px 14px;border-radius:14px;
+  font-size:.85rem;line-height:1.5;
+}
+.chat-user{
+  align-self:flex-end;
+  background:var(--accent);color:var(--bg);
+  border-bottom-right-radius:4px;
+}
+.chat-bot{
+  align-self:flex-start;
+  background:#21262d;color:var(--text);
+  border-bottom-left-radius:4px;
+}
+.chat-bot code{
+  display:block;margin-top:6px;
+  font-family:var(--font-mono);font-size:.78rem;
+  color:var(--accent);background:rgba(0,212,170,.08);
+  padding:6px 8px;border-radius:6px;
+}
+.chat-time{font-size:.65rem;color:var(--text-dim);margin-top:2px}
+
+/* ---- SECTION COMMON ---- */
+section{padding:80px 24px}
+.section-inner{max-width:var(--max-w);margin:0 auto}
+.section-label{
+  display:inline-block;font-size:.8rem;font-weight:700;
+  color:var(--accent);text-transform:uppercase;letter-spacing:.08em;
+  margin-bottom:12px;
+}
+.section-title{
+  font-size:clamp(1.6rem,3.5vw,2.4rem);font-weight:800;
+  line-height:1.2;margin-bottom:16px;
+}
+.section-desc{color:var(--text-muted);max-width:600px;font-size:1.05rem;margin-bottom:48px}
+
+/* ---- HOW IT WORKS ---- */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
+.step{text-align:center;padding:32px 24px}
+.step-icon{
+  width:72px;height:72px;margin:0 auto 20px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:2rem;
+  background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.15);
+  border-radius:50%;
+}
+.step-num{
+  font-size:.75rem;font-weight:700;color:var(--accent);
+  text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;
+}
+.step h3{font-size:1.15rem;margin-bottom:8px}
+.step p{color:var(--text-muted);font-size:.92rem;line-height:1.6}
+.step-connector{display:none}
+
+/* ---- FEATURES ---- */
+.features-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+.feature-card{
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:28px;
+  transition:border-color .25s,transform .25s,box-shadow .25s;
+}
+.feature-card:hover{
+  border-color:var(--accent);transform:translateY(-4px);
+  box-shadow:0 8px 24px rgba(0,0,0,.3);
+}
+.feature-icon{
+  width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;background:rgba(0,212,170,.08);border-radius:var(--radius-sm);
+  margin-bottom:16px;
+}
+.feature-card h3{font-size:1rem;margin-bottom:8px;font-weight:700}
+.feature-card p{color:var(--text-muted);font-size:.88rem;line-height:1.6}
+
+/* ---- QUICKSTART ---- */
+.qs-steps{
+  display:grid;grid-template-columns:1fr;gap:24px;
+  counter-reset:qs;
+}
+.qs-step{
+  display:grid;grid-template-columns:48px 1fr;gap:20px;align-items:start;
+}
+.qs-num{
+  width:48px;height:48px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
+  border-radius:50%;font-weight:800;font-size:1.1rem;color:var(--accent);
+}
+.qs-content h3{font-size:1.05rem;margin-bottom:8px}
+.qs-content p{color:var(--text-muted);font-size:.9rem;margin-bottom:12px}
+
+/* ---- CODE BLOCKS ---- */
+.code-block{
+  background:var(--code-bg);border:1px solid var(--border);
+  border-radius:var(--radius-sm);overflow:hidden;
+}
+.code-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;background:rgba(0,0,0,.25);border-bottom:1px solid var(--border);
+  font-size:.75rem;color:var(--text-dim);font-family:var(--font-mono);
+}
+.code-body{
+  padding:16px 20px;overflow-x:auto;
+}
+.code-body pre{
+  margin:0;font-family:var(--font-mono);font-size:.85rem;
+  line-height:1.7;color:var(--text);white-space:pre;
+}
+.code-body .cm{color:var(--text-dim)}
+.code-body .kw{color:#ff7b72}
+.code-body .str{color:#a5d6ff}
+.code-body .key{color:#7ee787}
+.code-body .val{color:#79c0ff}
+.code-body .cmd{color:var(--accent)}
+
+/* ---- CONFIG ---- */
+.config-section{
+  display:grid;grid-template-columns:1fr 1.3fr;gap:48px;align-items:start;
+}
+.config-text .config-items{list-style:none;display:flex;flex-direction:column;gap:14px;margin-top:24px}
+.config-items li{
+  display:flex;align-items:flex-start;gap:12px;
+  font-size:.92rem;color:var(--text-muted);
+}
+.config-items li::before{
+  content:"";display:block;
+  width:6px;height:6px;min-width:6px;
+  background:var(--accent);border-radius:50%;
+  margin-top:9px;
+}
+
+/* ---- ARCHITECTURE ---- */
+.arch-diagram{
+  display:flex;align-items:center;justify-content:center;
+  flex-wrap:wrap;gap:0;
+  padding:40px 20px;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+.arch-node{
+  padding:16px 24px;
+  background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.2);
+  border-radius:var(--radius-sm);text-align:center;
+  font-weight:600;font-size:.9rem;
+  transition:border-color .2s,background .2s;
+}
+.arch-node:hover{border-color:var(--accent);background:rgba(0,212,170,.1)}
+.arch-node small{display:block;color:var(--text-dim);font-weight:400;font-size:.75rem;margin-top:4px}
+.arch-arrow{
+  color:var(--accent);font-size:1.3rem;padding:0 12px;
+  font-family:var(--font-mono);font-weight:700;
+  flex-shrink:0;
+}
+
+/* ---- FOOTER ---- */
+footer{
+  border-top:1px solid var(--border);padding:40px 24px;margin-top:40px;
+}
+.footer-inner{
+  max-width:var(--max-w);margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;
+}
+.footer-left{color:var(--text-muted);font-size:.88rem}
+.footer-left span{color:var(--accent);font-weight:600}
+.footer-right{display:flex;align-items:center;gap:20px}
+.footer-right a{color:var(--text-muted);font-size:.85rem;transition:color .2s}
+.footer-right a:hover{color:var(--text)}
+
+/* ---- RESPONSIVE ---- */
+@media(max-width:900px){
+  .hero{grid-template-columns:1fr;gap:40px;padding:120px 24px 60px;text-align:center}
+  .hero-text p{margin-left:auto;margin-right:auto}
+  .hero-buttons{justify-content:center}
+  .terminal{max-width:480px;margin:0 auto}
+  .steps{grid-template-columns:1fr;gap:16px}
+  .config-section{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  .nav-links{
+    position:fixed;top:64px;left:0;right:0;bottom:0;
+    background:rgba(13,17,23,.97);
+    flex-direction:column;align-items:center;justify-content:center;
+    gap:32px;
+    transform:translateX(100%);transition:transform .3s ease;
+  }
+  .nav-links.open{transform:translateX(0)}
+  .nav-links a{font-size:1.1rem}
+  .hamburger{display:block}
+  .hero h1{font-size:1.8rem}
+  .features-grid{grid-template-columns:1fr}
+  .arch-diagram{flex-direction:column;gap:4px}
+  .arch-arrow{transform:rotate(90deg);padding:4px 0}
+  .footer-inner{flex-direction:column;text-align:center}
+}
+
+/* ---- ANIMATIONS ---- */
+@media(prefers-reduced-motion:no-preference){
+  .fade-in{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+  .fade-in.visible{opacity:1;transform:translateY(0)}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo"><span>&gt;_</span> Dispatcher</a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#how-it-works" onclick="closeMenu()">How it Works</a></li>
+      <li><a href="#features" onclick="closeMenu()">Features</a></li>
+      <li><a href="#quickstart" onclick="closeMenu()">Quick Start</a></li>
+      <li><a href="#config" onclick="closeMenu()">Config</a></li>
+      <li><a href="https://github.com/mephisto0/dispatcher" class="nav-cta" onclick="closeMenu()">GitHub</a></li>
+    </ul>
+    <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-text">
+    <h1>Control your AI coder<br><span class="highlight">from your phone.</span></h1>
+    <p>Dispatcher bridges Telegram and CLI-based AI agents. Send a message, get code written. Works with Claude Code, Aider, Cursor, and any CLI agent.</p>
+    <div class="hero-buttons">
+      <a href="#quickstart" class="btn btn-primary">Get Started</a>
+      <a href="https://github.com/mephisto0/dispatcher" class="btn btn-secondary">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="terminal-dot"></div>
+      <div class="terminal-dot"></div>
+      <div class="terminal-dot"></div>
+      <div class="terminal-title">Telegram &mdash; Dispatcher Bot</div>
+    </div>
+    <div class="chat">
+      <div class="chat-msg chat-user">Add a dark mode toggle to the settings page in myapp</div>
+      <div class="chat-msg chat-bot">
+        Got it. Spawning Claude Code on <strong>myapp</strong>...
+        <div class="chat-time">Working...</div>
+      </div>
+      <div class="chat-msg chat-bot">
+        Done. Added dark mode toggle to settings.
+        <code>+ src/components/Settings.tsx (47 lines)
++ src/hooks/useTheme.ts (new file)
+  3 files changed, 89 insertions(+)</code>
+        <div class="chat-time">Committed &amp; pushed to feature/dark-mode</div>
+      </div>
+      <div class="chat-msg chat-user">Also add a system preference detection</div>
+      <div class="chat-msg chat-bot">
+        Following up on the dark mode task...
+        <code>+ prefers-color-scheme media query
+  useTheme.ts updated, 12 insertions(+)</code>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works">
+  <div class="section-inner">
+    <span class="section-label">How it works</span>
+    <h2 class="section-title">Three steps. Zero friction.</h2>
+    <p class="section-desc">No IDE required. No SSH tunnels. Just your phone and your AI agent.</p>
+    <div class="steps">
+      <div class="step fade-in">
+        <div class="step-icon">&#x1F4AC;</div>
+        <div class="step-num">Step 1</div>
+        <h3>Send a message</h3>
+        <p>Describe your task in Telegram, just like texting a colleague. Mention a project name or let Dispatcher auto-detect it.</p>
+      </div>
+      <div class="step fade-in">
+        <div class="step-icon">&#x2699;&#xFE0F;</div>
+        <div class="step-num">Step 2</div>
+        <h3>Agent executes</h3>
+        <p>Dispatcher routes your message to the right project directory and spawns your AI coding agent with full context.</p>
+      </div>
+      <div class="step fade-in">
+        <div class="step-icon">&#x2705;</div>
+        <div class="step-num">Step 3</div>
+        <h3>Get results</h3>
+        <p>The agent's output is delivered back to Telegram. See diffs, logs, and summaries right on your phone.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-inner">
+    <span class="section-label">Features</span>
+    <h2 class="section-title">Everything you need to code remotely.</h2>
+    <p class="section-desc">Built for developers who want to stay productive away from their desk.</p>
+    <div class="features-grid">
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#x1F504;</div>
+        <h3>Session management</h3>
+        <p>Resume conversations by replying to any previous message. Dispatcher keeps full context across sessions.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#x1F4C2;</div>
+        <h3>Project routing</h3>
+        <p>Auto-detect which project you mean from keywords in your message. No need to specify paths manually.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#x1F517;</div>
+        <h3>Smart follow-ups</h3>
+        <p>Short replies like "also fix the tests" auto-link to your most recent task. Natural conversation flow.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#x26A1;</div>
+        <h3>Concurrent tasks</h3>
+        <p>Run multiple AI agents in parallel across different projects. No waiting, no bottlenecks.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#x1F916;</div>
+        <h3>Agent-agnostic</h3>
+        <p>Works with Claude Code, Aider, Cursor, or any CLI-based agent. Swap agents without changing your workflow.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#x1F4CA;</div>
+        <h3>Progress tracking</h3>
+        <p>See typing indicators while agents work. Get periodic status updates on long-running tasks.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#x1F9E0;</div>
+        <h3>Memory persistence</h3>
+        <p>Dispatcher remembers your preferences, project associations, and patterns across sessions.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#x1F680;</div>
+        <h3>Easy deployment</h3>
+        <p>Install with pip, run one command. No Docker, no infrastructure. Works on any machine with Python 3.10+.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUICKSTART -->
+<section id="quickstart">
+  <div class="section-inner">
+    <span class="section-label">Quick Start</span>
+    <h2 class="section-title">Up and running in 2 minutes.</h2>
+    <p class="section-desc">Four commands. That's all it takes.</p>
+    <div class="qs-steps">
+      <div class="qs-step fade-in">
+        <div class="qs-num">1</div>
+        <div class="qs-content">
+          <h3>Install Dispatcher</h3>
+          <p>Requires Python 3.10 or higher.</p>
+          <div class="code-block">
+            <div class="code-header"><span>terminal</span></div>
+            <div class="code-body"><pre><span class="cmd">pip install agent-dispatcher</span></pre></div>
+          </div>
+        </div>
+      </div>
+      <div class="qs-step fade-in">
+        <div class="qs-num">2</div>
+        <div class="qs-content">
+          <h3>Initialize configuration</h3>
+          <p>Creates a config file at <code style="color:var(--accent);font-family:var(--font-mono);font-size:.85em">~/.config/dispatcher/config.yaml</code>.</p>
+          <div class="code-block">
+            <div class="code-header"><span>terminal</span></div>
+            <div class="code-body"><pre><span class="cmd">dispatcher init</span></pre></div>
+          </div>
+        </div>
+      </div>
+      <div class="qs-step fade-in">
+        <div class="qs-num">3</div>
+        <div class="qs-content">
+          <h3>Configure your projects</h3>
+          <p>Add your Telegram bot token, chat ID, and project paths.</p>
+          <div class="code-block">
+            <div class="code-header"><span>~/.config/dispatcher/config.yaml</span></div>
+            <div class="code-body"><pre><span class="cm"># Edit with your favorite editor</span>
+<span class="cmd">vim ~/.config/dispatcher/config.yaml</span></pre></div>
+          </div>
+        </div>
+      </div>
+      <div class="qs-step fade-in">
+        <div class="qs-num">4</div>
+        <div class="qs-content">
+          <h3>Start Dispatcher</h3>
+          <p>That's it. Open Telegram and start sending tasks.</p>
+          <div class="code-block">
+            <div class="code-header"><span>terminal</span></div>
+            <div class="code-body"><pre><span class="cmd">dispatcher start</span></pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONFIGURATION -->
+<section id="config">
+  <div class="section-inner">
+    <span class="section-label">Configuration</span>
+    <h2 class="section-title">Simple, declarative config.</h2>
+    <div class="config-section">
+      <div class="config-text">
+        <p class="section-desc" style="margin-bottom:0">One YAML file controls everything. Define your Telegram credentials, choose your AI agent, and register your projects with keyword-based routing.</p>
+        <ul class="config-items">
+          <li>Set your Telegram bot token and authorized chat ID for secure access</li>
+          <li>Choose any CLI agent &mdash; Claude Code, Aider, or a custom script</li>
+          <li>Control concurrency limits per machine</li>
+          <li>Register projects with paths and keyword triggers</li>
+          <li>Override agent settings per project when needed</li>
+        </ul>
+      </div>
+      <div class="code-block fade-in">
+        <div class="code-header"><span>config.yaml</span></div>
+        <div class="code-body"><pre><span class="key">telegram</span>:
+  <span class="key">bot_token</span>: <span class="str">"YOUR_BOT_TOKEN"</span>
+  <span class="key">chat_id</span>: <span class="val">YOUR_CHAT_ID</span>
+
+<span class="key">agent</span>:
+  <span class="key">command</span>: <span class="str">"claude"</span>
+  <span class="key">args</span>: [<span class="str">"-p"</span>, <span class="str">"--dangerously-skip-permissions"</span>]
+  <span class="key">max_concurrent</span>: <span class="val">3</span>
+
+<span class="key">projects</span>:
+  <span class="key">myapp</span>:
+    <span class="key">path</span>: <span class="str">~/projects/myapp</span>
+    <span class="key">keywords</span>: [<span class="str">myapp</span>, <span class="str">app</span>]
+  <span class="key">backend</span>:
+    <span class="key">path</span>: <span class="str">~/projects/backend-api</span>
+    <span class="key">keywords</span>: [<span class="str">backend</span>, <span class="str">api</span>, <span class="str">server</span>]
+  <span class="key">docs</span>:
+    <span class="key">path</span>: <span class="str">~/projects/documentation</span>
+    <span class="key">keywords</span>: [<span class="str">docs</span>, <span class="str">documentation</span>]</pre></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="section-inner">
+    <span class="section-label">Architecture</span>
+    <h2 class="section-title">Simple by design.</h2>
+    <p class="section-desc">No cloud services. No databases. Dispatcher runs on your machine, next to your code.</p>
+    <div class="arch-diagram fade-in">
+      <div class="arch-node">
+        &#x1F4F1; Phone
+        <small>Telegram app</small>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-node">
+        &#x1F310; Telegram API
+        <small>Bot webhook</small>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-node" style="border-color:var(--accent);background:rgba(0,212,170,.12)">
+        &#x2699;&#xFE0F; Dispatcher
+        <small>Router + session mgr</small>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-node">
+        &#x1F916; AI Agent CLI
+        <small>Claude / Aider / etc.</small>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-node">
+        &#x1F4BB; Codebase
+        <small>Your projects</small>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <span>&gt;_ Dispatcher</span> &mdash; Built for developers who code on the go.
+    </div>
+    <div class="footer-right">
+      <a href="https://github.com/mephisto0/dispatcher">GitHub</a>
+      <span style="color:var(--border)">|</span>
+      <span style="color:var(--text-dim);font-size:.85rem">MIT License</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Mobile menu toggle
+const hamburger = document.getElementById('hamburger');
+const navLinks = document.getElementById('navLinks');
+hamburger.addEventListener('click', function() {
+  navLinks.classList.toggle('open');
+  const spans = this.querySelectorAll('span');
+  if (navLinks.classList.contains('open')) {
+    spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+    spans[1].style.opacity = '0';
+    spans[2].style.transform = 'rotate(-45deg) translate(5px, -5px)';
+  } else {
+    spans[0].style.transform = '';
+    spans[1].style.opacity = '';
+    spans[2].style.transform = '';
+  }
+});
+function closeMenu() {
+  navLinks.classList.remove('open');
+  const spans = hamburger.querySelectorAll('span');
+  spans[0].style.transform = '';
+  spans[1].style.opacity = '';
+  spans[2].style.transform = '';
+}
+
+// Fade-in on scroll
+(function() {
+  var els = document.querySelectorAll('.fade-in');
+  if (!els.length) return;
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15 });
+  els.forEach(function(el) { observer.observe(el); });
+})();
+</script>
+</body>
+</html>

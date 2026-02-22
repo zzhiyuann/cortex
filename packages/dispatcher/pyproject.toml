@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-dispatcher"
+version = "0.1.0"
+description = "Control your AI coding agent from your phone via Telegram"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Zhe Wang" }]
+keywords = ["telegram", "ai", "agent", "cli", "claude", "dispatcher"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "click>=8.0",
+    "pyyaml>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/mephisto0/dispatcher"
+Documentation = "https://mephisto0.github.io/dispatcher"
+Repository = "https://github.com/mephisto0/dispatcher"
+Issues = "https://github.com/mephisto0/dispatcher/issues"
+
+[project.scripts]
+dispatcher = "dispatcher.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["dispatcher"]
