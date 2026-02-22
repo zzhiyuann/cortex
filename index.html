@@ -579,7 +579,7 @@
   /* ---- COMPONENT CARDS ---- */
   .components-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
   }
   .comp-card {
@@ -643,25 +643,7 @@
   .comp-card p {
     color: var(--text-muted);
     font-size: 0.925rem;
-    margin-bottom: 1.25rem;
-  }
-  .comp-features {
-    list-style: none;
-    font-size: 0.85rem;
-  }
-  .comp-features li {
-    color: var(--text-muted);
-    padding: 0.3rem 0;
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-  .comp-features li::before {
-    content: '~';
-    color: var(--text-dim);
-    font-family: var(--font-mono);
-    font-weight: 700;
-    flex-shrink: 0;
+    margin-bottom: 0;
   }
 
   /* ---- HOW IT WORKS ---- */
@@ -1569,14 +1551,6 @@
         Your mobile JARVIS. Message Claude from your phone via Telegram.
         It classifies, routes, and manages concurrent tasks — always on, always ready.
       </p>
-      <ul class="comp-features">
-        <li>Smart message classification (task / status / cancel)</li>
-        <li>Project-aware routing with auto directory detection</li>
-        <li>Concurrent task management (3 parallel sessions)</li>
-        <li>Intelligent follow-up detection (no explicit reply needed)</li>
-        <li>Progress updates and typing indicators</li>
-        <li>570 lines, zero dependencies, LaunchAgent daemon</li>
-      </ul>
     </div>
 
     <!-- A2A Hub -->
@@ -1588,14 +1562,6 @@
         Agent-to-Agent protocol hub. Agents discover each other, delegate tasks,
         and collaborate through a lightweight WebSocket-based protocol.
       </p>
-      <ul class="comp-features">
-        <li>Agent registry with capability-based discovery</li>
-        <li>Task delegation with routing and result collection</li>
-        <li>Broadcast messaging for multi-agent coordination</li>
-        <li>Heartbeat and automatic disconnection cleanup</li>
-        <li>MCP bridge — use directly from Claude Code</li>
-        <li>Python SDK with decorator-based agent creation</li>
-      </ul>
     </div>
 
     <!-- Forge -->
@@ -1607,14 +1573,6 @@
         Self-evolving tool agent. Describe what you need in plain English —
         Forge builds it, tests it, and installs it into your toolkit.
       </p>
-      <ul class="comp-features">
-        <li>Natural language to working tool in one command</li>
-        <li>Intelligent clarification questions for ambiguous requests</li>
-        <li>Auto-generated tests with iterative refinement (max 5 rounds)</li>
-        <li>Multiple output types: MCP tool, CLI command, Python module</li>
-        <li>Direct installation into MCP config or system PATH</li>
-        <li>Both CLI and MCP server interfaces</li>
-      </ul>
     </div>
 
     <!-- Vibe Replay -->
@@ -1626,14 +1584,6 @@
         Not just logs — structured wisdom. Captures coding sessions, extracts
         decisions and learnings, generates beautiful shareable replays.
       </p>
-      <ul class="comp-features">
-        <li>Claude Code hooks for automatic event capture</li>
-        <li>Phase detection (exploration, implementation, debugging)</li>
-        <li>Decision point and turning point identification</li>
-        <li>Auto-extracted reflections, learnings, and patterns</li>
-        <li>Interactive HTML replay with timeline and code diffs</li>
-        <li>Cross-session wisdom aggregation</li>
-      </ul>
     </div>
   </div>
 </section>
