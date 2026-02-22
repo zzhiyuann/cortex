@@ -16,6 +16,11 @@
 import { createServer } from "node:http";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
+// Prevent "cannot launch inside another Claude Code session" error
+for (const key of ["CLAUDECODE", "CLAUDE_CODE", "CLAUDE_CODE_ENTRYPOINT"]) {
+  delete process.env[key];
+}
+
 const PORT = parseInt(process.env.SIDECAR_PORT || "18899", 10);
 
 async function handleQuery(body) {
@@ -26,8 +31,8 @@ async function handleQuery(body) {
     dangerouslySkipPermissions: true,
   };
   if (sessionId && resume) {
-    opts.continue = true;
-    opts.sessionId = sessionId;
+    // SDK: resume option maps to `--resume <sessionId>`
+    opts.resume = sessionId;
   } else if (sessionId) {
     opts.sessionId = sessionId;
   }
