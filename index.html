@@ -322,28 +322,259 @@
     margin: 0 auto;
   }
 
-  /* ---- ARCHITECTURE ---- */
-  .arch-diagram {
+  /* ---- ARCHITECTURE DIAGRAM (Visual) ---- */
+  .arch-visual {
+    position: relative;
+    padding: 3rem 2rem 4rem;
+    margin-bottom: 4rem;
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: 16px;
-    padding: 3rem 2rem;
-    margin-bottom: 4rem;
-    overflow-x: auto;
+    overflow: hidden;
   }
-  .arch-diagram pre {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    line-height: 1.6;
-    color: var(--text-muted);
+  /* Subtle grid background like circuit board */
+  .arch-visual::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(96,165,250,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(96,165,250,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .arch-flow {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    z-index: 1;
+  }
+
+  /* Node boxes with gradient border */
+  .arch-node {
+    position: relative;
+    border-radius: 12px;
+    padding: 2px; /* border thickness */
+    max-width: 420px;
+    width: 100%;
+  }
+  .arch-node-inner {
+    background: var(--bg-card);
+    border-radius: 10px;
+    padding: 1.25rem 1.75rem;
     text-align: center;
-    white-space: pre;
   }
-  .arch-diagram .highlight { color: var(--accent-blue); font-weight: 700; }
-  .arch-diagram .green { color: var(--accent-green); }
-  .arch-diagram .purple { color: var(--accent-purple); }
-  .arch-diagram .amber { color: var(--accent-amber); }
-  .arch-diagram .rose { color: var(--accent-rose); }
+  .arch-node .node-title {
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.15rem;
+  }
+  .arch-node .node-role {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.6rem;
+  }
+  .arch-node .node-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .arch-node .node-desc .sep {
+    color: var(--text-dim);
+    margin: 0 0.15rem;
+  }
+  .arch-node .node-pills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+  }
+  .arch-node .node-pill {
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.04);
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  /* Individual node colors */
+  .node-you {
+    background: linear-gradient(135deg, rgba(96,165,250,0.5), rgba(167,139,250,0.5));
+    max-width: 360px;
+  }
+  .node-you .node-title { color: var(--text); }
+  .node-you .node-icons {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    font-size: 1.1rem;
+    opacity: 0.7;
+  }
+
+  .node-dispatcher {
+    background: linear-gradient(135deg, #60A5FA, #A78BFA);
+    max-width: 420px;
+  }
+  .node-dispatcher .node-title { color: var(--accent-blue); }
+  .node-dispatcher .node-role { color: var(--accent-blue); }
+
+  .node-a2a {
+    background: linear-gradient(135deg, #60A5FA, #3B82F6);
+  }
+  .node-a2a .node-title { color: var(--accent-blue); }
+  .node-a2a .node-role { color: var(--accent-blue); }
+
+  .node-forge {
+    background: linear-gradient(135deg, #FBBF24, #FB7185);
+  }
+  .node-forge .node-title { color: var(--accent-amber); }
+  .node-forge .node-role { color: var(--accent-amber); }
+
+  .node-replay {
+    background: linear-gradient(135deg, #A78BFA, #FB7185);
+    max-width: 520px;
+  }
+  .node-replay .node-title { color: var(--accent-purple); }
+  .node-replay .node-role { color: var(--accent-purple); }
+
+  /* Connecting lines */
+  .arch-connector {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+  .conn-vert {
+    width: 2px;
+    height: 40px;
+    background: linear-gradient(to bottom, rgba(96,165,250,0.4), rgba(167,139,250,0.4));
+  }
+  .conn-label {
+    text-align: center;
+    padding: 0.5rem 0;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+  }
+
+  /* Middle row: A2A + Forge side by side */
+  .arch-mid-row {
+    display: flex;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 660px;
+    align-items: stretch;
+  }
+  .arch-mid-row .arch-node {
+    flex: 1;
+    max-width: none;
+  }
+  /* Branch connector (Y shape) */
+  .conn-branch {
+    position: relative;
+    width: 100%;
+    max-width: 660px;
+    height: 40px;
+  }
+  .conn-branch::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 15px;
+    background: rgba(96,165,250,0.4);
+    transform: translateX(-50%);
+  }
+  .conn-branch::after {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: calc(25% + 0.75rem);
+    right: calc(25% + 0.75rem);
+    height: 2px;
+    background: rgba(96,165,250,0.3);
+  }
+  .conn-branch .branch-left,
+  .conn-branch .branch-right {
+    position: absolute;
+    top: 15px;
+    width: 2px;
+    height: 25px;
+    background: rgba(96,165,250,0.3);
+  }
+  .conn-branch .branch-left { left: calc(25% + 0.75rem); }
+  .conn-branch .branch-right { right: calc(25% + 0.75rem); }
+
+  /* Arrow between A2A and Forge */
+  .arch-mid-row .arch-node:first-child::after {
+    content: '\2192';
+    position: absolute;
+    right: -1.1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(96,165,250,0.4);
+    font-size: 1.1rem;
+    z-index: 2;
+  }
+
+  /* Merge connector (inverted Y) */
+  .conn-merge {
+    position: relative;
+    width: 100%;
+    max-width: 660px;
+    height: 40px;
+  }
+  .conn-merge::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    height: 15px;
+    background: rgba(167,139,250,0.4);
+    transform: translateX(-50%);
+  }
+  .conn-merge::after {
+    content: '';
+    position: absolute;
+    bottom: 15px;
+    left: calc(25% + 0.75rem);
+    right: calc(25% + 0.75rem);
+    height: 2px;
+    background: rgba(167,139,250,0.3);
+  }
+  .conn-merge .branch-left,
+  .conn-merge .branch-right {
+    position: absolute;
+    bottom: 15px;
+    width: 2px;
+    height: 25px;
+    background: rgba(167,139,250,0.3);
+  }
+  .conn-merge .branch-left { left: calc(25% + 0.75rem); }
+  .conn-merge .branch-right { right: calc(25% + 0.75rem); }
+
+  @media (max-width: 768px) {
+    .arch-mid-row {
+      flex-direction: column;
+      max-width: 360px;
+      gap: 1rem;
+    }
+    .arch-mid-row .arch-node:first-child::after { display: none; }
+    .conn-branch, .conn-merge { display: none; }
+    .arch-visual { padding: 2rem 1rem; }
+  }
 
   /* ---- COMPONENT CARDS ---- */
   .components-grid {
@@ -1259,39 +1490,91 @@
     agent operating system — from receiving commands to building tools to remembering what worked.
   </p>
 
-  <div class="arch-diagram">
-    <pre>
-                        ┌──────────────────────────────────────┐
-                        │          <span class="highlight">YOU</span> (Phone / Desktop)         │
-                        └──────────────────┬───────────────────┘
-                                           │
-                          Telegram / CLI / Natural Language
-                                           │
-                        ┌──────────────────▼───────────────────┐
-                        │      <span class="green">DISPATCHER</span>  (Command Layer)      │
-                        │                                      │
-                        │  Classify &rarr; Route &rarr; Execute &rarr; Reply  │
-                        │  Mobile JARVIS &middot; Always-on Daemon    │
-                        └──────┬──────────────┬────────────────┘
-                               │              │
-                ┌──────────────▼──┐    ┌──────▼──────────────┐
-                │   <span class="highlight">A2A HUB</span>       │    │     <span class="amber">FORGE</span>           │
-                │ (Comm Layer)    │    │  (Creation Layer)   │
-                │                 │    │                     │
-                │ Agent Registry  │    │ Describe &rarr; Clarify  │
-                │ Task Routing    │◄──►│ Generate &rarr; Test     │
-                │ Discovery       │    │ Iterate &rarr; Install   │
-                │ WebSocket Proto │    │ CLI + MCP Server    │
-                └──────┬──────────┘    └─────────────────────┘
-                       │
-              ┌────────▼──────────────────────────────────────┐
-              │              <span class="purple">VIBE REPLAY</span>  (Memory Layer)       │
-              │                                               │
-              │  Capture Events &rarr; Analyze &rarr; Extract Insights   │
-              │  Generate Replay &rarr; Aggregate Wisdom &rarr; Share     │
-              │  Claude Code Hooks &middot; HTML Timeline &middot; MCP Query │
-              └───────────────────────────────────────────────┘
-    </pre>
+  <div class="arch-visual">
+    <div class="arch-flow">
+      <!-- YOU -->
+      <div class="arch-node node-you">
+        <div class="arch-node-inner">
+          <div class="node-title">YOU</div>
+          <div class="node-desc">Phone <span class="sep">/</span> Desktop <span class="sep">/</span> Anywhere</div>
+          <div class="node-icons">
+            <span title="Phone">&#9743;</span>
+            <span title="Desktop">&#9000;</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connector: vertical + label -->
+      <div class="arch-connector"><div class="conn-vert"></div></div>
+      <div class="conn-label">Telegram <span class="sep">/</span> CLI <span class="sep">/</span> Natural Language</div>
+      <div class="arch-connector"><div class="conn-vert"></div></div>
+
+      <!-- DISPATCHER -->
+      <div class="arch-node node-dispatcher">
+        <div class="arch-node-inner">
+          <div class="node-title">DISPATCHER</div>
+          <div class="node-role">Command Layer</div>
+          <div class="node-desc">Classify &rarr; Route &rarr; Execute &rarr; Reply</div>
+          <div class="node-pills">
+            <span class="node-pill">Mobile JARVIS</span>
+            <span class="node-pill">Always-on Daemon</span>
+            <span class="node-pill">Zero Dependencies</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Branch connector (Y shape down) -->
+      <div class="conn-branch">
+        <div class="branch-left"></div>
+        <div class="branch-right"></div>
+      </div>
+
+      <!-- Middle row: A2A + Forge -->
+      <div class="arch-mid-row">
+        <div class="arch-node node-a2a">
+          <div class="arch-node-inner">
+            <div class="node-title">A2A HUB</div>
+            <div class="node-role">Communication Layer</div>
+            <div class="node-desc">Agent Registry <span class="sep">&middot;</span> Task Routing <span class="sep">&middot;</span> Discovery</div>
+            <div class="node-pills">
+              <span class="node-pill">WebSocket Protocol</span>
+              <span class="node-pill">MCP Bridge</span>
+            </div>
+          </div>
+        </div>
+        <div class="arch-node node-forge">
+          <div class="arch-node-inner">
+            <div class="node-title">FORGE</div>
+            <div class="node-role">Creation Layer</div>
+            <div class="node-desc">Describe &rarr; Clarify &rarr; Generate &rarr; Test &rarr; Install</div>
+            <div class="node-pills">
+              <span class="node-pill">CLI + MCP Server</span>
+              <span class="node-pill">Auto Iterate</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Merge connector (inverted Y) -->
+      <div class="conn-merge">
+        <div class="branch-left"></div>
+        <div class="branch-right"></div>
+      </div>
+
+      <!-- VIBE REPLAY -->
+      <div class="arch-node node-replay">
+        <div class="arch-node-inner">
+          <div class="node-title">VIBE REPLAY</div>
+          <div class="node-role">Memory Layer</div>
+          <div class="node-desc">Capture Events &rarr; Analyze &rarr; Extract Insights &rarr; Share</div>
+          <div class="node-pills">
+            <span class="node-pill">Claude Code Hooks</span>
+            <span class="node-pill">HTML Timeline</span>
+            <span class="node-pill">Wisdom Aggregation</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
