@@ -49,5 +49,9 @@ Thumbs.db
 sessions/
 *.db
 
+# Node.js
+node_modules/
+package-lock.json
+
 # uv
 uv.lock
