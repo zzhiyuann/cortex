@@ -303,8 +303,7 @@ class Dispatcher:
                 source = fwd_from or fwd_chat
                 text = f"[Forwarded from {source}]: {text}"
 
-            # F1: instant reaction feedback
-            self._fire_reaction(mid, "\U0001f440")
+            # F1: reaction disabled — setMessageReaction returns 400 for this bot
 
             # Non-project messages go immediately; project messages batch for 2s
             if reply_to or not self._detect_project(text):
@@ -864,7 +863,7 @@ class Dispatcher:
             self._reply(mid, "Usage: /q your question")
             return
 
-        self._fire_reaction(mid, "\U0001f440")
+        # self._fire_reaction(mid, "\U0001f440")  # disabled: 400 error
         self._fire_typing()
 
         # Temporary session — not tracked in SessionManager
@@ -884,7 +883,7 @@ class Dispatcher:
                 if len(formatted) > 4000:
                     formatted = formatted[:3900] + "..."
                 self._reply(mid, formatted, parse_mode="HTML")
-                self._fire_reaction(mid, "\u2705")
+                # self._fire_reaction(mid, "\u2705")  # disabled: 400 error
             else:
                 self._reply(mid, "No output returned.")
         except asyncio.TimeoutError:
@@ -1351,7 +1350,7 @@ class Dispatcher:
         # Track consecutive failures for escalation
         if session.status == "done":
             self._consecutive_failures = 0
-            self._fire_reaction(mid, "\u2705")
+            # self._fire_reaction(mid, "\u2705")  # disabled: 400 error
 
         if not result or not result.strip():
             self._reply(mid, "\u26a0\ufe0f Agent returned no output, may have run out of turns.\n"
@@ -1368,7 +1367,7 @@ class Dispatcher:
 
         if session.status == "failed":
             self._consecutive_failures += 1
-            self._fire_reaction(mid, "\u274c")
+            # self._fire_reaction(mid, "\u274c")  # disabled: 400 error
             friendly = self._friendly_error(result)
             if self._consecutive_failures >= 3:
                 friendly += f"\n\n\u26a0\ufe0f {self._consecutive_failures} consecutive failures, check agent status."
