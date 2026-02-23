@@ -47,6 +47,11 @@ _SYSTEM = (
     "'look at stdout for errors' → all TASK.\n"
     "- Short acknowledgments like 'ok', 'got it', 'sure', 'hmm' are TASK "
     "(the user is not asking about anything).\n"
+    "- Health and lifestyle messages are ALWAYS TASK — never status/cancel/peek. "
+    "This includes anything about food, eating, meals, weight, body, exercise, "
+    "workout, sleep, mood, health symptoms, or daily routines. Examples: "
+    "'今天吃了xxx', 'I had rice for lunch', '体重降了', 'went for a run', "
+    "'slept badly', '感觉有点累' → all TASK.\n"
     "- When in doubt, return 'task'.\n\n"
     "Respond with ONLY the category name, nothing else."
 )
