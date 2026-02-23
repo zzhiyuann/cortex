@@ -738,28 +738,6 @@ class TestPIDFile:
 
 # -- Message splitting tests --
 
-class TestMessageSplitting:
-    def test_short_message_no_split(self, tmp_path):
-        d = make_dispatcher(tmp_path)
-        chunks = d._split_message("short text", 4000)
-        assert chunks == ["short text"]
-
-    def test_long_message_split_at_newline(self, tmp_path):
-        d = make_dispatcher(tmp_path)
-        text = ("line\n" * 1000)  # ~5000 chars
-        chunks = d._split_message(text, 100)
-        for chunk in chunks:
-            assert len(chunk) <= 100
-
-    def test_no_good_newline_hard_split(self, tmp_path):
-        d = make_dispatcher(tmp_path)
-        text = "x" * 200  # No newlines
-        chunks = d._split_message(text, 100)
-        assert len(chunks) == 2
-        assert chunks[0] == "x" * 100
-        assert chunks[1] == "x" * 100
-
-
 # -- Friendly error tests --
 
 class TestFriendlyError:

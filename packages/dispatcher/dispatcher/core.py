@@ -297,7 +297,7 @@ class Dispatcher:
             # F1: instant reaction feedback
             self._fire_reaction(mid, "\U0001f440")
 
-            # Quick questions (no project keyword) bypass the 2s batch buffer
+            # Non-project messages go immediately; project messages batch for 2s
             if reply_to or not self._detect_project(text):
                 await self._handle_task(mid, text, reply_to, attachments=attachments)
             else:
@@ -695,8 +695,6 @@ class Dispatcher:
 
         self._reply(mid, help_text, parse_mode="HTML")
 
-    _NEW_SESSION_KEYWORDS = {"新session", "新建session", "new session", "开个新的", "新对话"}
-
     # Model aliases: lowercase = current message only, capitalized = persist in follow-ups
     _MODEL_PREFIXES_TEMP = {"@haiku": "haiku", "@sonnet": "sonnet", "@opus": "opus"}
     _MODEL_PREFIXES_STICKY = {"@Haiku": "haiku", "@Sonnet": "sonnet", "@Opus": "opus"}
@@ -733,12 +731,9 @@ class Dispatcher:
     ):
         """Route a task message. NEVER blocks — always processes immediately.
 
-        Architecture:
-        - Chat/quick questions → lightweight parallel session (low max_turns)
-        - Project tasks → full parallel session (high max_turns)
-        - Explicit reply to running task → queue as follow-up (only case that waits)
-        - All sessions get context about what's running in background
-        - Chat window is NEVER stuck waiting
+        Every message gets full Claude Code capability (50 turns, streaming,
+        full prompt). Sessions run in parallel via asyncio tasks.
+        Only explicit reply to a *running* task queues as follow-up.
         """
         # 0. Extract model preference from @haiku/@opus/@sonnet prefix
         text, model_from_prefix, is_sticky = self._extract_model_prefix(text)
@@ -780,7 +775,15 @@ class Dispatcher:
                 return
         self.sm.force_new = False
 
-        # 5. Always create a new session — never block
+        # 5. Enforce concurrency limit
+        if len(active) >= self.cfg.max_concurrent:
+            self._reply(mid, f"\u23f3 已有 {len(active)} 个任务在跑，等一个完成再处理。")
+            # Queue behind the oldest active session
+            oldest = active[0]
+            self._spawn(self._do_queued_followup(mid, text, oldest, attachments, model=model_override, model_sticky=is_sticky))
+            return
+
+        # 6. Create new session
         session = self.sm.create(mid, text, cwd)
         session.is_task = is_project
         session.model_sticky = is_sticky
@@ -1192,20 +1195,6 @@ class Dispatcher:
         if len(error) > 500:
             return f"出错了：\n{error[:400]}...\n\n回复「详情」看完整输出。"
         return f"出错了：\n{error}"
-
-    def _split_message(self, text: str, max_len: int) -> list[str]:
-        """Split long text into chunks, preferring line boundaries."""
-        chunks = []
-        while len(text) > max_len:
-            # Find a good split point (newline near the limit)
-            split_at = text.rfind("\n", 0, max_len)
-            if split_at < max_len // 2:
-                split_at = max_len  # No good newline, hard split
-            chunks.append(text[:split_at])
-            text = text[split_at:].lstrip("\n")
-        if text:
-            chunks.append(text)
-        return chunks
 
     def _spawn(self, coro):
         task = asyncio.create_task(coro)
