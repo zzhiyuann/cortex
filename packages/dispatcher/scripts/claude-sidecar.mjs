@@ -46,19 +46,23 @@ async function handleQuery(body) {
   });
 
   let result = "";
+  let lastAssistantText = "";
   let sid = null;
   for await (const msg of session) {
     if (msg.session_id && !sid) sid = msg.session_id;
-    if (msg.type === "result") {
-      result = msg.result || result;
-      break;
-    }
     if (msg.type === "assistant") {
       for (const b of msg.message?.content || []) {
-        if (b.type === "text") result = b.text;
+        if (b.type === "text" && b.text) lastAssistantText = b.text;
       }
     }
+    if (msg.type === "result") {
+      // Prefer explicit result; fall back to last assistant text
+      result = msg.result || lastAssistantText;
+      break;
+    }
   }
+  // Final fallback: if loop ended without result event, use accumulated text
+  if (!result) result = lastAssistantText;
 
   return {
     result: result.trim(),

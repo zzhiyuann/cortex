@@ -17,6 +17,7 @@ from .memory import Memory
 from .runner import AgentRunner
 from .session import Session, SessionManager
 from .telegram import TelegramClient
+from .transcript import Transcript
 
 # Self-healing feedback loop — write issues to shared JSONL store.
 # Works standalone (no cortex_cli dependency) by writing directly to the file.
@@ -140,6 +141,7 @@ class Dispatcher:
             timeout=config.timeout,
         )
         self.mem = Memory(config.memory_file)
+        self.transcript = Transcript(config.data_dir)
         self.sm = SessionManager(recent_window=config.recent_window)
         self.routes = config.get_project_routes()
         self.offset = 0
@@ -802,6 +804,10 @@ class Dispatcher:
     ):
         """Run a task with full Claude Code capability."""
         session.model_override = model
+
+        # Record user message to transcript
+        self.transcript.append(session.conv_id, "user", text)
+
         prompt = self._build_prompt(text, session.cwd, attachments, bg_context)
         max_turns = self.cfg.max_turns
 
@@ -814,6 +820,11 @@ class Dispatcher:
         monitor = asyncio.create_task(self._progress_loop(mid, session))
         result = await runner
         monitor.cancel()
+
+        # Record assistant response to transcript
+        if result and result.strip():
+            self.transcript.append(session.conv_id, "assistant", result)
+
         self._send_result(mid, session, result)
 
     async def _do_queued_followup(
@@ -833,46 +844,40 @@ class Dispatcher:
         model: str | None = None,
         model_sticky: bool = False,
     ):
-        """Resume a previous session with full Claude Code capability."""
+        """Resume a conversation with full history context.
+
+        Loads the complete conversation transcript and injects it into
+        the prompt so the LLM has full multi-turn context. Uses --resume
+        for Claude Code session continuity when the model hasn't changed.
+        """
         effective_model = model or self._sticky_model
         effective_sticky = model_sticky or (prev.model_sticky if not model else False)
 
-        # If model differs from previous session, --resume would ignore it.
-        # Start a fresh session with previous context injected instead.
+        # If model changed, start a fresh Claude Code session.
+        # Otherwise, resume the existing one.
         model_changed = (
             effective_model
             and prev.model_override != effective_model
         )
         if model_changed:
-            session = self.sm.create(mid, text, prev.cwd)  # new session id
+            session = self.sm.create(
+                mid, text, prev.cwd, conv_id=prev.conv_id,
+            )
             resume = False
         else:
-            session = self.sm.create(mid, text, prev.cwd, sid=prev.sid)
+            session = self.sm.create(
+                mid, text, prev.cwd, sid=prev.sid, conv_id=prev.conv_id,
+            )
             resume = True
 
         session.is_task = prev.is_task
         session.model_override = effective_model
         session.model_sticky = effective_sticky
 
-        # Build follow-up text with context
+        # Build the follow-up prompt with full conversation history.
+        # IMPORTANT: build history BEFORE appending the new message,
+        # so the current message isn't duplicated in both history and prompt.
         follow_text = text
-
-        # If previous session failed, inject error context so the agent understands
-        if prev.status == "failed" and prev.result:
-            error_snippet = prev.result[:500]
-            follow_text = (
-                f"[Previous task failed with this error]:\n{error_snippet}\n\n"
-                f"[User follow-up]: {text}"
-            )
-
-        # If we can't resume (model changed), inject previous result as context
-        if not resume and prev.result:
-            prev_snippet = prev.result[:1000]
-            follow_text = (
-                f"[Previous conversation result]:\n{prev_snippet}\n\n"
-                f"[User says]: {follow_text}"
-            )
-
         if attachments:
             parts = [follow_text]
             for a in attachments:
@@ -882,9 +887,12 @@ class Dispatcher:
                 )
             follow_text = "".join(parts)
 
-        prompt = follow_text if resume else self._build_prompt(
-            follow_text, session.cwd,
+        prompt = self._build_prompt_with_history(
+            follow_text, session.cwd, session.conv_id, attachments=None,
         )
+
+        # Record user message to transcript (after building prompt)
+        self.transcript.append(session.conv_id, "user", text)
 
         max_turns = self.cfg.max_turns_followup
 
@@ -898,6 +906,11 @@ class Dispatcher:
         monitor = asyncio.create_task(self._progress_loop(mid, session))
         result = await runner
         monitor.cancel()
+
+        # Record assistant response to transcript
+        if result and result.strip():
+            self.transcript.append(session.conv_id, "assistant", result)
+
         self._send_result(mid, session, result)
 
     async def _progress_loop(self, mid: int, session: Session):
@@ -1029,7 +1042,50 @@ class Dispatcher:
         if bg_context:
             prompt += f"\n{bg_context}\n\n"
 
-        prompt += (
+        prompt += self._prompt_footer()
+        return prompt
+
+    def _build_prompt_with_history(
+        self, text: str, cwd: str, conv_id: str,
+        attachments: list[dict] | None = None,
+    ) -> str:
+        """Build a prompt with full conversation history injected.
+
+        Loads all prior turns from the transcript and includes them
+        so the LLM has complete multi-turn context.
+        """
+        project = Path(cwd).name
+        history = self.transcript.build_history(conv_id)
+
+        prompt = f"Working directory: {cwd}  (project: {project})\n\n"
+        prompt += f"User context:\n{self.mem.text}\n\n"
+
+        if history:
+            prompt += (
+                "## Conversation History\n"
+                "Below is the full conversation so far. Use this context to "
+                "understand what the user is referring to.\n\n"
+                f"{history}\n\n"
+            )
+
+        prompt += f"## Current Message\n{text}\n\n"
+
+        if attachments:
+            prompt += "## Attached Files\n"
+            for a in attachments:
+                prompt += (
+                    f"- {a['media_type']}: {a['path']}\n"
+                    f"  Use the Read tool to view this file. "
+                    f"Interpret it in context with the user's message above.\n"
+                )
+            prompt += "\n"
+
+        prompt += self._prompt_footer()
+        return prompt
+
+    @staticmethod
+    def _prompt_footer() -> str:
+        return (
             "Do what the user asks. Summarize the result concisely. "
             "IMPORTANT: Do NOT send any Telegram messages yourself (no curl to "
             "Telegram API). Your stdout will be relayed to the user automatically.\n"
@@ -1038,7 +1094,6 @@ class Dispatcher:
             "Do NOT use other Markdown (no headers, no bullet-point -, no links). "
             "Keep it simple and readable."
         )
-        return prompt
 
     def _reply(
         self,

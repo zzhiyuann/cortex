@@ -12,16 +12,20 @@ class Session:
     """A single dispatched task or conversation turn."""
 
     __slots__ = (
-        "msg_id", "task_text", "cwd", "sid", "status",
+        "msg_id", "task_text", "cwd", "sid", "conv_id", "status",
         "proc", "started", "finished", "result", "is_task",
         "bot_msgs", "partial_output", "model_override", "model_sticky",
     )
 
-    def __init__(self, msg_id: int, text: str, cwd: str, sid: str | None = None):
+    def __init__(
+        self, msg_id: int, text: str, cwd: str,
+        sid: str | None = None, conv_id: str | None = None,
+    ):
         self.msg_id = msg_id
         self.task_text = text
         self.cwd = cwd
         self.sid = sid or str(uuid.uuid4())
+        self.conv_id = conv_id or self.sid  # links sessions in same conversation
         self.status = "pending"  # pending | running | done | failed | cancelled
         self.proc = None  # asyncio.subprocess.Process
         self.started: float | None = None
@@ -53,9 +57,10 @@ class SessionManager:
         self.force_new: bool = False
 
     def create(
-        self, msg_id: int, text: str, cwd: str, sid: str | None = None
+        self, msg_id: int, text: str, cwd: str,
+        sid: str | None = None, conv_id: str | None = None,
     ) -> Session:
-        s = Session(msg_id, text, cwd, sid)
+        s = Session(msg_id, text, cwd, sid, conv_id)
         self.by_msg[msg_id] = s
         self.recent.insert(0, msg_id)
         if len(self.recent) > 100:

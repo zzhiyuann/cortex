@@ -16,6 +16,7 @@ from dispatcher.config import Config
 from dispatcher.core import Dispatcher, _md_to_telegram_html
 from dispatcher.session import Session, SessionManager
 from dispatcher.runner import AgentRunner
+from dispatcher.transcript import Transcript
 
 
 # -- Global fixture: prevent tests from writing to real issues.jsonl --
@@ -31,6 +32,8 @@ def _no_record_issue(monkeypatch):
 def make_config(tmp_path, projects=None):
     """Create a minimal config file for testing."""
     import yaml
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(exist_ok=True)
     cfg_data = {
         "telegram": {"bot_token": "test-token", "chat_id": 12345},
         "agent": {
@@ -50,6 +53,7 @@ def make_config(tmp_path, projects=None):
             "status_keywords": ["status", "在干嘛"],
         },
         "projects": projects or {},
+        "data_dir": str(data_dir),
     }
     cfg_path = tmp_path / "config.yaml"
     cfg_path.write_text(yaml.dump(cfg_data))
@@ -393,11 +397,19 @@ class TestDoSession:
         prev = d.sm.create(1, "original task", "/tmp/webapp")
         prev.is_task = True
         prev.status = "done"
+        prev.result = "I completed the task."
         prev.finished = time.time()
+
+        # Record previous turn in transcript so history is available
+        d.transcript.append(prev.conv_id, "user", "original task")
+        d.transcript.append(prev.conv_id, "assistant", "I completed the task.")
 
         invocations = []
         async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
-            invocations.append({"sid": session.sid, "resume": resume, "model": model})
+            invocations.append({
+                "sid": session.sid, "resume": resume,
+                "model": model, "prompt": prompt,
+            })
             session.status = "done"
             session.finished = time.time()
             return "Follow-up result"
@@ -408,6 +420,10 @@ class TestDoSession:
         assert len(invocations) == 1
         assert invocations[0]["sid"] == prev.sid
         assert invocations[0]["resume"] is True
+        # Prompt should contain conversation history
+        assert "Conversation History" in invocations[0]["prompt"]
+        assert "original task" in invocations[0]["prompt"]
+        assert "I completed the task" in invocations[0]["prompt"]
 
     @pytest.mark.asyncio
     async def test_followup_different_model_fresh_session(self, tmp_path):
@@ -421,7 +437,10 @@ class TestDoSession:
 
         invocations = []
         async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
-            invocations.append({"sid": session.sid, "resume": resume, "model": model})
+            invocations.append({
+                "sid": session.sid, "resume": resume,
+                "model": model, "conv_id": session.conv_id,
+            })
             session.status = "done"
             session.finished = time.time()
             return "Follow-up result"
@@ -433,6 +452,8 @@ class TestDoSession:
         assert invocations[0]["sid"] != prev.sid  # fresh session
         assert invocations[0]["resume"] is False
         assert invocations[0]["model"] == "haiku"
+        # conv_id should be inherited from previous session
+        assert invocations[0]["conv_id"] == prev.conv_id
 
 
 # -- Result formatting tests --
@@ -1398,3 +1419,163 @@ class TestUXQuickActionButtons:
         call_kwargs = d.tg.send.call_args
         markup = call_kwargs[1].get("reply_markup")
         assert markup is None, "Quick task should have no buttons"
+
+
+# -- Transcript tests --
+
+class TestTranscript:
+    def test_append_and_load(self, tmp_path):
+        """Append messages and load them back."""
+        t = Transcript(tmp_path)
+        t.append("conv1", "user", "hello")
+        t.append("conv1", "assistant", "hi there")
+        t.append("conv1", "user", "how are you?")
+
+        msgs = t.load("conv1")
+        assert len(msgs) == 3
+        assert msgs[0]["role"] == "user"
+        assert msgs[0]["content"] == "hello"
+        assert msgs[1]["role"] == "assistant"
+        assert msgs[1]["content"] == "hi there"
+        assert msgs[2]["role"] == "user"
+        assert msgs[2]["content"] == "how are you?"
+
+    def test_load_nonexistent(self, tmp_path):
+        """Loading a non-existent conversation returns empty list."""
+        t = Transcript(tmp_path)
+        assert t.load("does_not_exist") == []
+
+    def test_build_history(self, tmp_path):
+        """build_history formats messages as labeled turns."""
+        t = Transcript(tmp_path)
+        t.append("conv1", "user", "what is 2+2?")
+        t.append("conv1", "assistant", "2+2 = 4")
+
+        history = t.build_history("conv1")
+        assert "[User]: what is 2+2?" in history
+        assert "[Assistant]: 2+2 = 4" in history
+
+    def test_build_history_empty(self, tmp_path):
+        """build_history for empty conversation returns empty string."""
+        t = Transcript(tmp_path)
+        assert t.build_history("empty") == ""
+
+    def test_build_history_truncation(self, tmp_path):
+        """Long history should be trimmed from the beginning."""
+        t = Transcript(tmp_path)
+        # Write enough messages to exceed max_chars
+        for i in range(50):
+            t.append("conv1", "user", f"Message {i}: {'x' * 200}")
+            t.append("conv1", "assistant", f"Response {i}: {'y' * 200}")
+
+        history = t.build_history("conv1", max_chars=2000)
+        assert "earlier conversation omitted" in history
+        # Most recent messages should be present
+        assert "Response 49" in history
+
+    def test_separate_conversations(self, tmp_path):
+        """Different conv_ids maintain separate transcripts."""
+        t = Transcript(tmp_path)
+        t.append("conv1", "user", "hello conv1")
+        t.append("conv2", "user", "hello conv2")
+
+        msgs1 = t.load("conv1")
+        msgs2 = t.load("conv2")
+        assert len(msgs1) == 1
+        assert len(msgs2) == 1
+        assert msgs1[0]["content"] == "hello conv1"
+        assert msgs2[0]["content"] == "hello conv2"
+
+
+class TestTranscriptIntegration:
+    """Verify transcript is recorded during session and followup execution."""
+
+    @pytest.mark.asyncio
+    async def test_session_records_transcript(self, tmp_path):
+        """_do_session should record user message and assistant response."""
+        d = make_dispatcher(tmp_path)
+        session = d.sm.create(1, "what is python", str(Path.home()))
+
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+            session.status = "done"
+            session.started = time.time()
+            session.finished = time.time()
+            return "Python is a programming language"
+
+        d.runner.invoke = mock_invoke
+        await d._do_session(1, session, "what is python")
+
+        msgs = d.transcript.load(session.conv_id)
+        assert len(msgs) == 2
+        assert msgs[0]["role"] == "user"
+        assert msgs[0]["content"] == "what is python"
+        assert msgs[1]["role"] == "assistant"
+        assert msgs[1]["content"] == "Python is a programming language"
+
+    @pytest.mark.asyncio
+    async def test_followup_records_and_uses_history(self, tmp_path):
+        """_do_followup should inject full history and record new turn."""
+        d = make_dispatcher(tmp_path)
+        prev = d.sm.create(1, "tell me about cats", "/tmp")
+        prev.is_task = False
+        prev.status = "done"
+        prev.result = "Cats are great pets."
+        prev.finished = time.time()
+
+        # Simulate first turn already recorded
+        d.transcript.append(prev.conv_id, "user", "tell me about cats")
+        d.transcript.append(prev.conv_id, "assistant", "Cats are great pets.")
+
+        captured_prompts = []
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+            captured_prompts.append(prompt)
+            session.status = "done"
+            session.started = time.time()
+            session.finished = time.time()
+            return "They like sleeping and playing."
+
+        d.runner.invoke = mock_invoke
+        await d._do_followup(2, "what do they like?", prev)
+
+        # Verify history was injected into prompt
+        assert len(captured_prompts) == 1
+        prompt = captured_prompts[0]
+        assert "tell me about cats" in prompt
+        assert "Cats are great pets" in prompt
+        assert "what do they like?" in prompt
+
+        # Verify new turn was recorded
+        msgs = d.transcript.load(prev.conv_id)
+        assert len(msgs) == 4  # 2 original + 2 new
+        assert msgs[2]["role"] == "user"
+        assert msgs[2]["content"] == "what do they like?"
+        assert msgs[3]["role"] == "assistant"
+        assert msgs[3]["content"] == "They like sleeping and playing."
+
+    @pytest.mark.asyncio
+    async def test_conv_id_inherited_across_model_change(self, tmp_path):
+        """Model change creates new session but keeps same conv_id for transcript."""
+        d = make_dispatcher(tmp_path)
+        prev = d.sm.create(1, "hello", "/tmp")
+        prev.is_task = False
+        prev.status = "done"
+        prev.model_override = "opus"
+        prev.finished = time.time()
+
+        d.transcript.append(prev.conv_id, "user", "hello")
+        d.transcript.append(prev.conv_id, "assistant", "Hi!")
+
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+            session.status = "done"
+            session.started = time.time()
+            session.finished = time.time()
+            return "Switching to haiku"
+
+        d.runner.invoke = mock_invoke
+        await d._do_followup(2, "switch model", prev, model="haiku")
+
+        # All messages should be in the same transcript
+        msgs = d.transcript.load(prev.conv_id)
+        assert len(msgs) == 4
+        assert msgs[2]["content"] == "switch model"
+        assert msgs[3]["content"] == "Switching to haiku"

@@ -167,6 +167,11 @@ class AgentRunner:
         if result.get("error"):
             out = f"Error: {result['error']}"
 
+        # If sidecar returned empty (e.g. maxTurns exhausted during tool use),
+        # signal caller to fall back to CLI by returning empty string.
+        if not out or not out.strip():
+            log.warning("sidecar returned empty result, will fall back to CLI")
+
         return out
 
     # -- Main invoke --
@@ -197,10 +202,17 @@ class AgentRunner:
                         self._invoke_sidecar(session, prompt, resume, max_turns, model),
                         timeout=self.timeout,
                     )
-                    session.status = "done" if out and "Error:" not in out[:20] else "failed"
-                    session.finished = time.time()
-                    session.result = out
-                    return out
+                    # If sidecar returned a real result, use it.
+                    # Empty result → fall through to CLI for a retry.
+                    if out and out.strip():
+                        session.status = "done" if "Error:" not in out[:20] else "failed"
+                        session.finished = time.time()
+                        session.result = out
+                        return out
+                    log.info("sidecar returned empty, falling back to CLI")
+                    # Sidecar likely exhausted turns during tool use;
+                    # give CLI more turns so it can finish the response.
+                    max_turns = max(max_turns * 2, 6)
             except Exception as exc:
                 log.warning("sidecar failed, falling back to CLI: %s", exc)
                 self._sidecar_healthy = False
