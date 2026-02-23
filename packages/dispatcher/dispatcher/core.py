@@ -303,8 +303,9 @@ class Dispatcher:
                 source = fwd_from or fwd_chat
                 text = f"[Forwarded from {source}]: {text}"
 
-            # F1: instant reaction feedback
+            # F1: instant reaction feedback + async vibe emoji
             self._fire_reaction(mid, "\U0001f440")
+            self._fire_vibe(mid, text)
 
             # Non-project messages go immediately; project messages batch for 2s
             if reply_to or not self._detect_project(text):
@@ -1224,8 +1225,21 @@ class Dispatcher:
         # Schedule without awaiting — truly fire-and-forget
         asyncio.create_task(_do())
 
-    def _fire_reaction(self, mid: int, emoji: str):
-        """Set a reaction on a message without blocking the event loop."""
+    def _fire_vibe(self, mid: int, text: str):
+        """Pick a contextual emoji via LLM and add it as a second reaction."""
+        from .classifier import pick_emoji
+
+        async def _do():
+            try:
+                emoji = await pick_emoji(text)
+                if emoji:
+                    self.tg.react(mid, ["\U0001f440", emoji])
+            except Exception:
+                pass  # vibe is cosmetic, never fail
+        asyncio.create_task(_do())
+
+    def _fire_reaction(self, mid: int, emoji: str | list[str]):
+        """Set reaction(s) on a message without blocking the event loop."""
         async def _do():
             try:
                 await asyncio.wait_for(

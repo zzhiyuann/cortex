@@ -78,12 +78,19 @@ class TelegramClient:
             timeout=5,
         )
 
-    def react(self, message_id: int, emoji: str) -> bool:
-        """Set a reaction emoji on a message."""
+    def react(self, message_id: int, emoji: str | list[str]) -> bool:
+        """Set reaction emoji(s) on a message.
+
+        Accepts a single emoji string or a list of emojis.
+        """
+        if isinstance(emoji, str):
+            emojis = [emoji]
+        else:
+            emojis = emoji
         result = self.request("setMessageReaction", {
             "chat_id": self.chat_id,
             "message_id": message_id,
-            "reaction": [{"type": "emoji", "emoji": emoji}],
+            "reaction": [{"type": "emoji", "emoji": e} for e in emojis],
         })
         return bool(result.get("ok"))
 
