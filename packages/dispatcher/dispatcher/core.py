@@ -1048,6 +1048,15 @@ class Dispatcher:
         result = await runner
         monitor.cancel()
 
+        # Phase 2: if turns were exhausted and we got internal monologue instead
+        # of a user-facing summary, resume and force a proper summary.
+        if session.used_partial_fallback:
+            log.info("phase-2 summarization triggered for sid=%s", session.sid[:8])
+            summary = await self._summarize_session(session, text)
+            if summary and summary.strip():
+                result = summary
+                session.used_partial_fallback = False
+
         # Record assistant response to transcript
         if result and result.strip():
             self.transcript.append(session.conv_id, "assistant", result)
@@ -1162,6 +1171,15 @@ class Dispatcher:
             result = await runner
             monitor.cancel()
 
+        # Phase 2: if turns were exhausted and we got internal monologue instead
+        # of a user-facing summary, resume and force a proper summary.
+        if session.used_partial_fallback:
+            log.info("phase-2 summarization triggered for sid=%s", session.sid[:8])
+            summary = await self._summarize_session(session, text)
+            if summary and summary.strip():
+                result = summary
+                session.used_partial_fallback = False
+
         # Record assistant response to transcript
         if result and result.strip():
             self.transcript.append(session.conv_id, "assistant", result)
@@ -1174,6 +1192,33 @@ class Dispatcher:
             asyncio.create_task(
                 self._capture_memory(conversation, session.project_name)
             )
+
+    async def _summarize_session(self, session: Session, original_question: str) -> str:
+        """Phase 2: force a user-facing summary when turns were exhausted mid-task.
+
+        Resumes the same Claude Code session and asks it to produce a concise
+        summary of what was accomplished. max_turns=3 keeps it cheap and fast.
+        """
+        prompt = (
+            f"Your previous response was incomplete — you ran out of turns. "
+            f"The user asked: \"{original_question[:200]}\"\n\n"
+            f"In 2-3 sentences, summarize: what you did, what you found or "
+            f"changed, and whether the task is complete or needs follow-up. "
+            f"Be direct and specific — no filler phrases."
+        )
+        try:
+            summary = await asyncio.wait_for(
+                self.runner.invoke(
+                    session, prompt, resume=True, max_turns=3,
+                    model=session.model_override, stream=True,
+                    on_question=None,
+                ),
+                timeout=90,
+            )
+            return summary or ""
+        except Exception as exc:
+            log.warning("phase-2 summarization failed: %s", exc)
+            return ""
 
     async def _progress_loop(self, mid: int, session: Session):
         """Send real-time streaming updates from agent output."""
@@ -1346,7 +1391,11 @@ class Dispatcher:
     @staticmethod
     def _prompt_footer() -> str:
         return (
-            "Do what the user asks. Summarize the result concisely. "
+            "Do what the user asks. "
+            "CRITICAL: You MUST end your response with a direct, user-facing summary "
+            "of what you did and what the outcome was. Never exit without addressing "
+            "the user — even if you ran out of turns mid-task, write a brief status "
+            "update as your final output.\n"
             "IMPORTANT: Do NOT send any Telegram messages yourself (no curl to "
             "Telegram API). Your stdout will be relayed to the user automatically.\n"
             "FORMATTING: Your output is displayed in Telegram. "

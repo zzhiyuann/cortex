@@ -19,6 +19,7 @@ class Session:
         # F7: transient question relay fields (NOT serialized)
         "pending_question", "answer_event", "answer_data",
         "stdin_writer", "stdin_drain",
+        "used_partial_fallback",
     )
 
     def __init__(
@@ -46,6 +47,8 @@ class Session:
         self.answer_data: str | None = None
         self.stdin_writer = None   # proc.stdin.write reference
         self.stdin_drain = None    # proc.stdin.drain reference
+        # True when result is partial_output fallback (turns exhausted mid-task)
+        self.used_partial_fallback: bool = False
 
     def elapsed(self) -> float:
         end = self.finished or time.time()

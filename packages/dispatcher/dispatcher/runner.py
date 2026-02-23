@@ -339,10 +339,12 @@ class AgentRunner:
 
                 # Fallback: if stream parsing returned empty but partial output
                 # was accumulated during streaming, use that instead.
+                # Mark the session so the caller can detect this degraded case.
                 if not out or not out.strip():
                     if session.partial_output and session.partial_output.strip():
                         log.info("using partial_output as fallback (%d chars)", len(session.partial_output))
                         out = session.partial_output
+                        session.used_partial_fallback = True
 
                 # Stream mode: determine status from output, not return code.
                 # The process was terminated (SIGTERM), so returncode is always
