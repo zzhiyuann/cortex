@@ -23,33 +23,28 @@ Cortex is not another agent framework. It's a plug-in layer that sits **on top**
 
 | Component | What's Missing | What Cortex Adds |
 |-----------|---------------|------------------|
-| **[Dispatcher](https://github.com/zzhiyuann/dispatcher)** | Can't command your agent from your phone | Mobile JARVIS via Telegram. Always-on daemon. |
-| **[A2A Hub](https://github.com/zzhiyuann/a2a-hub)** | Agents can't discover or delegate to each other | Agent-to-Agent protocol. WebSocket hub + MCP bridge. |
-| **[Forge](https://github.com/zzhiyuann/forge)** | Agent can't build its own tools | Self-evolving tool agent. Describe → Generate → Test → Install. |
-| **[Vibe Replay](https://github.com/zzhiyuann/vibe-replay)** | Sessions are ephemeral — wisdom is lost | Capture sessions, extract decisions, generate shareable replays. |
+| **[Dispatcher](packages/dispatcher)** | Can't command your agent from your phone | Mobile JARVIS via Telegram. Always-on daemon. |
+| **[A2A Hub](packages/a2a-hub)** | Agents can't discover or delegate to each other | Agent-to-Agent protocol. WebSocket hub + MCP bridge. |
+| **[Forge](packages/forge)** | Agent can't build its own tools | Self-evolving tool agent. Describe → Generate → Test → Install. |
+| **[Vibe Replay](packages/vibe-replay)** | Sessions are ephemeral — wisdom is lost | Capture sessions, extract decisions, generate shareable replays. |
 
 ## Install
 
 ```bash
-pip install cortex-cli-agent
+git clone https://github.com/zzhiyuann/cortex.git
+cd cortex
+uv sync --all-packages
 
-# Or via Homebrew
-brew tap zzhiyuann/tap && brew install cortex
-```
-
-## Quick Start
-
-```bash
-# Set up Cortex on top of your existing agent
-cortex init
+# Set up everything — MCP servers, hooks, Telegram config
+uv run cortex init
 
 # Check what's connected
-cortex status
+uv run cortex status
+```
 
-# Or install components individually
-pip install vibe-replay          # Session memory
-pip install forge-agent          # Tool generation
-pip install a2a-hub              # Agent communication
+Or install a single component standalone:
+```bash
+pip install "vibe-replay @ git+https://github.com/zzhiyuann/cortex.git#subdirectory=packages/vibe-replay"
 ```
 
 ## Philosophy

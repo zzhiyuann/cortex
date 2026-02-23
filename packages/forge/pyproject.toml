@@ -43,9 +43,9 @@ forge = "forge.cli:cli"
 forge-mcp = "forge.mcp_server:main"
 
 [project.urls]
-Homepage = "https://github.com/zzhiyuann/forge"
-Repository = "https://github.com/zzhiyuann/forge"
-Issues = "https://github.com/zzhiyuann/forge/issues"
+Homepage = "https://github.com/zzhiyuann/cortex/tree/main/packages/forge"
+Repository = "https://github.com/zzhiyuann/cortex"
+Issues = "https://github.com/zzhiyuann/cortex/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["forge"]

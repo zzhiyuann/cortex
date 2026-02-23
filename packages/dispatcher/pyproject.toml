@@ -29,10 +29,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/mephisto0/dispatcher"
-Documentation = "https://mephisto0.github.io/dispatcher"
-Repository = "https://github.com/mephisto0/dispatcher"
-Issues = "https://github.com/mephisto0/dispatcher/issues"
+Homepage = "https://github.com/zzhiyuann/cortex/tree/main/packages/dispatcher"
+Documentation = "https://zzhiyuann.github.io/cortex/dispatcher.html"
+Repository = "https://github.com/zzhiyuann/cortex"
+Issues = "https://github.com/zzhiyuann/cortex/issues"
 
 [project.scripts]
 dispatcher = "dispatcher.cli:main"
