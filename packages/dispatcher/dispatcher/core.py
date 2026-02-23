@@ -893,10 +893,16 @@ class Dispatcher:
             log.exception("quick query failed")
             self._reply(mid, f"\u274c Error: {str(e)[:200]}")
 
-    # Model aliases: #prefix to avoid Telegram @mention resolution.
-    # Lowercase = current message only, capitalized = persist in follow-ups.
-    _MODEL_PREFIXES_TEMP = {"#haiku": "haiku", "#sonnet": "sonnet", "#opus": "opus"}
-    _MODEL_PREFIXES_STICKY = {"#Haiku": "haiku", "#Sonnet": "sonnet", "#Opus": "opus"}
+    # Model aliases: #prefix recommended (@ triggers Telegram mention resolution).
+    # Both @ and # accepted. Lowercase = current message only, capitalized = persist.
+    _MODEL_PREFIXES_TEMP = {
+        "#haiku": "haiku", "#sonnet": "sonnet", "#opus": "opus",
+        "@haiku": "haiku", "@sonnet": "sonnet", "@opus": "opus",
+    }
+    _MODEL_PREFIXES_STICKY = {
+        "#Haiku": "haiku", "#Sonnet": "sonnet", "#Opus": "opus",
+        "@Haiku": "haiku", "@Sonnet": "sonnet", "@Opus": "opus",
+    }
 
     def _extract_model_prefix(self, text: str) -> tuple[str, str | None, bool]:
         """Extract #model prefix from message. Returns (clean_text, model_or_none, sticky).
