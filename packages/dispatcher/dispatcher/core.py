@@ -768,17 +768,15 @@ class Dispatcher:
                 bg_lines.append(f"  - {s.project_name}: {s.task_text[:60]} ({elapsed})")
             bg_context = "\n".join(bg_lines)
 
-        # 3. Quick vs task: project detected = task, otherwise = quick chat
-        #    No Haiku classification overhead — project routing is zero-cost.
+        # 3. Detect project for working directory routing
         cwd = self._detect_project(text) or str(Path.home())
         is_project = cwd != str(Path.home())
-        is_quick = not is_project
 
         # 4. If nothing running, try to resume last session for continuity
         if not self.sm.force_new:
             last = self.sm.last_session()
             if not active and last and last.status in ("done", "failed"):
-                self._spawn(self._do_followup(mid, text, last, attachments, model=model_override, model_sticky=is_sticky, quick=is_quick))
+                self._spawn(self._do_followup(mid, text, last, attachments, model=model_override, model_sticky=is_sticky))
                 return
         self.sm.force_new = False
 
@@ -788,7 +786,7 @@ class Dispatcher:
         session.model_sticky = is_sticky
         self._spawn(self._do_session(
             mid, session, text, attachments, bg_context=bg_context,
-            quick=is_quick, model=model_override,
+            model=model_override,
         ))
 
     # -- Session runners --
@@ -797,27 +795,20 @@ class Dispatcher:
         self, mid: int, session: Session, text: str,
         attachments: list[dict] | None = None,
         bg_context: str = "",
-        quick: bool = False,
         model: str | None = None,
     ):
-        """Run a task with progress feedback."""
+        """Run a task with full Claude Code capability."""
         session.model_override = model
-        if quick:
-            prompt = self._build_prompt_quick(text, attachments)
-            max_turns = 1
-        else:
-            prompt = self._build_prompt(text, session.cwd, attachments, bg_context)
-            max_turns = self.cfg.max_turns if session.is_task else self.cfg.max_turns_chat
+        prompt = self._build_prompt(text, session.cwd, attachments, bg_context)
+        max_turns = self.cfg.max_turns
 
-        # Quick: plain mode (fast, no stream overhead). Task: stream-json (progressive updates).
         runner = asyncio.create_task(
             self.runner.invoke(
                 session, prompt, resume=False, max_turns=max_turns,
-                model=model, stream=not quick,
+                model=model, stream=True,
             )
         )
-        # Quick questions: typing only, no progress messages (no noise)
-        monitor = asyncio.create_task(self._progress_loop(mid, session, quiet=quick))
+        monitor = asyncio.create_task(self._progress_loop(mid, session))
         result = await runner
         monitor.cancel()
         self._send_result(mid, session, result)
@@ -827,25 +818,19 @@ class Dispatcher:
         attachments: list[dict] | None = None,
         model: str | None = None,
         model_sticky: bool = False,
-        quick: bool = False,
     ):
         """Wait for a running session to finish, then resume with the new message."""
         while target.status in ("pending", "running"):
             await asyncio.sleep(1)
-        await self._do_followup(mid, text, target, attachments, model=model, model_sticky=model_sticky, quick=quick)
+        await self._do_followup(mid, text, target, attachments, model=model, model_sticky=model_sticky)
 
     async def _do_followup(
         self, mid: int, text: str, prev: Session,
         attachments: list[dict] | None = None,
         model: str | None = None,
         model_sticky: bool = False,
-        quick: bool = False,
     ):
-        """Resume a previous session for follow-up.
-
-        quick=True uses plain mode and 1 turn for fast responses
-        while still maintaining session continuity via --resume.
-        """
+        """Resume a previous session with full Claude Code capability."""
         effective_model = model or self._sticky_model
         effective_sticky = model_sticky or (prev.model_sticky if not model else False)
 
@@ -898,27 +883,22 @@ class Dispatcher:
             follow_text, session.cwd,
         )
 
-        max_turns = 1 if quick else self.cfg.max_turns_followup
-        use_stream = not quick
+        max_turns = self.cfg.max_turns_followup
 
         runner = asyncio.create_task(
             self.runner.invoke(
                 session, prompt, resume=resume,
                 max_turns=max_turns, model=effective_model,
-                stream=use_stream,
+                stream=True,
             )
         )
-        monitor = asyncio.create_task(self._progress_loop(mid, session, quiet=quick))
+        monitor = asyncio.create_task(self._progress_loop(mid, session))
         result = await runner
         monitor.cancel()
         self._send_result(mid, session, result)
 
-    async def _progress_loop(self, mid: int, session: Session, quiet: bool = False):
-        """Send real-time streaming updates from agent output.
-
-        quiet=True: only send typing indicators, no progress messages.
-        Used for quick Q&A so the user just gets the answer with no noise.
-        """
+    async def _progress_loop(self, mid: int, session: Session):
+        """Send real-time streaming updates from agent output."""
         try:
             progress_msg_id = None
             last_partial_len = 0
@@ -926,15 +906,11 @@ class Dispatcher:
             phase_shown = False
 
             while session.status in ("pending", "running"):
-                await asyncio.sleep(5 if quiet else 3)
+                await asyncio.sleep(3)
                 if session.status not in ("pending", "running"):
                     break
 
                 self._fire_typing()
-
-                # Quick sessions: typing only, no messages
-                if quiet:
-                    continue
 
                 if not session.started:
                     continue
@@ -1025,17 +1001,6 @@ class Dispatcher:
                 pass
         asyncio.ensure_future(_do())
 
-    def _build_prompt_quick(
-        self, text: str,
-        attachments: list[dict] | None = None,
-    ) -> str:
-        """Minimal prompt for quick questions — no memory, no cwd, less tokens."""
-        prompt = f"{text}\n\nAnswer concisely. Output is shown in Telegram."
-        if attachments:
-            for a in attachments:
-                prompt += f"\n[Attached {a['media_type']}: {a['path']}]"
-        return prompt
-
     def _build_prompt(
         self, text: str, cwd: str,
         attachments: list[dict] | None = None,
@@ -1112,7 +1077,8 @@ class Dispatcher:
             self._fire_reaction(mid, "\u2705")
 
         if not result or not result.strip():
-            self._reply(mid, "\u2705 完成了，但没有输出内容。")
+            self._reply(mid, "\u26a0\ufe0f Agent 没有返回内容，可能 turn 不够用了。\n"
+                        "试试回复这条消息重新问，或换个说法。")
             record_issue(
                 source="dispatcher",
                 category="empty_response",

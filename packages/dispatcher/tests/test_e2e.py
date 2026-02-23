@@ -444,7 +444,7 @@ class TestSendResult:
         s.status = "done"
         d._send_result(1, s, "")
         msg = d.tg.send.call_args[0][0]
-        assert "完成" in msg or "没有输出" in msg
+        assert "没有返回" in msg or "没有输出" in msg or "完成" in msg
 
     def test_failed_result(self, tmp_path):
         d = make_dispatcher(tmp_path)
@@ -798,8 +798,8 @@ class TestUXResponseLatency:
     """Verify architectural choices that affect perceived response time."""
 
     @pytest.mark.asyncio
-    async def test_quick_question_uses_plain_mode(self, tmp_path):
-        """Quick questions must use stream=False for speed (no stream-json overhead)."""
+    async def test_all_messages_use_stream_and_full_turns(self, tmp_path):
+        """All messages get full Claude Code capability: stream + max_turns."""
         d = make_dispatcher(tmp_path)
         session = d.sm.create(1, "what is python", str(Path.home()))
         session.is_task = False
@@ -814,30 +814,10 @@ class TestUXResponseLatency:
             return "Python is a language"
 
         d.runner.invoke = mock_invoke
-        await d._do_session(1, session, "what is python", quick=True)
+        await d._do_session(1, session, "what is python")
 
-        assert captured["stream"] is False, "Quick questions should NOT use stream-json"
-        assert captured["max_turns"] <= 5, "Quick questions should have low max_turns"
-
-    @pytest.mark.asyncio
-    async def test_task_uses_stream_mode(self, tmp_path):
-        """Project tasks should use stream mode for progressive updates."""
-        d = make_dispatcher(tmp_path)
-        session = d.sm.create(1, "fix bug", "/tmp/webapp")
-        session.is_task = True
-
-        captured = {}
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
-            captured["stream"] = stream
-            session.status = "done"
-            session.started = time.time()
-            session.finished = time.time()
-            return "Fixed"
-
-        d.runner.invoke = mock_invoke
-        await d._do_session(1, session, "fix bug", quick=False)
-
-        assert captured["stream"] is True, "Project tasks should use stream-json"
+        assert captured["stream"] is True, "All messages should use stream-json"
+        assert captured["max_turns"] == d.cfg.max_turns, "All messages should get cfg.max_turns"
 
     def test_commands_respond_without_agent(self, tmp_path):
         """/status /help /history respond instantly via tg.send, no agent needed."""
@@ -879,14 +859,14 @@ class TestUXNoNoise:
     """Verify the user is not bombarded with unnecessary messages."""
 
     @pytest.mark.asyncio
-    async def test_quiet_progress_sends_no_messages(self, tmp_path):
-        """Quick sessions: progress loop in quiet=True mode sends no messages."""
+    async def test_progress_loop_no_messages_when_fast(self, tmp_path):
+        """Progress loop sends no messages if session finishes before first check."""
         d = make_dispatcher(tmp_path)
         session = d.sm.create(1, "hi", str(Path.home()))
         session.status = "running"
         session.started = time.time()
 
-        task = asyncio.create_task(d._progress_loop(1, session, quiet=True))
+        task = asyncio.create_task(d._progress_loop(1, session))
         await asyncio.sleep(0.05)
         session.status = "done"
         task.cancel()

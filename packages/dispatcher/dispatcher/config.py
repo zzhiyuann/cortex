@@ -24,8 +24,8 @@ DEFAULTS: dict[str, Any] = {
         "max_concurrent": 3,
         "timeout": 1800,
         "max_turns": 50,
-        "max_turns_chat": 10,
-        "max_turns_followup": 20,
+        "max_turns_chat": 50,
+        "max_turns_followup": 50,
     },
     "behavior": {
         "poll_timeout": 30,
