@@ -49,6 +49,14 @@ except ImportError:
 
 log = logging.getLogger("dispatcher")
 
+# Optional long-term memory integration (cortex-memory package)
+try:
+    from memory import MemoryStore, FactExtractor  # type: ignore
+    HAS_MEMORY = True
+    log.debug("cortex-memory available")
+except ImportError:
+    HAS_MEMORY = False
+
 # Progress phase descriptions based on elapsed time
 _PROGRESS_PHASES = [
     (30, "Analyzing task..."),
@@ -1046,6 +1054,13 @@ class Dispatcher:
 
         self._send_result(mid, session, result)
 
+        # Capture memory in background — non-blocking
+        if HAS_MEMORY and result and result.strip() and session.status == "done":
+            conversation = f"User: {text}\n\nAssistant: {result}"
+            asyncio.create_task(
+                self._capture_memory(conversation, session.project_name)
+            )
+
     async def _do_queued_followup(
         self, mid: int, text: str, target: Session,
         attachments: list[dict] | None = None,
@@ -1127,11 +1142,38 @@ class Dispatcher:
         result = await runner
         monitor.cancel()
 
+        # If resume returned empty (session may have expired or been cleaned up),
+        # retry once with a fresh session using the same conversation history.
+        if resume and (not result or not result.strip()):
+            log.info("resume returned empty for mid=%d, retrying as fresh session", mid)
+            session = self.sm.create(mid, text, prev.cwd, conv_id=prev.conv_id)
+            session.is_task = prev.is_task
+            session.model_override = effective_model
+            session.model_sticky = effective_sticky
+            runner = asyncio.create_task(
+                self.runner.invoke(
+                    session, prompt, resume=False,
+                    max_turns=max_turns, model=effective_model,
+                    stream=True,
+                    on_question=self._surface_question,
+                )
+            )
+            monitor = asyncio.create_task(self._progress_loop(mid, session))
+            result = await runner
+            monitor.cancel()
+
         # Record assistant response to transcript
         if result and result.strip():
             self.transcript.append(session.conv_id, "assistant", result)
 
         self._send_result(mid, session, result)
+
+        # Capture memory in background — non-blocking
+        if HAS_MEMORY and result and result.strip() and session.status == "done":
+            conversation = f"User: {text}\n\nAssistant: {result}"
+            asyncio.create_task(
+                self._capture_memory(conversation, session.project_name)
+            )
 
     async def _progress_loop(self, mid: int, session: Session):
         """Send real-time streaming updates from agent output."""
@@ -1366,6 +1408,23 @@ class Dispatcher:
         elapsed = _format_duration(session.elapsed()) if session.started else ""
 
         if session.status == "failed":
+            # If the result looks like a real response (not an error),
+            # the status was likely set incorrectly — treat as success.
+            looks_like_error = (
+                result.startswith("(stderr)")
+                or result.lower().startswith("error:")
+                or result.startswith("Timed out")
+            )
+            if not looks_like_error:
+                log.info(
+                    "status=failed but result looks valid (%d chars), treating as done",
+                    len(result),
+                )
+                session.status = "done"
+                self._consecutive_failures = 0
+                # fall through to normal success path below
+
+        if session.status == "failed":
             self._consecutive_failures += 1
             # self._fire_reaction(mid, "\u274c")  # disabled: 400 error
             friendly = self._friendly_error(result)
@@ -1466,6 +1525,37 @@ class Dispatcher:
         if len(error) > 500:
             return f"Error:\n{error[:400]}...\n\nReply 'details' for full output."
         return f"Error:\n{error}"
+
+    async def _capture_memory(self, conversation: str, project_name: str):
+        """Extract facts from a completed conversation and store them in memory.
+
+        Runs in background via asyncio.create_task — never blocks dispatch loop.
+        Silently no-ops if cortex-memory is unavailable.
+        """
+        if not HAS_MEMORY:
+            return
+        try:
+            def _do_extract_and_store():
+                extractor = FactExtractor()
+                facts = extractor.extract(conversation, source="bot")
+                if not facts:
+                    return 0
+                store = MemoryStore()
+                count = 0
+                for fact in facts:
+                    try:
+                        store.add(fact, source="bot", tags=project_name)
+                        count += 1
+                    except Exception as exc:
+                        log.debug("failed to store fact: %s", exc)
+                store.close()
+                return count
+
+            count = await asyncio.to_thread(_do_extract_and_store)
+            if count:
+                log.debug("captured %d memory fact(s) from %s session", count, project_name)
+        except Exception as exc:
+            log.debug("memory capture failed (non-fatal): %s", exc)
 
     def _spawn(self, coro):
         task = asyncio.create_task(coro)

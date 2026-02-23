@@ -485,7 +485,7 @@ class AgentRunner:
                         session.answer_data = None
 
             elif etype == "result":
-                result_text = event.get("result", "")
+                result_text = event.get("result") or ""
                 got_result_event = True
                 # Result event is authoritative — stop reading.
                 # In stream-json mode stdin may still be open, so the process
