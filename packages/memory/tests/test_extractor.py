@@ -1,44 +1,40 @@
-"""Tests for FactExtractor — mock Anthropic API."""
+"""Tests for FactExtractor — uses claude CLI subprocess."""
 
 from __future__ import annotations
 
+import json
 from unittest.mock import MagicMock, patch
 
 
 class TestFactExtractor:
     def test_extract_returns_list_of_facts(self):
-        """Happy path: Haiku returns bullet-free lines."""
+        """Happy path: claude CLI returns newline-separated facts."""
         from memory.extractor import FactExtractor
 
-        mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="Fact one.\nFact two.\nFact three.")]
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = json.dumps({"result": "Fact one.\nFact two.\nFact three."})
 
-        mock_client = MagicMock()
-        mock_client.messages.create.return_value = mock_response
-
-        with patch("anthropic.Anthropic", return_value=mock_client):
-            extractor = FactExtractor(api_key="sk-test")
+        with patch("subprocess.run", return_value=mock_result):
+            extractor = FactExtractor()
             facts = extractor.extract(
                 "User: Can you fix the bug?\nAssistant: Fixed in store.py.",
                 source="bot",
             )
 
         assert facts == ["Fact one.", "Fact two.", "Fact three."]
-        mock_client.messages.create.assert_called_once()
 
     def test_extract_caps_at_five_facts(self):
         """Extractor should return at most 5 facts."""
         from memory.extractor import FactExtractor
 
         six_lines = "\n".join(f"Fact {i}." for i in range(6))
-        mock_response = MagicMock()
-        mock_response.content = [MagicMock(text=six_lines)]
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = json.dumps({"result": six_lines})
 
-        mock_client = MagicMock()
-        mock_client.messages.create.return_value = mock_response
-
-        with patch("anthropic.Anthropic", return_value=mock_client):
-            extractor = FactExtractor(api_key="sk-test")
+        with patch("subprocess.run", return_value=mock_result):
+            extractor = FactExtractor()
             facts = extractor.extract("some long conversation", source="cli")
 
         assert len(facts) <= 5
@@ -47,44 +43,39 @@ class TestFactExtractor:
         """Lines starting with # should be filtered out."""
         from memory.extractor import FactExtractor
 
-        mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="# Ignored header\nReal fact.\n")]
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = json.dumps({"result": "# Ignored header\nReal fact."})
 
-        mock_client = MagicMock()
-        mock_client.messages.create.return_value = mock_response
-
-        with patch("anthropic.Anthropic", return_value=mock_client):
-            extractor = FactExtractor(api_key="sk-test")
+        with patch("subprocess.run", return_value=mock_result):
+            extractor = FactExtractor()
             facts = extractor.extract("conversation text", source="manual")
 
         assert facts == ["Real fact."]
 
-    def test_extract_no_api_key_returns_fallback(self):
-        """Without an API key, should return a fallback summary."""
-        import os
+    def test_extract_no_claude_cli_returns_fallback(self):
+        """Without claude CLI, should return a fallback summary."""
         from memory.extractor import FactExtractor
 
-        env_without_key = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
-        with patch.dict(os.environ, env_without_key, clear=True):
-            extractor = FactExtractor(api_key=None)
+        with patch("shutil.which", return_value=None):
+            extractor = FactExtractor()
             facts = extractor.extract("This is a test conversation.", source="cli")
 
-        # Should return a non-empty fallback
         assert isinstance(facts, list)
         assert len(facts) >= 1
 
-    def test_extract_anthropic_error_returns_fallback(self):
-        """When Anthropic raises an exception, fall back gracefully."""
+    def test_extract_cli_error_returns_fallback(self):
+        """When claude CLI fails, fall back gracefully."""
         from memory.extractor import FactExtractor
 
-        mock_client = MagicMock()
-        mock_client.messages.create.side_effect = RuntimeError("API error")
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stderr = "some error"
 
-        with patch("anthropic.Anthropic", return_value=mock_client):
-            extractor = FactExtractor(api_key="sk-test")
+        with patch("subprocess.run", return_value=mock_result):
+            extractor = FactExtractor()
             facts = extractor.extract("important conversation content", source="bot")
 
-        # Fallback: truncated raw conversation
         assert isinstance(facts, list)
         assert len(facts) >= 1
         assert "important conversation content" in facts[0]
@@ -93,7 +84,7 @@ class TestFactExtractor:
         """Empty or whitespace-only conversation returns empty list."""
         from memory.extractor import FactExtractor
 
-        extractor = FactExtractor(api_key="sk-test")
+        extractor = FactExtractor()
         assert extractor.extract("", source="cli") == []
         assert extractor.extract("   ", source="cli") == []
 
@@ -107,19 +98,29 @@ class TestFactExtractor:
         assert len(result[0]) <= 300
         assert result[0].endswith("...")
 
-    def test_extract_without_anthropic_package(self):
-        """If anthropic is not installed, fall back gracefully."""
-        import builtins
-        real_import = builtins.__import__
+    def test_extract_timeout_returns_fallback(self):
+        """Timeout during extraction should return fallback."""
+        import subprocess
+        from memory.extractor import FactExtractor
 
-        def mock_import(name, *args, **kwargs):
-            if name == "anthropic":
-                raise ImportError("No module named 'anthropic'")
-            return real_import(name, *args, **kwargs)
+        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("claude", 30)):
+            extractor = FactExtractor()
+            facts = extractor.extract("important content", source="cli")
 
-        with patch("builtins.__import__", side_effect=mock_import):
-            from memory.extractor import FactExtractor
-            extractor = FactExtractor(api_key="sk-test")
+        assert isinstance(facts, list)
+        assert len(facts) >= 1
+
+    def test_extract_empty_result_returns_fallback(self):
+        """Empty result field in CLI output should return fallback."""
+        from memory.extractor import FactExtractor
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = json.dumps({"result": ""})
+
+        with patch("subprocess.run", return_value=mock_result):
+            extractor = FactExtractor()
             facts = extractor.extract("A test conversation.", source="test")
 
         assert isinstance(facts, list)
+        assert len(facts) >= 1
