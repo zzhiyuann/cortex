@@ -49,33 +49,18 @@ except ImportError:
 
 log = logging.getLogger("dispatcher")
 
-# Chinese aliases for common project concepts
-_PROJECT_ALIASES: dict[str, list[str]] = {
-    "网站": ["cortex", "website", "web", "frontend"],
-    "网页": ["cortex", "website", "web", "frontend"],
-    "前端": ["frontend", "web", "website"],
-    "后端": ["api", "backend", "server"],
-    "工具": ["forge", "tool"],
-    "回放": ["vibe", "replay"],
-    "录制": ["vibe", "replay"],
-    "调度": ["dispatcher"],
-    "机器人": ["dispatcher", "bot"],
-    "签证": ["visa"],
-    "书": ["book"],
-}
-
-# Progress phase descriptions (Chinese) based on elapsed time
+# Progress phase descriptions based on elapsed time
 _PROGRESS_PHASES = [
-    (30, "正在分析任务..."),
-    (60, "正在读取代码..."),
-    (120, "正在编写修改..."),
-    (180, "还在跑... 任务比较复杂"),
-    (300, "跑了挺久了，再等等"),
-    (600, "跑了 {m} 分钟，应该快好了"),
+    (30, "Analyzing task..."),
+    (60, "Reading code..."),
+    (120, "Writing changes..."),
+    (180, "Still running... complex task"),
+    (300, "Running for a while, hang tight"),
+    (600, "Running for {m} min, should be done soon"),
 ]
 
 
-# Precompiled pattern for Markdown→HTML conversion (avoids recompiling per call)
+# Precompiled pattern for Markdown->HTML conversion (avoids recompiling per call)
 _MD_PATTERN = re.compile(
     r'```(?:\w*\n)?(.*?)```'   # fenced code block
     r'|`([^`]+)`'              # inline code
@@ -116,16 +101,16 @@ def _md_to_telegram_html(text: str) -> str:
 
 
 def _format_duration(seconds: float) -> str:
-    """Format seconds into a human-readable Chinese duration."""
+    """Format seconds into a human-readable duration."""
     if seconds < 60:
-        return f"{int(seconds)}秒"
+        return f"{int(seconds)}s"
     m = int(seconds) // 60
     s = int(seconds) % 60
     if m < 60:
-        return f"{m}分{s}秒" if s else f"{m}分钟"
+        return f"{m}m{s}s" if s else f"{m}min"
     h = m // 60
     m = m % 60
-    return f"{h}小时{m}分"
+    return f"{h}h{m}m"
 
 
 class Dispatcher:
@@ -192,12 +177,12 @@ class Dispatcher:
 
         # Register bot commands menu
         self.tg.set_my_commands([
-            {"command": "status", "description": "查看当前任务状态"},
-            {"command": "cancel", "description": "取消正在运行的任务"},
-            {"command": "peek", "description": "查看运行中任务的输出"},
-            {"command": "q", "description": "快问（不阻塞运行中任务）"},
-            {"command": "history", "description": "查看最近任务记录"},
-            {"command": "help", "description": "使用帮助"},
+            {"command": "status", "description": "Check current task status"},
+            {"command": "cancel", "description": "Cancel a running task"},
+            {"command": "peek", "description": "Preview running task output"},
+            {"command": "q", "description": "Quick question (non-blocking)"},
+            {"command": "history", "description": "Recent task history"},
+            {"command": "help", "description": "Usage help"},
         ])
 
         self.tg.send("\u2705 Dispatcher online.")
@@ -260,15 +245,15 @@ class Dispatcher:
         media = await self._extract_media(msg)
         if media:
             if media["kind"] == "text":
-                # Voice/audio → whisper transcription becomes the text
+                # Voice/audio -> whisper transcription becomes the text
                 transcription = media["text"]
                 if not text:
                     if caption and transcription:
-                        text = f"{caption}\n\n[语音内容]: {transcription}"
+                        text = f"{caption}\n\n[Voice transcript]: {transcription}"
                     else:
                         text = caption or transcription
             elif media["kind"] == "file":
-                # Photo/video/document → attach for agent to read directly
+                # Photo/video/document -> attach for agent to read directly
                 attachments.append(media)
                 if not text:
                     text = caption or f"[User sent a {media['media_type']}]"
@@ -286,8 +271,8 @@ class Dispatcher:
                     s.answer_data = text
                     s.answer_event.set()
                     if tg_msg_id:
-                        self.tg.edit(tg_msg_id, f"✅ 已回答: {text}")
-                    self._reply(mid, "👍 已发送给 agent。")
+                        self.tg.edit(tg_msg_id, f"\u2705 Answered: {text}")
+                    self._reply(mid, "\U0001f44d Sent to agent.")
                     return
 
         # Fire-and-forget typing — never block the event loop
@@ -349,34 +334,34 @@ class Dispatcher:
                 target.proc.kill()
                 target.status = "cancelled"
                 target.finished = time.time()
-                self.tg.answer_callback(cb_id, "已取消")
+                self.tg.answer_callback(cb_id, "Cancelled")
                 self.tg.edit(
                     msg["message_id"],
-                    f"\u274c 已取消: {target.task_text[:40]}",
+                    f"\u274c Cancelled: {target.task_text[:40]}",
                 )
             else:
-                self.tg.answer_callback(cb_id, "任务已结束")
+                self.tg.answer_callback(cb_id, "Task already finished")
         elif data.startswith("retry:"):
             try:
                 orig_mid = int(data.split(":")[1])
             except (IndexError, ValueError):
-                self.tg.answer_callback(cb_id, "无效的重试请求")
+                self.tg.answer_callback(cb_id, "Invalid retry request")
                 return
             session = self.sm.by_msg.get(orig_mid)
             if session:
-                self.tg.answer_callback(cb_id, "\U0001f504 重试中...")
+                self.tg.answer_callback(cb_id, "\U0001f504 Retrying...")
                 await self._handle_task(
                     orig_mid, session.task_text, None,
                     model=session.model_override,
                 )
             else:
-                self.tg.answer_callback(cb_id, "找不到原始任务")
+                self.tg.answer_callback(cb_id, "Original task not found")
 
         elif data.startswith("answer:"):
             # F7: user answered an AskUserQuestion via inline keyboard
             parts = data.split(":", 2)  # answer:{sid_prefix}:{index_or_other}
             if len(parts) < 3:
-                self.tg.answer_callback(cb_id, "无效的回答")
+                self.tg.answer_callback(cb_id, "Invalid answer")
                 return
             sid_prefix, answer_key = parts[1], parts[2]
             # Find the session with a pending question
@@ -386,11 +371,11 @@ class Dispatcher:
                     target = s
                     break
             if not target or not target.pending_question:
-                self.tg.answer_callback(cb_id, "问题已过期")
+                self.tg.answer_callback(cb_id, "Question expired")
                 return
 
             if answer_key == "other":
-                self.tg.answer_callback(cb_id, "请直接回复那条消息输入答案")
+                self.tg.answer_callback(cb_id, "Reply to that message with your answer")
                 return
 
             # Resolve index to label
@@ -401,7 +386,7 @@ class Dispatcher:
             except (ValueError, IndexError):
                 answer_label = answer_key
 
-            self.tg.answer_callback(cb_id, f"已选择: {answer_label}")
+            self.tg.answer_callback(cb_id, f"Selected: {answer_label}")
 
             # Capture tg_msg_id BEFORE signaling (race condition fix)
             tg_msg_id = target.pending_question.get("tg_msg_id")
@@ -413,11 +398,11 @@ class Dispatcher:
 
             # Edit question message to show selected answer
             if tg_msg_id:
-                self.tg.edit(tg_msg_id, f"✅ 已回答: {answer_label}")
+                self.tg.edit(tg_msg_id, f"\u2705 Answered: {answer_label}")
 
         elif data == "new_session":
             self.sm.force_new = True
-            self.tg.answer_callback(cb_id, "好的，下条消息将开始新对话")
+            self.tg.answer_callback(cb_id, "OK, next message starts a new session")
 
         else:
             self.tg.answer_callback(cb_id)
@@ -449,7 +434,7 @@ class Dispatcher:
                 await self._handle_task(mid, new_text, None)
                 return
 
-        log.debug("ignoring edit for [%d] — session too old or not running", mid)
+        log.debug("ignoring edit for [%d] -- session too old or not running", mid)
 
     async def _surface_question(self, session: Session):
         """F7: Send AskUserQuestion to Telegram as inline keyboard buttons."""
@@ -466,14 +451,14 @@ class Dispatcher:
         options = q.get("options", [])
         sid_prefix = session.sid[:8]
 
-        # Store option labels for index→label resolution in callback
+        # Store option labels for index->label resolution in callback
         pq["option_labels"] = [opt.get("label", "?") for opt in options]
 
         rows = []
         for i, opt in enumerate(options):
             label = opt.get("label", "?")
             desc = opt.get("description", "")
-            btn_text = f"{label} — {desc}" if desc else label
+            btn_text = f"{label} -- {desc}" if desc else label
             if len(btn_text) > 40:
                 btn_text = btn_text[:37] + "..."
             rows.append([{
@@ -483,12 +468,12 @@ class Dispatcher:
 
         # Add "Other..." button for free-text reply
         rows.append([{
-            "text": "✍ Other...",
+            "text": "\u270d Other...",
             "callback_data": f"answer:{sid_prefix}:other",
         }])
 
         markup = {"inline_keyboard": rows}
-        header = f"❓ Agent 在问:\n\n<b>{html.escape(q_text)}</b>"
+        header = f"\u2753 Agent asks:\n\n<b>{html.escape(q_text)}</b>"
         tg_msg_id = self.tg.send(
             header, reply_to=session.msg_id,
             parse_mode="HTML", reply_markup=markup,
@@ -500,7 +485,7 @@ class Dispatcher:
     def _handle_new_session(self, mid: int):
         """Mark that the next message should start a fresh session."""
         self.sm.force_new = True
-        self._reply(mid, "\U0001f195 好的，下条消息将开始新对话。")
+        self._reply(mid, "\U0001f195 OK, next message starts a new session.")
 
     def _buffer_message(self, mid: int, text: str, reply_to: int | None, attachments: list):
         """Buffer a task message for batching. Flushes after 2s of quiet."""
@@ -556,11 +541,11 @@ class Dispatcher:
             if cmd in _CMD_MAP:
                 return _CMD_MAP[cmd]
         # Exact-match utility commands (unambiguous)
-        if low in ("history", "历史", "最近任务", "跑过什么"):
+        if low in ("history",):
             return "history"
-        if low in ("help", "帮助", "命令", "怎么用"):
+        if low in ("help",):
             return "help"
-        if low in ("新session", "新建session", "new session", "开个新的", "新对话"):
+        if low in ("new session",):
             return "new_session"
         # LLM classification when tasks are running
         active = self.sm.active()
@@ -579,17 +564,10 @@ class Dispatcher:
     def _detect_project(self, text: str) -> str | None:
         low = text.lower()
 
-        # Direct keyword matching (existing behavior)
+        # Direct keyword matching from config
         for name, path in self.routes.items():
             if name in low and path.exists():
                 return str(path)
-
-        # Chinese alias matching
-        for alias, keywords in _PROJECT_ALIASES.items():
-            if alias in low:
-                for kw in keywords:
-                    if kw in self.routes and self.routes[kw].exists():
-                        return str(self.routes[kw])
 
         # Fuzzy: check if any project name appears as a substring
         for name, path in self.routes.items():
@@ -668,7 +646,7 @@ class Dispatcher:
                     pass
                 return {"kind": "text", "text": text or ""} if text else None
             else:
-                # Photo, video, document → pass file path for agent to read
+                # Photo, video, document -> pass file path for agent to read
                 return {"kind": "file", "media_type": media_type, "path": tmp}
         except Exception:
             log.exception("media processing failed for %s", media_type)
@@ -686,7 +664,7 @@ class Dispatcher:
             result = Dispatcher._whisper_model.transcribe(
                 audio_path,
                 language=None,
-                initial_prompt="这是一段中文或英文的语音消息，涉及编程、代码、项目管理等话题。",
+                initial_prompt="Voice message about programming, code, and project management.",
                 condition_on_previous_text=False,
             )
             return result.get("text", "").strip()
@@ -712,16 +690,16 @@ class Dispatcher:
         uptime = _format_duration(time.time() - self._start_time)
         active = self.sm.active()
         if not active:
-            self._reply(mid, f"\U0001f4a4 空闲中，没有在跑的任务。\n\n\u23f1 运行时间: {uptime}")
+            self._reply(mid, f"\U0001f4a4 Idle, no tasks running.\n\n\u23f1 Uptime: {uptime}")
             return
 
-        lines = [f"\U0001f3c3 正在运行 <b>{len(active)}</b> 个任务：\n"]
+        lines = [f"\U0001f3c3 Running <b>{len(active)}</b> task(s):\n"]
         buttons = []
         for s in active:
             elapsed = _format_duration(s.elapsed())
             proj = html.escape(s.project_name)
             task = html.escape(s.task_text[:50])
-            lines.append(f"\u2022 <b>{proj}</b> — {task}\n  \u23f1 {html.escape(elapsed)}")
+            lines.append(f"\u2022 <b>{proj}</b> -- {task}\n  \u23f1 {html.escape(elapsed)}")
             # Show partial output preview if available
             if s.partial_output:
                 preview = s.partial_output.strip()
@@ -729,7 +707,7 @@ class Dispatcher:
                     preview = "..." + preview[-300:]
                 lines.append(f"\n<pre>{html.escape(preview)}</pre>")
             buttons.append({
-                "text": f"\u274c 取消 {s.project_name}",
+                "text": f"\u274c Cancel {s.project_name}",
                 "callback_data": f"cancel:{s.sid[:8]}",
             })
 
@@ -740,7 +718,7 @@ class Dispatcher:
                 "inline_keyboard": [[b] for b in buttons],
             }
 
-        lines.append(f"\n\u23f1 运行时间: {html.escape(uptime)}")
+        lines.append(f"\n\u23f1 Uptime: {html.escape(uptime)}")
         self._reply(mid, "\n".join(lines), parse_mode="HTML",
                     reply_markup=markup)
 
@@ -763,19 +741,19 @@ class Dispatcher:
             target.status = "cancelled"
             target.finished = time.time()
             elapsed = _format_duration(target.elapsed())
-            self._reply(mid, f"\u274c 已取消 <b>{html.escape(target.project_name)}</b> 的任务\n"
-                        f"运行了 {html.escape(elapsed)}",
+            self._reply(mid, f"\u274c Cancelled <b>{html.escape(target.project_name)}</b>\n"
+                        f"Ran for {html.escape(elapsed)}",
                         parse_mode="HTML")
         elif not self.sm.active():
-            self._reply(mid, "没有在跑的任务。")
+            self._reply(mid, "No tasks running.")
         else:
             active = self.sm.active()
-            lines = ["不确定要取消哪个，当前在跑的任务：\n"]
+            lines = ["Which one to cancel?\n"]
             buttons = []
             for s in active:
-                lines.append(f"\u2022 {s.project_name} — {s.task_text[:40]}")
+                lines.append(f"\u2022 {s.project_name} -- {s.task_text[:40]}")
                 buttons.append({
-                    "text": f"\u274c 取消 {s.project_name}",
+                    "text": f"\u274c Cancel {s.project_name}",
                     "callback_data": f"cancel:{s.sid[:8]}",
                 })
             markup = {"inline_keyboard": [[b] for b in buttons]}
@@ -789,36 +767,36 @@ class Dispatcher:
             if s and s.status in ("done", "failed", "cancelled"):
                 recent.append(s)
         if not recent:
-            self._reply(mid, "没有最近完成的任务。")
+            self._reply(mid, "No recent tasks.")
             return
 
-        lines = ["\U0001f4cb <b>最近任务</b>：\n"]
+        lines = ["\U0001f4cb <b>Recent Tasks</b>:\n"]
         for s in recent[:8]:
             icon = {"done": "\u2705", "failed": "\u274c", "cancelled": "\u26a0\ufe0f"}.get(
                 s.status, "\u2753"
             )
-            elapsed = _format_duration(s.elapsed()) if s.started else "—"
+            elapsed = _format_duration(s.elapsed()) if s.started else "--"
             proj = html.escape(s.project_name)
             task = html.escape(s.task_text[:40])
-            lines.append(f"{icon} <b>{proj}</b> — {task}  ({html.escape(elapsed)})")
+            lines.append(f"{icon} <b>{proj}</b> -- {task}  ({html.escape(elapsed)})")
 
         self._reply(mid, "\n".join(lines), parse_mode="HTML")
 
     def _handle_help(self, mid: int):
         """Show available commands."""
         help_text = (
-            "\U0001f916 <b>Dispatcher 使用指南</b>\n\n"
-            "\U0001f4ac <b>发任务</b>：直接发消息，自动识别项目\n"
-            "\U0001f504 <b>跟进</b>：回复之前的消息继续对话\n"
-            "\U0001f4ca <b>状态</b>：随便问（还在跑吗？进度？）或 /status\n"
-            "\U0001f6d1 <b>取消</b>：随便说（停了/kill掉）或 /cancel\n"
-            "\U0001f441 <b>看输出</b>：随便说（看看输出）或 /peek\n"
-            "\u26a1 <b>快问</b>：/q 你的问题（不阻塞运行中的任务）\n"
-            "\U0001f4cb <b>历史</b>：/history\n"
-            "\u2753 <b>帮助</b>：/help\n\n"
-            "\U0001f4a1 任务运行时，自然语言会自动识别你是在问进度、"
-            "取消、看输出，还是要发新任务。\n\n"
-            "\U0001f4c1 <b>已配置项目</b>：\n"
+            "\U0001f916 <b>Dispatcher Help</b>\n\n"
+            "\U0001f4ac <b>Send task</b>: Just send a message, project auto-detected\n"
+            "\U0001f504 <b>Follow up</b>: Reply to a previous message to continue\n"
+            "\U0001f4ca <b>Status</b>: /status or just ask\n"
+            "\U0001f6d1 <b>Cancel</b>: /cancel or just say stop\n"
+            "\U0001f441 <b>Peek output</b>: /peek\n"
+            "\u26a1 <b>Quick question</b>: /q your question (non-blocking)\n"
+            "\U0001f4cb <b>History</b>: /history\n"
+            "\u2753 <b>Help</b>: /help\n\n"
+            "\U0001f4a1 While tasks are running, natural language is auto-classified "
+            "(status check, cancel, new task, etc.)\n\n"
+            "\U0001f4c1 <b>Configured projects</b>:\n"
         )
         for name in self.cfg.projects:
             proj = self.cfg.projects[name]
@@ -831,7 +809,7 @@ class Dispatcher:
         """Show the current output of the most recent active session."""
         active = self.sm.active()
         if not active:
-            self._reply(mid, "没有在跑的任务。")
+            self._reply(mid, "No tasks running.")
             return
 
         session = active[-1]  # most recently started
@@ -841,7 +819,7 @@ class Dispatcher:
         if not session.partial_output:
             self._reply(
                 mid,
-                f"\U0001f3c3 <b>{proj}</b> 正在运行 ({html.escape(elapsed)})，暂无输出。",
+                f"\U0001f3c3 <b>{proj}</b> running ({html.escape(elapsed)}), no output yet.",
                 parse_mode="HTML",
             )
             return
@@ -850,7 +828,7 @@ class Dispatcher:
         if len(output) > 3000:
             output = "...\n" + output[-3000:]
 
-        header = f"\U0001f4c4 <b>{proj}</b> ({html.escape(elapsed)}) 当前输出:\n\n"
+        header = f"\U0001f4c4 <b>{proj}</b> ({html.escape(elapsed)}) current output:\n\n"
         body = f"<pre>{html.escape(output)}</pre>"
         formatted = header + body
 
@@ -864,7 +842,7 @@ class Dispatcher:
             fd.close()
             self._reply_document(
                 mid, tmp_path,
-                caption=f"{session.project_name} 当前输出 ({elapsed})",
+                caption=f"{session.project_name} output ({elapsed})",
             )
             try:
                 os.unlink(tmp_path)
@@ -873,7 +851,7 @@ class Dispatcher:
         else:
             markup = {
                 "inline_keyboard": [[{
-                    "text": f"\u274c 取消 {session.project_name}",
+                    "text": f"\u274c Cancel {session.project_name}",
                     "callback_data": f"cancel:{session.sid[:8]}",
                 }]]
             }
@@ -883,7 +861,7 @@ class Dispatcher:
         """Handle /q quick queries — fast, independent, no session tracking."""
         query = re.sub(r'^/q(uick)?\s+', '', text, flags=re.IGNORECASE).strip()
         if not query:
-            self._reply(mid, "用法: /q 你的问题")
+            self._reply(mid, "Usage: /q your question")
             return
 
         self._fire_reaction(mid, "\U0001f440")
@@ -908,12 +886,12 @@ class Dispatcher:
                 self._reply(mid, formatted, parse_mode="HTML")
                 self._fire_reaction(mid, "\u2705")
             else:
-                self._reply(mid, "没有返回内容。")
+                self._reply(mid, "No output returned.")
         except asyncio.TimeoutError:
-            self._reply(mid, "\u23f3 快问超时了（60秒限制）。")
+            self._reply(mid, "\u23f3 Quick question timed out (60s limit).")
         except Exception as e:
             log.exception("quick query failed")
-            self._reply(mid, f"\u274c 出错了: {str(e)[:200]}")
+            self._reply(mid, f"\u274c Error: {str(e)[:200]}")
 
     # Model aliases: lowercase = current message only, capitalized = persist in follow-ups
     _MODEL_PREFIXES_TEMP = {"@haiku": "haiku", "@sonnet": "sonnet", "@opus": "opus"}
@@ -962,11 +940,11 @@ class Dispatcher:
         # Priority: explicit arg > prefix > sticky > None
         model_override = model or model_from_prefix or self._sticky_model
 
-        # 1. Explicit reply to a running task → only case where we queue
+        # 1. Explicit reply to a running task -> only case where we queue
         if reply_to:
             prev = self.sm.find_by_reply(reply_to)
             if prev and prev.status == "running":
-                self._reply(mid, "\u23f3 等这个任务跑完继续。")
+                self._reply(mid, "\u23f3 Queued, will continue after current task.")
                 self._spawn(self._do_queued_followup(mid, text, prev, attachments, model=model_override, model_sticky=is_sticky))
                 return
             if prev:
@@ -998,7 +976,7 @@ class Dispatcher:
                 last_cwd = last.cwd
                 detected_cwd = cwd if is_project else None
                 same_project = (
-                    detected_cwd is None  # no project detected → safe to resume
+                    detected_cwd is None  # no project detected -> safe to resume
                     or detected_cwd == last_cwd  # same project
                 )
                 if same_project:
@@ -1013,7 +991,7 @@ class Dispatcher:
 
         # 5. Enforce concurrency limit
         if len(active) >= self.cfg.max_concurrent:
-            self._reply(mid, f"\u23f3 已有 {len(active)} 个任务在跑，等一个完成再处理。")
+            self._reply(mid, f"\u23f3 {len(active)} tasks running, queued until one finishes.")
             # Queue behind the oldest active session
             oldest = active[0]
             self._spawn(self._do_queued_followup(mid, text, oldest, attachments, model=model_override, model_sticky=is_sticky))
@@ -1183,7 +1161,7 @@ class Dispatcher:
                     preview = partial
                     if len(preview) > 2000:
                         preview = "..." + preview[-1800:]
-                    display = _md_to_telegram_html(preview) + "\n\n<i>\u270f\ufe0f 正在输出...</i>"
+                    display = _md_to_telegram_html(preview) + "\n\n<i>\u270f\ufe0f Writing...</i>"
 
                     if progress_msg_id:
                         self.tg.edit(progress_msg_id, display, parse_mode="HTML")
@@ -1203,7 +1181,7 @@ class Dispatcher:
             if progress_msg_id:
                 try:
                     self.tg.edit(progress_msg_id,
-                                 f"\u2705 {html.escape(session.task_text[:40])} — 完成",
+                                 f"\u2705 {html.escape(session.task_text[:40])} -- done",
                                  parse_mode="HTML")
                 except Exception:
                     pass
@@ -1220,7 +1198,7 @@ class Dispatcher:
             if elapsed < threshold:
                 return template.format(m=m)
 
-        return f"\u23f3 已经跑了 {m} 分钟... 任务还在进行中"
+        return f"\u23f3 Running for {m} min..."
 
     # -- Helpers --
 
@@ -1371,8 +1349,8 @@ class Dispatcher:
             self._fire_reaction(mid, "\u2705")
 
         if not result or not result.strip():
-            self._reply(mid, "\u26a0\ufe0f Agent 没有返回内容，可能 turn 不够用了。\n"
-                        "试试回复这条消息重新问，或换个说法。")
+            self._reply(mid, "\u26a0\ufe0f Agent returned no output, may have run out of turns.\n"
+                        "Try replying to continue, or rephrase.")
             record_issue(
                 source="dispatcher",
                 category="empty_response",
@@ -1388,15 +1366,15 @@ class Dispatcher:
             self._fire_reaction(mid, "\u274c")
             friendly = self._friendly_error(result)
             if self._consecutive_failures >= 3:
-                friendly += f"\n\n\u26a0\ufe0f 连续失败 {self._consecutive_failures} 次，建议检查 agent 状态。"
+                friendly += f"\n\n\u26a0\ufe0f {self._consecutive_failures} consecutive failures, check agent status."
             # Retry button
             retry_markup = {
                 "inline_keyboard": [[{
-                    "text": "\U0001f504 重试",
+                    "text": "\U0001f504 Retry",
                     "callback_data": f"retry:{mid}",
                 }]]
             }
-            self._reply(mid, f"\u274c <b>任务失败</b>\n\n{html.escape(friendly)}",
+            self._reply(mid, f"\u274c <b>Task failed</b>\n\n{html.escape(friendly)}",
                         parse_mode="HTML", reply_markup=retry_markup)
             record_issue(
                 source="dispatcher",
@@ -1414,7 +1392,7 @@ class Dispatcher:
 
         # Build response
         if session.elapsed() > 60 and elapsed:
-            header = f"\u2705 完成 ({elapsed})\n\n"
+            header = f"\u2705 Done ({elapsed})\n\n"
         else:
             header = ""
 
@@ -1426,7 +1404,7 @@ class Dispatcher:
         if session.is_task and session.elapsed() > 30:
             result_markup = {
                 "inline_keyboard": [[{
-                    "text": "\U0001f195 新对话",
+                    "text": "\U0001f195 New session",
                     "callback_data": "new_session",
                 }]]
             }
@@ -1443,7 +1421,7 @@ class Dispatcher:
             summary = result[:150].replace('\n', ' ')
             if len(result) > 150:
                 summary += "..."
-            caption = f"\u2705 完成" + (f" ({elapsed})" if session.elapsed() > 60 else "")
+            caption = f"\u2705 Done" + (f" ({elapsed})" if session.elapsed() > 60 else "")
             self._reply_document(mid, tmp_path, caption=caption)
             try:
                 os.unlink(tmp_path)
@@ -1453,39 +1431,37 @@ class Dispatcher:
             self._reply(mid, formatted, parse_mode="HTML", reply_markup=result_markup)
 
     def _friendly_error(self, error: str) -> str:
-        """Convert raw error text to user-friendly Chinese message."""
+        """Convert raw error text to user-friendly message."""
         low = error.lower()
 
         if "timed out" in low or "timeout" in low:
-            return ("任务超时了。可能是任务太复杂，"
-                    "或者 agent 卡住了。\n\n"
-                    "可以试试拆成更小的任务重新发。")
+            return ("Task timed out. May be too complex or the agent got stuck.\n\n"
+                    "Try breaking it into smaller tasks.")
 
         if "max turns" in low:
-            return ("Agent 达到了最大轮次限制，任务可能没完全做完。\n\n"
-                    "回复这条消息让它继续。")
+            return ("Agent hit the max turn limit, task may be incomplete.\n\n"
+                    "Reply to this message to let it continue.")
 
         if "rate limit" in low or "429" in low:
-            return ("API 限流了，等一会儿再试。")
+            return "API rate limited, try again in a bit."
 
         if "permission" in low or "denied" in low:
-            return ("权限不足，agent 无法执行某些操作。\n\n"
-                    f"详情：{error[:200]}")
+            return (f"Permission denied.\n\nDetails: {error[:200]}")
 
         if "not found" in low or "no such file" in low:
-            return (f"找不到文件或命令。\n\n详情：{error[:200]}")
+            return f"File or command not found.\n\nDetails: {error[:200]}"
 
         if "(stderr)" in error:
             # Strip the stderr prefix and give context
             clean = error.replace("(stderr) ", "").strip()
             if len(clean) > 300:
                 clean = clean[:300] + "..."
-            return f"执行出错：\n{clean}"
+            return f"Execution error:\n{clean}"
 
         # Generic: show a cleaned-up version
         if len(error) > 500:
-            return f"出错了：\n{error[:400]}...\n\n回复「详情」看完整输出。"
-        return f"出错了：\n{error}"
+            return f"Error:\n{error[:400]}...\n\nReply 'details' for full output."
+        return f"Error:\n{error}"
 
     def _spawn(self, coro):
         task = asyncio.create_task(coro)
