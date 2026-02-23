@@ -1,0 +1,611 @@
+{
+  "total": 50,
+  "passed": 49,
+  "accuracy": 98.0,
+  "results": [
+    {
+      "scenario": "status_chinese_1",
+      "message": "还在跑吗",
+      "expected": "status",
+      "got": "status",
+      "passed": true,
+      "latency_ms": 586.328416,
+      "details": "🏃 正在运行 <b>1</b> 个任务：\n\n• <b>test-sims</b> — running data analysis\n  ⏱ 5分钟\n\n<pre>Processing data files...\nAnalyzing correl",
+      "tags": [
+        "status"
+      ]
+    },
+    {
+      "scenario": "status_chinese_2",
+      "message": "进度如何",
+      "expected": "status",
+      "got": "status",
+      "passed": true,
+      "latency_ms": 448.614125,
+      "details": "🏃 正在运行 <b>1</b> 个任务：\n\n• <b>test-sims</b> — running data analysis\n  ⏱ 5分钟\n\n<pre>Processing data files...\nAnalyzing correl",
+      "tags": [
+        "status"
+      ]
+    },
+    {
+      "scenario": "status_chinese_3",
+      "message": "跑完了吗",
+      "expected": "status",
+      "got": "status",
+      "passed": true,
+      "latency_ms": 506.76537500000006,
+      "details": "🏃 正在运行 <b>1</b> 个任务：\n\n• <b>test-sims</b> — running data analysis\n  ⏱ 5分钟\n\n<pre>Processing data files...\nAnalyzing correl",
+      "tags": [
+        "status"
+      ]
+    },
+    {
+      "scenario": "status_chinese_4",
+      "message": "搞定了吗",
+      "expected": "status",
+      "got": "status",
+      "passed": true,
+      "latency_ms": 420.7362090000002,
+      "details": "🏃 正在运行 <b>1</b> 个任务：\n\n• <b>test-sims</b> — running data analysis\n  ⏱ 5分钟\n\n<pre>Processing data files...\nAnalyzing correl",
+      "tags": [
+        "status"
+      ]
+    },
+    {
+      "scenario": "status_chinese_5",
+      "message": "还要多久",
+      "expected": "status",
+      "got": "status",
+      "passed": true,
+      "latency_ms": 453.0662080000001,
+      "details": "🏃 正在运行 <b>1</b> 个任务：\n\n• <b>test-sims</b> — running data analysis\n  ⏱ 5分钟\n\n<pre>Processing data files...\nAnalyzing correl",
+      "tags": [
+        "status"
+      ]
+    },
+    {
+      "scenario": "status_english_1",
+      "message": "still running?",
+      "expected": "status",
+      "got": "status",
+      "passed": true,
+      "latency_ms": 404.95899999999983,
+      "details": "🏃 正在运行 <b>1</b> 个任务：\n\n• <b>test-sims</b> — running data analysis\n  ⏱ 5分钟\n\n<pre>Processing data files...\nAnalyzing correl",
+      "tags": [
+        "status"
+      ]
+    },
+    {
+      "scenario": "status_english_2",
+      "message": "is it done yet",
+      "expected": "status",
+      "got": "status",
+      "passed": true,
+      "latency_ms": 463.1597089999997,
+      "details": "🏃 正在运行 <b>1</b> 个任务：\n\n• <b>test-sims</b> — running data analysis\n  ⏱ 5分钟\n\n<pre>Processing data files...\nAnalyzing correl",
+      "tags": [
+        "status"
+      ]
+    },
+    {
+      "scenario": "status_english_3",
+      "message": "any progress?",
+      "expected": "status",
+      "got": "status",
+      "passed": true,
+      "latency_ms": 672.2416249999999,
+      "details": "🏃 正在运行 <b>1</b> 个任务：\n\n• <b>test-sims</b> — running data analysis\n  ⏱ 5分钟\n\n<pre>Processing data files...\nAnalyzing correl",
+      "tags": [
+        "status"
+      ]
+    },
+    {
+      "scenario": "status_natural",
+      "message": "那个任务跑得怎么样了",
+      "expected": "status",
+      "got": "status",
+      "passed": true,
+      "latency_ms": 589.9423749999996,
+      "details": "🏃 正在运行 <b>1</b> 个任务：\n\n• <b>test-sims</b> — running data analysis\n  ⏱ 5分钟\n\n<pre>Processing data files...\nAnalyzing correl",
+      "tags": [
+        "status"
+      ]
+    },
+    {
+      "scenario": "status_impatient",
+      "message": "这都跑了好久了还没好？",
+      "expected": "status",
+      "got": "status",
+      "passed": true,
+      "latency_ms": 537.8563329999997,
+      "details": "🏃 正在运行 <b>1</b> 个任务：\n\n• <b>test-sims</b> — running data analysis\n  ⏱ 5分钟\n\n<pre>Processing data files...\nAnalyzing correl",
+      "tags": [
+        "status"
+      ]
+    },
+    {
+      "scenario": "cancel_chinese_1",
+      "message": "kill掉吧",
+      "expected": "cancel",
+      "got": "cancel",
+      "passed": true,
+      "latency_ms": 626.604875,
+      "details": "❌ 已取消 <b>test-sims</b> 的任务\n运行了 5分钟",
+      "tags": [
+        "cancel"
+      ]
+    },
+    {
+      "scenario": "cancel_chinese_2",
+      "message": "别跑了",
+      "expected": "cancel",
+      "got": "cancel",
+      "passed": true,
+      "latency_ms": 463.5419579999995,
+      "details": "❌ 已取消 <b>test-sims</b> 的任务\n运行了 5分钟",
+      "tags": [
+        "cancel"
+      ]
+    },
+    {
+      "scenario": "cancel_chinese_3",
+      "message": "取消吧",
+      "expected": "cancel",
+      "got": "cancel",
+      "passed": true,
+      "latency_ms": 368.34716699999956,
+      "details": "❌ 已取消 <b>test-sims</b> 的任务\n运行了 5分钟",
+      "tags": [
+        "cancel"
+      ]
+    },
+    {
+      "scenario": "cancel_chinese_4",
+      "message": "太慢了不要了",
+      "expected": "cancel",
+      "got": "cancel",
+      "passed": true,
+      "latency_ms": 366.95674999999994,
+      "details": "❌ 已取消 <b>test-sims</b> 的任务\n运行了 5分钟",
+      "tags": [
+        "cancel"
+      ]
+    },
+    {
+      "scenario": "cancel_english_1",
+      "message": "stop it",
+      "expected": "cancel",
+      "got": "cancel",
+      "passed": true,
+      "latency_ms": 405.583,
+      "details": "❌ 已取消 <b>test-sims</b> 的任务\n运行了 5分钟",
+      "tags": [
+        "cancel"
+      ]
+    },
+    {
+      "scenario": "cancel_english_2",
+      "message": "kill it",
+      "expected": "cancel",
+      "got": "cancel",
+      "passed": true,
+      "latency_ms": 420.2854580000004,
+      "details": "❌ 已取消 <b>test-sims</b> 的任务\n运行了 5分钟",
+      "tags": [
+        "cancel"
+      ]
+    },
+    {
+      "scenario": "cancel_english_3",
+      "message": "abort",
+      "expected": "cancel",
+      "got": "cancel",
+      "passed": true,
+      "latency_ms": 557.4275410000009,
+      "details": "❌ 已取消 <b>test-sims</b> 的任务\n运行了 5分钟",
+      "tags": [
+        "cancel"
+      ]
+    },
+    {
+      "scenario": "cancel_combo",
+      "message": "太慢了 kill掉吧 不要了",
+      "expected": "cancel",
+      "got": "cancel",
+      "passed": true,
+      "latency_ms": 394.27991600000036,
+      "details": "❌ 已取消 <b>test-sims</b> 的任务\n运行了 5分钟",
+      "tags": [
+        "cancel"
+      ]
+    },
+    {
+      "scenario": "peek_chinese_1",
+      "message": "看看输出",
+      "expected": "peek",
+      "got": "peek",
+      "passed": true,
+      "latency_ms": 387.29550000000046,
+      "details": "📄 <b>test-sims</b> (5分钟) 当前输出:\n\n<pre>Processing data files...\nAnalyzing correlations...</pre>",
+      "tags": [
+        "peek"
+      ]
+    },
+    {
+      "scenario": "peek_chinese_2",
+      "message": "给我看看它现在写了什么",
+      "expected": "peek",
+      "got": "peek",
+      "passed": true,
+      "latency_ms": 458.8009579999994,
+      "details": "📄 <b>test-sims</b> (5分钟) 当前输出:\n\n<pre>Processing data files...\nAnalyzing correlations...</pre>",
+      "tags": [
+        "peek"
+      ]
+    },
+    {
+      "scenario": "peek_english_1",
+      "message": "show me the output",
+      "expected": "peek",
+      "got": "peek",
+      "passed": true,
+      "latency_ms": 486.8846249999983,
+      "details": "📄 <b>test-sims</b> (5分钟) 当前输出:\n\n<pre>Processing data files...\nAnalyzing correlations...</pre>",
+      "tags": [
+        "peek"
+      ]
+    },
+    {
+      "scenario": "peek_natural",
+      "message": "让我看看你现在写了啥",
+      "expected": "peek",
+      "got": "peek",
+      "passed": true,
+      "latency_ms": 378.9188330000002,
+      "details": "📄 <b>test-sims</b> (5分钟) 当前输出:\n\n<pre>Processing data files...\nAnalyzing correlations...</pre>",
+      "tags": [
+        "peek"
+      ]
+    },
+    {
+      "scenario": "task_project_check",
+      "message": "帮我检查一下proactive项目的进度",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 414.51741700000076,
+      "details": "[mock result for: 帮我检查一下proactive项目的进度]",
+      "tags": [
+        "task",
+        "critical"
+      ]
+    },
+    {
+      "scenario": "task_code_write",
+      "message": "帮我写个Python脚本",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 542.967707999999,
+      "details": "[mock result for: 帮我写个Python脚本]",
+      "tags": [
+        "task"
+      ]
+    },
+    {
+      "scenario": "task_bug_fix",
+      "message": "修复那个bug",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 519.2505000000001,
+      "details": "[mock result for: 修复那个bug]",
+      "tags": [
+        "task"
+      ]
+    },
+    {
+      "scenario": "task_git",
+      "message": "git push一下",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 508.9714999999995,
+      "details": "[mock result for: git push一下]",
+      "tags": [
+        "task"
+      ]
+    },
+    {
+      "scenario": "task_tests",
+      "message": "把测试跑一下",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 613.3549589999986,
+      "details": "[mock result for: 把测试跑一下]",
+      "tags": [
+        "task"
+      ]
+    },
+    {
+      "scenario": "task_english",
+      "message": "run the tests",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 380.02599999999734,
+      "details": "[mock result for: run the tests]",
+      "tags": [
+        "task"
+      ]
+    },
+    {
+      "scenario": "task_refactor",
+      "message": "refactor that function",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 397.7237910000007,
+      "details": "[mock result for: refactor that function]",
+      "tags": [
+        "task"
+      ]
+    },
+    {
+      "scenario": "task_readme",
+      "message": "帮我更新README",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 379.6529580000012,
+      "details": "[mock result for: 帮我更新README]",
+      "tags": [
+        "task"
+      ]
+    },
+    {
+      "scenario": "task_kill_specific",
+      "message": "帮我kill掉那个僵尸进程",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 481.0064589999996,
+      "details": "[mock result for: 帮我kill掉那个僵尸进程]",
+      "tags": [
+        "task",
+        "critical"
+      ]
+    },
+    {
+      "scenario": "task_stop_docker",
+      "message": "stop the docker container",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 490.83075000000065,
+      "details": "[mock result for: stop the docker container]",
+      "tags": [
+        "task",
+        "critical"
+      ]
+    },
+    {
+      "scenario": "task_cancel_cron",
+      "message": "帮我取消那个scheduled job",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 370.1533330000011,
+      "details": "[mock result for: 帮我取消那个scheduled job]",
+      "tags": [
+        "task",
+        "critical"
+      ]
+    },
+    {
+      "scenario": "task_check_status",
+      "message": "看看那个服务的运行状态",
+      "expected": "task",
+      "got": "peek",
+      "passed": false,
+      "latency_ms": 422.8961249999976,
+      "details": "📄 <b>test-sims</b> (5分钟) 当前输出:\n\n<pre>Processing data files...\nAnalyzing correlations...</pre>",
+      "tags": [
+        "task"
+      ]
+    },
+    {
+      "scenario": "cmd_status",
+      "message": "/status",
+      "expected": "status",
+      "got": "status",
+      "passed": true,
+      "latency_ms": 0.16349999999931697,
+      "details": "🏃 正在运行 <b>1</b> 个任务：\n\n• <b>test-sims</b> — running data analysis\n  ⏱ 5分钟\n\n<pre>Processing data files...\nAnalyzing correl",
+      "tags": [
+        "command"
+      ]
+    },
+    {
+      "scenario": "cmd_cancel",
+      "message": "/cancel",
+      "expected": "cancel",
+      "got": "cancel",
+      "passed": true,
+      "latency_ms": 1.192750000001297,
+      "details": "❌ 已取消 <b>test-sims</b> 的任务\n运行了 5分钟",
+      "tags": [
+        "command"
+      ]
+    },
+    {
+      "scenario": "cmd_peek",
+      "message": "/peek",
+      "expected": "peek",
+      "got": "peek",
+      "passed": true,
+      "latency_ms": 0.16312500000026375,
+      "details": "📄 <b>test-sims</b> (5分钟) 当前输出:\n\n<pre>Processing data files...\nAnalyzing correlations...</pre>",
+      "tags": [
+        "command"
+      ]
+    },
+    {
+      "scenario": "cmd_help",
+      "message": "/help",
+      "expected": "help",
+      "got": "help",
+      "passed": true,
+      "latency_ms": 0.11445799999876272,
+      "details": "🤖 <b>Dispatcher 使用指南</b>\n\n💬 <b>发任务</b>：直接发消息，自动识别项目\n🔄 <b>跟进</b>：回复之前的消息继续对话\n📊 <b>状态</b>：随便问（还在跑吗？进度？）或 /status\n🛑 <b>取消</",
+      "tags": [
+        "command"
+      ]
+    },
+    {
+      "scenario": "cmd_history",
+      "message": "/history",
+      "expected": "history",
+      "got": "history",
+      "passed": true,
+      "latency_ms": 0.11558299999947508,
+      "details": "没有最近完成的任务。",
+      "tags": [
+        "command"
+      ]
+    },
+    {
+      "scenario": "cmd_quick",
+      "message": "/q what is a monad",
+      "expected": "quick",
+      "got": "quick",
+      "passed": true,
+      "latency_ms": 0.0690419999997971,
+      "details": "[mock result for: what is a monad]",
+      "tags": [
+        "command"
+      ]
+    },
+    {
+      "scenario": "idle_status_word",
+      "message": "进度如何",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 0.3069170000031818,
+      "details": "[mock result for: 进度如何]",
+      "tags": [
+        "idle"
+      ]
+    },
+    {
+      "scenario": "idle_cancel_word",
+      "message": "取消",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 0.3034999999975696,
+      "details": "[mock result for: 取消]",
+      "tags": [
+        "idle"
+      ]
+    },
+    {
+      "scenario": "idle_normal",
+      "message": "帮我写个脚本",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 0.29758300000182203,
+      "details": "[mock result for: 帮我写个脚本]",
+      "tags": [
+        "idle"
+      ]
+    },
+    {
+      "scenario": "multi_status",
+      "message": "还在跑吗",
+      "expected": "status",
+      "got": "status",
+      "passed": true,
+      "latency_ms": 484.15079199999764,
+      "details": "🏃 正在运行 <b>2</b> 个任务：\n\n• <b>test-sims</b> — running data analysis\n  ⏱ 5分钟\n\n<pre>Processing data files...\nAnalyzing correl",
+      "tags": [
+        "multi"
+      ]
+    },
+    {
+      "scenario": "multi_cancel",
+      "message": "kill掉",
+      "expected": "cancel",
+      "got": "cancel",
+      "passed": true,
+      "latency_ms": 370.51562499999943,
+      "details": "❌ 已取消 <b>test-cortex</b> 的任务\n运行了 2分钟",
+      "tags": [
+        "multi"
+      ]
+    },
+    {
+      "scenario": "multi_task",
+      "message": "帮我看看README",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 370.458708000001,
+      "details": "[mock result for: 帮我看看README]",
+      "tags": [
+        "multi"
+      ]
+    },
+    {
+      "scenario": "edge_short_ok",
+      "message": "ok",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 903.954125000002,
+      "details": "[mock result for: ok]",
+      "tags": [
+        "edge"
+      ]
+    },
+    {
+      "scenario": "edge_short_hmm",
+      "message": "嗯",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 357.9061249999995,
+      "details": "[mock result for: 嗯]",
+      "tags": [
+        "edge"
+      ]
+    },
+    {
+      "scenario": "edge_followup",
+      "message": "继续改那个文件",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 435.13420899999744,
+      "details": "[mock result for: 继续改那个文件]",
+      "tags": [
+        "edge"
+      ]
+    },
+    {
+      "scenario": "edge_emoji_only",
+      "message": "👍",
+      "expected": "task",
+      "got": "task",
+      "passed": true,
+      "latency_ms": 426.33199999999863,
+      "details": "[mock result for: 👍]",
+      "tags": [
+        "edge"
+      ]
+    }
+  ]
+}
