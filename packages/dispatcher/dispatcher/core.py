@@ -1129,8 +1129,8 @@ class Dispatcher:
 
     async def _progress_loop(self, mid: int, session: Session):
         """Send real-time streaming updates from agent output."""
+        progress_msg_id = None
         try:
-            progress_msg_id = None
             last_partial_len = 0
             last_update_time = 0
             phase_shown = False
@@ -1177,15 +1177,15 @@ class Dispatcher:
                     else:
                         progress_msg_id = self._reply(mid, msg)
 
-            # Delete progress message — the final result message replaces it
+        except asyncio.CancelledError:
+            pass
+        finally:
+            # Always delete progress message — the final result replaces it
             if progress_msg_id:
                 try:
                     self.tg.delete_message(progress_msg_id)
                 except Exception:
                     pass
-
-        except asyncio.CancelledError:
-            pass
 
     def _get_progress_message(self, session: Session) -> str:
         """Generate a contextual progress message."""
