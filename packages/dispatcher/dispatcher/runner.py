@@ -343,6 +343,14 @@ class AgentRunner:
                     if session.partial_output and session.partial_output.strip():
                         log.info("using partial_output as fallback (%d chars)", len(session.partial_output))
                         out = session.partial_output
+
+                # Stream mode: determine status from output, not return code.
+                # The process was terminated (SIGTERM), so returncode is always
+                # non-zero and meaningless for success/failure determination.
+                session.status = "done" if out and out.strip() else "failed"
+                session.finished = time.time()
+                session.result = out
+                return out
             else:
                 stdout, stderr = await asyncio.wait_for(
                     proc.communicate(input=prompt.encode()),
@@ -485,16 +493,19 @@ class AgentRunner:
         # Don't await proc.wait() unconditionally — in stream-json mode the
         # process may hang with stdin open.  The caller handles termination.
 
-        stderr_data = await proc.stderr.read()
-        stderr_text = stderr_data.decode(errors="replace").strip()
-        if stderr_text:
-            log.debug("agent stderr: %s", stderr_text[:500])
+        # Only read stderr if the process has already exited (no result event).
+        # When we broke out after a result event, the process is still alive
+        # and proc.stderr.read() would hang indefinitely.
+        if not result_text:
+            stderr_data = await proc.stderr.read()
+            stderr_text = stderr_data.decode(errors="replace").strip()
+            if stderr_text:
+                log.debug("agent stderr: %s", stderr_text[:500])
 
-        if not result_text and last_text:
-            result_text = last_text
-
-        if not result_text and stderr_text:
-            result_text = f"(stderr) {stderr_text[:800]}"
+            if last_text:
+                result_text = last_text
+            elif stderr_text:
+                result_text = f"(stderr) {stderr_text[:800]}"
 
         return result_text
 
