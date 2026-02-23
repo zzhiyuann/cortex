@@ -149,6 +149,40 @@ class TestReadStreamNoHang:
         assert "some error" in result
 
     @pytest.mark.asyncio
+    async def test_empty_result_event_uses_assistant_text(self):
+        """When result event has empty result field, use accumulated assistant text."""
+        runner = AgentRunner(command="echo", args=[], timeout=5)
+        session = Session(1, "hi", "/tmp")
+
+        proc = FakeProcess([
+            make_assistant_event("Hi! How can I help?"),
+            make_result_event(""),  # empty result field
+        ])
+
+        start = time.monotonic()
+        result = await runner._read_stream(proc, session)
+        elapsed = time.monotonic() - start
+
+        assert result == "Hi! How can I help?"
+        assert elapsed < 2, f"should not hang on stderr when result event was received"
+
+    @pytest.mark.asyncio
+    async def test_empty_result_event_multi_turn(self):
+        """Empty result event with multiple assistant turns joins them."""
+        runner = AgentRunner(command="echo", args=[], timeout=5)
+        session = Session(1, "hi", "/tmp")
+
+        proc = FakeProcess([
+            make_assistant_event("First thought."),
+            make_assistant_event("Second thought."),
+            make_result_event(""),
+        ])
+
+        result = await runner._read_stream(proc, session)
+        assert "First thought." in result
+        assert "Second thought." in result
+
+    @pytest.mark.asyncio
     async def test_partial_output_updated_during_stream(self):
         """session.partial_output should be updated as assistant events arrive."""
         runner = AgentRunner(command="echo", args=[], timeout=5)

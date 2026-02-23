@@ -401,6 +401,7 @@ class AgentRunner:
         result_text = ""
         last_text = ""
         completed_turns: list[str] = []
+        got_result_event = False
 
         async for raw_line in proc.stdout:
             line = raw_line.decode(errors="replace").strip()
@@ -485,26 +486,34 @@ class AgentRunner:
 
             elif etype == "result":
                 result_text = event.get("result", "")
+                got_result_event = True
                 # Result event is authoritative — stop reading.
                 # In stream-json mode stdin may still be open, so the process
                 # won't close stdout on its own; we must break here.
                 break
 
-        # Don't await proc.wait() unconditionally — in stream-json mode the
-        # process may hang with stdin open.  The caller handles termination.
+        # If result event had empty text, use accumulated assistant text.
+        # This handles newer Claude Code versions where the result event's
+        # "result" field may be empty while text was delivered via assistant events.
+        if not result_text and last_text:
+            all_parts = completed_turns + [last_text]
+            result_text = "\n\n".join(all_parts)
+            log.info("using accumulated assistant text as result (%d chars)", len(result_text))
 
-        # Only read stderr if the process has already exited (no result event).
-        # When we broke out after a result event, the process is still alive
-        # and proc.stderr.read() would hang indefinitely.
-        if not result_text:
-            stderr_data = await proc.stderr.read()
-            stderr_text = stderr_data.decode(errors="replace").strip()
+        # Only read stderr if NO result event was received (process exited
+        # abnormally). When we broke out after a result event, the process
+        # is still alive and proc.stderr.read() would hang indefinitely.
+        if not result_text and not got_result_event:
+            try:
+                stderr_data = await asyncio.wait_for(
+                    proc.stderr.read(), timeout=5,
+                )
+                stderr_text = stderr_data.decode(errors="replace").strip()
+            except (asyncio.TimeoutError, Exception):
+                stderr_text = ""
+
             if stderr_text:
                 log.debug("agent stderr: %s", stderr_text[:500])
-
-            if last_text:
-                result_text = last_text
-            elif stderr_text:
                 result_text = f"(stderr) {stderr_text[:800]}"
 
         return result_text
