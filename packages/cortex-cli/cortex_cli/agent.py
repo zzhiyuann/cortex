@@ -20,6 +20,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from cortex_cli.config import get_telegram_creds
 from cortex_cli.detect import get_monorepo_root
 from cortex_cli.process import read_pid, write_pid, stop_process, log_size, tail_log
 
@@ -128,6 +129,21 @@ def _build_agent_prompt(tasks: list[dict], custom_prompt: str | None = None) -> 
         pass
 
     monorepo_root = get_monorepo_root() or Path.home() / "projects" / "cortex"
+    bot_token, chat_id = get_telegram_creds()
+
+    telegram_section = ""
+    if bot_token and chat_id:
+        telegram_section = f"""
+## Telegram (Chinese only)
+curl -s -X POST "https://api.telegram.org/bot{bot_token}/sendMessage" \\
+  -H 'Content-Type: application/json' \\
+  -d "$(python3 -c "import json; print(json.dumps({{'chat_id': {chat_id}, 'text': '你的消息'}}))\")"
+"""
+    else:
+        telegram_section = """
+## Telegram
+Not configured. Run `cortex init` to set up Telegram credentials.
+"""
 
     prompt = f"""You are the Cortex Autonomous Improvement Agent. Work through the task queue systematically.
 
@@ -146,12 +162,7 @@ def _build_agent_prompt(tasks: list[dict], custom_prompt: str | None = None) -> 
 - If stuck on a task for too long, skip it and move on
 - Keep code clean, don't over-engineer
 - Auto commit + push after each meaningful change
-
-## Telegram (Chinese only)
-curl -s -X POST "https://api.telegram.org/bot$CORTEX_TELEGRAM_BOT_TOKEN/sendMessage" \\
-  -H 'Content-Type: application/json' \\
-  -d "$(python3 -c "import json; print(json.dumps({{'chat_id': int(os.environ['CORTEX_TELEGRAM_CHAT_ID']), 'text': '你的消息'}}))\")"
-
+{telegram_section}
 ## Testing
 uv run pytest  # runs all tests in the monorepo
 
