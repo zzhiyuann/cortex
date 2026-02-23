@@ -865,7 +865,7 @@ class Dispatcher:
             self._reply(mid, formatted, parse_mode="HTML", reply_markup=markup)
 
     async def _handle_quick(self, mid: int, text: str):
-        """Handle /q quick queries — fast, independent, no session tracking."""
+        """Handle /q quick queries — with conversation history and memory context."""
         query = re.sub(r'^/q(uick)?\s+', '', text, flags=re.IGNORECASE).strip()
         if not query:
             self._reply(mid, "Usage: /q your question")
@@ -874,28 +874,70 @@ class Dispatcher:
         # self._fire_reaction(mid, "\U0001f440")  # disabled: 400 error
         self._fire_typing()
 
+        # Build a context-rich prompt: recent history + memory + user context
+        context_parts = [f"User context:\n{self.mem.text}"]
+
+        # 1. Inject recent conversation history from the last session
+        last = self.sm.last_session()
+        if last and last.conv_id:
+            history = self.transcript.build_history(last.conv_id, max_chars=8000)
+            if history:
+                context_parts.append(
+                    "## Conversation History\n"
+                    "Below is the full conversation so far. Use this context to "
+                    "understand what the user is referring to.\n\n"
+                    + history
+                )
+
+        # 2. Query cortex-memory for semantically relevant facts
+        if HAS_MEMORY:
+            try:
+                def _search():
+                    store = MemoryStore()
+                    results = store.search(query, n=5)
+                    store.close()
+                    return results
+                mem_results = await asyncio.wait_for(
+                    asyncio.to_thread(_search), timeout=5,
+                )
+                if mem_results:
+                    lines = ["## Relevant Memory"]
+                    for r in mem_results:
+                        lines.append(f"- {r['content']}")
+                    context_parts.append("\n".join(lines))
+            except Exception:
+                pass  # memory search is non-fatal
+
+        context_parts.append(f"## Current Message\n{query}")
+        prompt = "\n\n".join(context_parts)
+        prompt += "\n\n" + self._prompt_footer()
+
         # Temporary session — not tracked in SessionManager
         session = Session(mid, query, str(Path.home()))
         session.is_task = False
 
+        # Use sticky model if set; otherwise let Claude Code use its default (sonnet)
+        model = self._sticky_model
+        max_turns = min(10, self.cfg.max_turns)
+
         try:
             result = await asyncio.wait_for(
                 self.runner.invoke(
-                    session, query, resume=False, max_turns=3,
-                    model="haiku", stream=False,
+                    session, prompt, resume=False, max_turns=max_turns,
+                    model=model, stream=True,
+                    on_question=self._surface_question,
                 ),
-                timeout=60,
+                timeout=180,
             )
             if result and result.strip():
                 formatted = _md_to_telegram_html(result)
                 if len(formatted) > 4000:
                     formatted = formatted[:3900] + "..."
                 self._reply(mid, formatted, parse_mode="HTML")
-                # self._fire_reaction(mid, "\u2705")  # disabled: 400 error
             else:
                 self._reply(mid, "No output returned.")
         except asyncio.TimeoutError:
-            self._reply(mid, "\u23f3 Quick question timed out (60s limit).")
+            self._reply(mid, "\u23f3 Quick question timed out (3min limit).")
         except Exception as e:
             log.exception("quick query failed")
             self._reply(mid, f"\u274c Error: {str(e)[:200]}")
