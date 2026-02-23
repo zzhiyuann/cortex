@@ -126,7 +126,7 @@ class MemoryStore:
         log.debug("stored memory id=%d source=%s", memory_id, source)
         return memory_id
 
-    def search(self, query: str, n: int = 5, threshold: float = 0.3) -> list[dict]:
+    def search(self, query: str, n: int = 5, threshold: float = 0.5) -> list[dict]:
         """Semantic search using cosine similarity.
 
         Falls back to FTS5 keyword search when Ollama is unavailable or
