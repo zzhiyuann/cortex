@@ -148,9 +148,9 @@ def _build_agent_prompt(tasks: list[dict], custom_prompt: str | None = None) -> 
 - Auto commit + push after each meaningful change
 
 ## Telegram (Chinese only)
-curl -s -X POST "https://api.telegram.org/botREDACTED_BOT_TOKEN/sendMessage" \\
+curl -s -X POST "https://api.telegram.org/bot$CORTEX_TELEGRAM_BOT_TOKEN/sendMessage" \\
   -H 'Content-Type: application/json' \\
-  -d "$(python3 -c "import json; print(json.dumps({{'chat_id': REDACTED_CHAT_ID, 'text': '你的消息'}}))\")"
+  -d "$(python3 -c "import json; print(json.dumps({{'chat_id': int(os.environ['CORTEX_TELEGRAM_CHAT_ID']), 'text': '你的消息'}}))\")"
 
 ## Testing
 uv run pytest  # runs all tests in the monorepo

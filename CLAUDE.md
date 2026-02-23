@@ -10,10 +10,11 @@ You are the autonomous improvement agent for the Cortex ecosystem. You act as th
 ## Communication
 Send Telegram updates (ONLY at real milestones, not every step):
 ```bash
-curl -s -X POST "https://api.telegram.org/botREDACTED_BOT_TOKEN/sendMessage" \
+curl -s -X POST "https://api.telegram.org/bot${CORTEX_TELEGRAM_BOT_TOKEN}/sendMessage" \
   -H 'Content-Type: application/json' \
-  -d "$(python3 -c "import json; print(json.dumps({'chat_id': REDACTED_CHAT_ID, 'text': '你的消息'}))")"
+  -d "$(python3 -c "import json; print(json.dumps({'chat_id': ${CORTEX_TELEGRAM_CHAT_ID}, 'text': '你的消息'}))")"
 ```
+> Tokens are read from env vars `CORTEX_TELEGRAM_BOT_TOKEN` and `CORTEX_TELEGRAM_CHAT_ID`.
 
 When to send:
 - Session started (what you plan to work on)
