@@ -112,7 +112,7 @@ class TelegramClient:
         return None
 
     def download_file(self, file_id: str, dest_path: str) -> bool:
-        """Download a Telegram file to a local path."""
+        """Download a Telegram file to a local path. Streams in chunks to avoid memory spikes."""
         url = self.get_file_url(file_id)
         if not url:
             return False
@@ -120,7 +120,11 @@ class TelegramClient:
             req = Request(url)
             resp = urlopen(req, timeout=60)
             with open(dest_path, "wb") as f:
-                f.write(resp.read())
+                while True:
+                    chunk = resp.read(8192)
+                    if not chunk:
+                        break
+                    f.write(chunk)
             return True
         except (URLError, OSError) as exc:
             log.error("download_file failed: %s", exc)

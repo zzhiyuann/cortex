@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
 from pathlib import Path
@@ -15,6 +16,9 @@ class Session:
         "msg_id", "task_text", "cwd", "sid", "conv_id", "status",
         "proc", "started", "finished", "result", "is_task",
         "bot_msgs", "partial_output", "model_override", "model_sticky",
+        # F7: transient question relay fields (NOT serialized)
+        "pending_question", "answer_event", "answer_data",
+        "stdin_writer", "stdin_drain",
     )
 
     def __init__(
@@ -36,6 +40,12 @@ class Session:
         self.partial_output = ""  # streaming: accumulated text so far
         self.model_override: str | None = None
         self.model_sticky: bool = False  # True = model persists in follow-ups
+        # F7: transient — not persisted
+        self.pending_question: dict | None = None  # {tool_use_id, questions, tg_msg_id}
+        self.answer_event: asyncio.Event | None = None
+        self.answer_data: str | None = None
+        self.stdin_writer = None   # proc.stdin.write reference
+        self.stdin_drain = None    # proc.stdin.drain reference
 
     def elapsed(self) -> float:
         end = self.finished or time.time()

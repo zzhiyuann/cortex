@@ -26,6 +26,7 @@ DEFAULTS: dict[str, Any] = {
         "max_turns": 50,
         "max_turns_chat": 50,
         "max_turns_followup": 50,
+        "question_timeout": 600,  # F7: auto-timeout unanswered agent questions (10 min)
     },
     "behavior": {
         "poll_timeout": 30,
@@ -109,6 +110,10 @@ class Config:
     @property
     def max_turns_followup(self) -> int:
         return int(self._data["agent"]["max_turns_followup"])
+
+    @property
+    def question_timeout(self) -> int:
+        return int(self._data["agent"]["question_timeout"])
 
     @property
     def poll_timeout(self) -> int:

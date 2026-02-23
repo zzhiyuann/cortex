@@ -140,6 +140,7 @@ class Dispatcher:
             command=config.agent_command,
             args=config.agent_args,
             timeout=config.timeout,
+            question_timeout=config.question_timeout,
         )
         self.mem = Memory(config.memory_file)
         self.transcript = Transcript(config.data_dir)
@@ -275,6 +276,20 @@ class Dispatcher:
         if not text:
             return
 
+        # F7: Check if this is a free-text reply to a pending question
+        if reply_to:
+            for s in self.sm.by_msg.values():
+                if (s.pending_question
+                        and s.pending_question.get("tg_msg_id") == reply_to
+                        and s.answer_event):
+                    tg_msg_id = s.pending_question.get("tg_msg_id")
+                    s.answer_data = text
+                    s.answer_event.set()
+                    if tg_msg_id:
+                        self.tg.edit(tg_msg_id, f"✅ 已回答: {text}")
+                    self._reply(mid, "👍 已发送给 agent。")
+                    return
+
         # Fire-and-forget typing — never block the event loop
         self._fire_typing()
 
@@ -357,6 +372,49 @@ class Dispatcher:
             else:
                 self.tg.answer_callback(cb_id, "找不到原始任务")
 
+        elif data.startswith("answer:"):
+            # F7: user answered an AskUserQuestion via inline keyboard
+            parts = data.split(":", 2)  # answer:{sid_prefix}:{index_or_other}
+            if len(parts) < 3:
+                self.tg.answer_callback(cb_id, "无效的回答")
+                return
+            sid_prefix, answer_key = parts[1], parts[2]
+            # Find the session with a pending question
+            target = None
+            for s in self.sm.by_msg.values():
+                if s.sid.startswith(sid_prefix) and s.pending_question:
+                    target = s
+                    break
+            if not target or not target.pending_question:
+                self.tg.answer_callback(cb_id, "问题已过期")
+                return
+
+            if answer_key == "other":
+                self.tg.answer_callback(cb_id, "请直接回复那条消息输入答案")
+                return
+
+            # Resolve index to label
+            option_labels = target.pending_question.get("option_labels", [])
+            try:
+                idx = int(answer_key)
+                answer_label = option_labels[idx] if idx < len(option_labels) else answer_key
+            except (ValueError, IndexError):
+                answer_label = answer_key
+
+            self.tg.answer_callback(cb_id, f"已选择: {answer_label}")
+
+            # Capture tg_msg_id BEFORE signaling (race condition fix)
+            tg_msg_id = target.pending_question.get("tg_msg_id")
+
+            # Signal the runner
+            target.answer_data = answer_label
+            if target.answer_event:
+                target.answer_event.set()
+
+            # Edit question message to show selected answer
+            if tg_msg_id:
+                self.tg.edit(tg_msg_id, f"✅ 已回答: {answer_label}")
+
         elif data == "new_session":
             self.sm.force_new = True
             self.tg.answer_callback(cb_id, "好的，下条消息将开始新对话")
@@ -392,6 +450,52 @@ class Dispatcher:
                 return
 
         log.debug("ignoring edit for [%d] — session too old or not running", mid)
+
+    async def _surface_question(self, session: Session):
+        """F7: Send AskUserQuestion to Telegram as inline keyboard buttons."""
+        pq = session.pending_question
+        if not pq:
+            return
+
+        questions = pq["questions"]
+        if not questions:
+            return
+
+        q = questions[0]  # handle first question
+        q_text = q.get("question", "")
+        options = q.get("options", [])
+        sid_prefix = session.sid[:8]
+
+        # Store option labels for index→label resolution in callback
+        pq["option_labels"] = [opt.get("label", "?") for opt in options]
+
+        rows = []
+        for i, opt in enumerate(options):
+            label = opt.get("label", "?")
+            desc = opt.get("description", "")
+            btn_text = f"{label} — {desc}" if desc else label
+            if len(btn_text) > 40:
+                btn_text = btn_text[:37] + "..."
+            rows.append([{
+                "text": btn_text,
+                "callback_data": f"answer:{sid_prefix}:{i}",
+            }])
+
+        # Add "Other..." button for free-text reply
+        rows.append([{
+            "text": "✍ Other...",
+            "callback_data": f"answer:{sid_prefix}:other",
+        }])
+
+        markup = {"inline_keyboard": rows}
+        header = f"❓ Agent 在问:\n\n<b>{html.escape(q_text)}</b>"
+        tg_msg_id = self.tg.send(
+            header, reply_to=session.msg_id,
+            parse_mode="HTML", reply_markup=markup,
+        )
+        pq["tg_msg_id"] = tg_msg_id
+        if tg_msg_id:
+            self.sm.link_bot(tg_msg_id, session.msg_id)
 
     def _handle_new_session(self, mid: int):
         """Mark that the next message should start a fresh session."""
@@ -945,6 +1049,7 @@ class Dispatcher:
             self.runner.invoke(
                 session, prompt, resume=False, max_turns=max_turns,
                 model=model, stream=True,
+                on_question=self._surface_question,
             )
         )
         monitor = asyncio.create_task(self._progress_loop(mid, session))
@@ -1031,6 +1136,7 @@ class Dispatcher:
                 session, prompt, resume=resume,
                 max_turns=max_turns, model=effective_model,
                 stream=True,
+                on_question=self._surface_question,
             )
         )
         monitor = asyncio.create_task(self._progress_loop(mid, session))
@@ -1133,7 +1239,7 @@ class Dispatcher:
             except Exception:
                 pass
         # Schedule without awaiting — truly fire-and-forget
-        asyncio.ensure_future(_do())
+        asyncio.create_task(_do())
 
     def _fire_reaction(self, mid: int, emoji: str):
         """Set a reaction on a message without blocking the event loop."""
@@ -1145,7 +1251,7 @@ class Dispatcher:
                 )
             except Exception:
                 pass
-        asyncio.ensure_future(_do())
+        asyncio.create_task(_do())
 
     def _build_prompt(
         self, text: str, cwd: str,
