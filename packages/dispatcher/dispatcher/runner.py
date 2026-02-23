@@ -477,8 +477,13 @@ class AgentRunner:
 
             elif etype == "result":
                 result_text = event.get("result", "")
+                # Result event is authoritative — stop reading.
+                # In stream-json mode stdin may still be open, so the process
+                # won't close stdout on its own; we must break here.
+                break
 
-        await proc.wait()
+        # Don't await proc.wait() unconditionally — in stream-json mode the
+        # process may hang with stdin open.  The caller handles termination.
 
         stderr_data = await proc.stderr.read()
         stderr_text = stderr_data.decode(errors="replace").strip()

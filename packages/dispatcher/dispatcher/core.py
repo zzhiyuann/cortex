@@ -1177,12 +1177,10 @@ class Dispatcher:
                     else:
                         progress_msg_id = self._reply(mid, msg)
 
-            # Clean up progress message
+            # Delete progress message — the final result message replaces it
             if progress_msg_id:
                 try:
-                    self.tg.edit(progress_msg_id,
-                                 f"\u2705 {html.escape(session.task_text[:40])} -- done",
-                                 parse_mode="HTML")
+                    self.tg.delete_message(progress_msg_id)
                 except Exception:
                     pass
 
