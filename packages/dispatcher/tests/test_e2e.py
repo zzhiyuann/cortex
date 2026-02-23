@@ -126,21 +126,21 @@ class TestClassification:
 class TestModelPrefix:
     def test_haiku_prefix_lowercase(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model, sticky = d._extract_model_prefix("@haiku 你是什么模型")
+        text, model, sticky = d._extract_model_prefix("#haiku 你是什么模型")
         assert text == "你是什么模型"
         assert model == "haiku"
         assert sticky is False
 
     def test_opus_prefix_lowercase(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model, sticky = d._extract_model_prefix("@opus write a complex algo")
+        text, model, sticky = d._extract_model_prefix("#opus write a complex algo")
         assert text == "write a complex algo"
         assert model == "opus"
         assert sticky is False
 
     def test_sonnet_prefix_lowercase(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model, sticky = d._extract_model_prefix("@sonnet help me")
+        text, model, sticky = d._extract_model_prefix("#sonnet help me")
         assert text == "help me"
         assert model == "sonnet"
         assert sticky is False
@@ -154,44 +154,44 @@ class TestModelPrefix:
 
     def test_capitalized_is_sticky(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model, sticky = d._extract_model_prefix("@Haiku test")
+        text, model, sticky = d._extract_model_prefix("#Haiku test")
         assert text == "test"
         assert model == "haiku"
         assert sticky is True
 
     def test_capitalized_sonnet_sticky(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model, sticky = d._extract_model_prefix("@Sonnet do something")
+        text, model, sticky = d._extract_model_prefix("#Sonnet do something")
         assert text == "do something"
         assert model == "sonnet"
         assert sticky is True
 
     def test_prefix_only_no_text(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model, sticky = d._extract_model_prefix("@haiku")
-        assert text == "@haiku"
+        text, model, sticky = d._extract_model_prefix("#haiku")
+        assert text == "#haiku"
         assert model is None
 
     def test_prefix_at_in_middle(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model, sticky = d._extract_model_prefix("use @haiku for this")
-        assert text == "use @haiku for this"
+        text, model, sticky = d._extract_model_prefix("use #haiku for this")
+        assert text == "use #haiku for this"
         assert model is None
 
     def test_sticky_sets_dispatcher_model(self, tmp_path):
-        """@Haiku (capitalized) sets _sticky_model on the dispatcher."""
+        """#Haiku (capitalized) sets _sticky_model on the dispatcher."""
         d = make_dispatcher(tmp_path)
         assert d._sticky_model is None
-        text, model, sticky = d._extract_model_prefix("@Haiku test")
+        text, model, sticky = d._extract_model_prefix("#Haiku test")
         if sticky and model:
             d._sticky_model = model
         assert d._sticky_model == "haiku"
 
     def test_lowercase_does_not_set_sticky(self, tmp_path):
-        """@haiku (lowercase) does NOT change _sticky_model."""
+        """#haiku (lowercase) does NOT change _sticky_model."""
         d = make_dispatcher(tmp_path)
         d._sticky_model = "opus"  # previously set
-        text, model, sticky = d._extract_model_prefix("@haiku test")
+        text, model, sticky = d._extract_model_prefix("#haiku test")
         if sticky and model:
             d._sticky_model = model
         assert d._sticky_model == "opus"  # unchanged

@@ -893,15 +893,16 @@ class Dispatcher:
             log.exception("quick query failed")
             self._reply(mid, f"\u274c Error: {str(e)[:200]}")
 
-    # Model aliases: lowercase = current message only, capitalized = persist in follow-ups
-    _MODEL_PREFIXES_TEMP = {"@haiku": "haiku", "@sonnet": "sonnet", "@opus": "opus"}
-    _MODEL_PREFIXES_STICKY = {"@Haiku": "haiku", "@Sonnet": "sonnet", "@Opus": "opus"}
+    # Model aliases: #prefix to avoid Telegram @mention resolution.
+    # Lowercase = current message only, capitalized = persist in follow-ups.
+    _MODEL_PREFIXES_TEMP = {"#haiku": "haiku", "#sonnet": "sonnet", "#opus": "opus"}
+    _MODEL_PREFIXES_STICKY = {"#Haiku": "haiku", "#Sonnet": "sonnet", "#Opus": "opus"}
 
     def _extract_model_prefix(self, text: str) -> tuple[str, str | None, bool]:
-        """Extract @model prefix from message. Returns (clean_text, model_or_none, sticky).
+        """Extract #model prefix from message. Returns (clean_text, model_or_none, sticky).
 
-        Lowercase @haiku/@opus/@sonnet = current message only.
-        Capitalized @Haiku/@Opus/@Sonnet = persist in follow-ups.
+        Lowercase #haiku/#opus/#sonnet = current message only.
+        Capitalized #Haiku/#Opus/#Sonnet = persist in follow-ups.
         """
         # Check sticky (capitalized) first — case-sensitive
         for prefix, model in self._MODEL_PREFIXES_STICKY.items():
@@ -933,7 +934,7 @@ class Dispatcher:
         full prompt). Sessions run in parallel via asyncio tasks.
         Only explicit reply to a *running* task queues as follow-up.
         """
-        # 0. Extract model preference from @haiku/@opus/@sonnet prefix
+        # 0. Extract model preference from #haiku/#opus/#sonnet prefix
         text, model_from_prefix, is_sticky = self._extract_model_prefix(text)
         if is_sticky and model_from_prefix:
             self._sticky_model = model_from_prefix

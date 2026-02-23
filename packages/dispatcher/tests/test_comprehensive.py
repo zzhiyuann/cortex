@@ -1694,18 +1694,18 @@ class TestOnMessageRouting:
 # ========================================================================
 
 class TestModelPrefixIntegration:
-    """@model prefix detection and sticky model behavior."""
+    """#model prefix detection and sticky model behavior."""
 
     def test_lowercase_haiku_not_sticky(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model, sticky = d._extract_model_prefix("@haiku quick question")
+        text, model, sticky = d._extract_model_prefix("#haiku quick question")
         assert text == "quick question"
         assert model == "haiku"
         assert sticky is False
 
     def test_capitalized_haiku_is_sticky(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        text, model, sticky = d._extract_model_prefix("@Haiku persist this")
+        text, model, sticky = d._extract_model_prefix("#Haiku persist this")
         assert text == "persist this"
         assert model == "haiku"
         assert sticky is True
@@ -1719,7 +1719,7 @@ class TestModelPrefixIntegration:
 
     @pytest.mark.asyncio
     async def test_sticky_model_persists_in_handle_task(self, tmp_path):
-        """@Haiku (capitalized) sets sticky model for subsequent messages."""
+        """#Haiku (capitalized) sets sticky model for subsequent messages."""
         d = make_dispatcher(tmp_path)
         d._fire_reaction = MagicMock()
 
@@ -1733,8 +1733,8 @@ class TestModelPrefixIntegration:
             return "ok"
         d.runner.invoke = mock_invoke
 
-        # First message with @Haiku
-        await d._handle_task(1, "@Haiku first message", None)
+        # First message with #Haiku
+        await d._handle_task(1, "#Haiku first message", None)
         if d._tasks:
             await asyncio.gather(*d._tasks, return_exceptions=True)
 
