@@ -12,6 +12,7 @@ import tempfile
 import time
 from pathlib import Path
 
+from .classifier import classify_intent
 from .config import Config
 from .memory import Memory
 from .runner import AgentRunner
@@ -192,6 +193,8 @@ class Dispatcher:
         self.tg.set_my_commands([
             {"command": "status", "description": "查看当前任务状态"},
             {"command": "cancel", "description": "取消正在运行的任务"},
+            {"command": "peek", "description": "查看运行中任务的输出"},
+            {"command": "q", "description": "快问（不阻塞运行中任务）"},
             {"command": "history", "description": "查看最近任务记录"},
             {"command": "help", "description": "使用帮助"},
         ])
@@ -275,7 +278,7 @@ class Dispatcher:
         # Fire-and-forget typing — never block the event loop
         self._fire_typing()
 
-        cat = self._classify(text)
+        cat = await self._classify(text)
         log.info("[%d] '%s' -> %s (attachments: %d)", mid, text[:80], cat, len(attachments))
 
         if cat == "status":
@@ -288,6 +291,10 @@ class Dispatcher:
             self._handle_help(mid)
         elif cat == "new_session":
             self._handle_new_session(mid)
+        elif cat == "peek":
+            self._handle_peek(mid)
+        elif cat == "quick":
+            self._spawn(self._handle_quick(mid, text))
         else:
             # F6: forward message context
             fwd_from = msg.get("forward_from", {}).get("first_name") or msg.get("forward_sender_name")
@@ -431,29 +438,38 @@ class Dispatcher:
             log.info("batched %d messages into one prompt", len(batch))
             await self._handle_task(last_mid, combined, None, attachments=all_atts)
 
-    def _classify(self, text: str) -> str:
+    async def _classify(self, text: str) -> str:
         low = text.strip().lower()
-        # Handle /command format from bot menu
+        # Explicit /commands — instant, unambiguous
         if low.startswith("/"):
             cmd = low.split()[0].lstrip("/").split("@")[0]  # strip /cmd@botname
-            if cmd in ("cancel", "stop"):
-                return "cancel"
-            if cmd in ("status",):
-                return "status"
-            if cmd in ("history",):
-                return "history"
-            if cmd in ("help",):
-                return "help"
-        if any(kw in low for kw in self.cfg.cancel_keywords):
-            return "cancel"
-        if any(kw in low for kw in self.cfg.status_keywords):
-            return "status"
+            _CMD_MAP = {
+                "cancel": "cancel", "stop": "cancel",
+                "status": "status", "history": "history",
+                "help": "help", "peek": "peek",
+                "q": "quick", "quick": "quick",
+            }
+            if cmd in _CMD_MAP:
+                return _CMD_MAP[cmd]
+        # Exact-match utility commands (unambiguous)
         if low in ("history", "历史", "最近任务", "跑过什么"):
             return "history"
         if low in ("help", "帮助", "命令", "怎么用"):
             return "help"
         if low in ("新session", "新建session", "new session", "开个新的", "新对话"):
             return "new_session"
+        # LLM classification when tasks are running
+        active = self.sm.active()
+        if active:
+            active_info = [
+                {
+                    "project": s.project_name,
+                    "task": s.task_text[:60],
+                    "elapsed": _format_duration(s.elapsed()),
+                }
+                for s in active
+            ]
+            return await classify_intent(text, active_info)
         return "task"
 
     def _detect_project(self, text: str) -> str | None:
@@ -602,6 +618,12 @@ class Dispatcher:
             proj = html.escape(s.project_name)
             task = html.escape(s.task_text[:50])
             lines.append(f"\u2022 <b>{proj}</b> — {task}\n  \u23f1 {html.escape(elapsed)}")
+            # Show partial output preview if available
+            if s.partial_output:
+                preview = s.partial_output.strip()
+                if len(preview) > 300:
+                    preview = "..." + preview[-300:]
+                lines.append(f"\n<pre>{html.escape(preview)}</pre>")
             buttons.append({
                 "text": f"\u274c 取消 {s.project_name}",
                 "callback_data": f"cancel:{s.sid[:8]}",
@@ -684,10 +706,14 @@ class Dispatcher:
             "\U0001f916 <b>Dispatcher 使用指南</b>\n\n"
             "\U0001f4ac <b>发任务</b>：直接发消息，自动识别项目\n"
             "\U0001f504 <b>跟进</b>：回复之前的消息继续对话\n"
-            "\U0001f4ca <b>状态</b>：发「在干嘛」或「status」\n"
-            "\U0001f6d1 <b>取消</b>：发「取消」或「stop」\n"
-            "\U0001f4cb <b>历史</b>：发「历史」或「history」\n"
-            "\u2753 <b>帮助</b>：发「帮助」或「help」\n\n"
+            "\U0001f4ca <b>状态</b>：随便问（还在跑吗？进度？）或 /status\n"
+            "\U0001f6d1 <b>取消</b>：随便说（停了/kill掉）或 /cancel\n"
+            "\U0001f441 <b>看输出</b>：随便说（看看输出）或 /peek\n"
+            "\u26a1 <b>快问</b>：/q 你的问题（不阻塞运行中的任务）\n"
+            "\U0001f4cb <b>历史</b>：/history\n"
+            "\u2753 <b>帮助</b>：/help\n\n"
+            "\U0001f4a1 任务运行时，自然语言会自动识别你是在问进度、"
+            "取消、看输出，还是要发新任务。\n\n"
             "\U0001f4c1 <b>已配置项目</b>：\n"
         )
         for name in self.cfg.projects:
@@ -696,6 +722,94 @@ class Dispatcher:
             help_text += f"  \u2022 {html.escape(name)} ({html.escape(kws)})\n"
 
         self._reply(mid, help_text, parse_mode="HTML")
+
+    def _handle_peek(self, mid: int):
+        """Show the current output of the most recent active session."""
+        active = self.sm.active()
+        if not active:
+            self._reply(mid, "没有在跑的任务。")
+            return
+
+        session = active[-1]  # most recently started
+        elapsed = _format_duration(session.elapsed())
+        proj = html.escape(session.project_name)
+
+        if not session.partial_output:
+            self._reply(
+                mid,
+                f"\U0001f3c3 <b>{proj}</b> 正在运行 ({html.escape(elapsed)})，暂无输出。",
+                parse_mode="HTML",
+            )
+            return
+
+        output = session.partial_output.strip()
+        if len(output) > 3000:
+            output = "...\n" + output[-3000:]
+
+        header = f"\U0001f4c4 <b>{proj}</b> ({html.escape(elapsed)}) 当前输出:\n\n"
+        body = f"<pre>{html.escape(output)}</pre>"
+        formatted = header + body
+
+        if len(formatted) > 4000:
+            # Too long for Telegram message — send as document
+            fd = tempfile.NamedTemporaryFile(
+                mode='w', suffix='.md', prefix='peek_', delete=False,
+            )
+            fd.write(session.partial_output)
+            tmp_path = fd.name
+            fd.close()
+            self._reply_document(
+                mid, tmp_path,
+                caption=f"{session.project_name} 当前输出 ({elapsed})",
+            )
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+        else:
+            markup = {
+                "inline_keyboard": [[{
+                    "text": f"\u274c 取消 {session.project_name}",
+                    "callback_data": f"cancel:{session.sid[:8]}",
+                }]]
+            }
+            self._reply(mid, formatted, parse_mode="HTML", reply_markup=markup)
+
+    async def _handle_quick(self, mid: int, text: str):
+        """Handle /q quick queries — fast, independent, no session tracking."""
+        query = re.sub(r'^/q(uick)?\s+', '', text, flags=re.IGNORECASE).strip()
+        if not query:
+            self._reply(mid, "用法: /q 你的问题")
+            return
+
+        self._fire_reaction(mid, "\U0001f440")
+        self._fire_typing()
+
+        # Temporary session — not tracked in SessionManager
+        session = Session(mid, query, str(Path.home()))
+        session.is_task = False
+
+        try:
+            result = await asyncio.wait_for(
+                self.runner.invoke(
+                    session, query, resume=False, max_turns=3,
+                    model="haiku", stream=False,
+                ),
+                timeout=60,
+            )
+            if result and result.strip():
+                formatted = _md_to_telegram_html(result)
+                if len(formatted) > 4000:
+                    formatted = formatted[:3900] + "..."
+                self._reply(mid, formatted, parse_mode="HTML")
+                self._fire_reaction(mid, "\u2705")
+            else:
+                self._reply(mid, "没有返回内容。")
+        except asyncio.TimeoutError:
+            self._reply(mid, "\u23f3 快问超时了（60秒限制）。")
+        except Exception as e:
+            log.exception("quick query failed")
+            self._reply(mid, f"\u274c 出错了: {str(e)[:200]}")
 
     # Model aliases: lowercase = current message only, capitalized = persist in follow-ups
     _MODEL_PREFIXES_TEMP = {"@haiku": "haiku", "@sonnet": "sonnet", "@opus": "opus"}
@@ -770,11 +884,27 @@ class Dispatcher:
         is_project = cwd != str(Path.home())
 
         # 4. If nothing running, try to resume last session for continuity
+        #    BUT only if the message targets the same project as the last session.
+        #    This prevents answering from the wrong project's context.
         if not self.sm.force_new:
             last = self.sm.last_session()
             if not active and last and last.status in ("done", "failed"):
-                self._spawn(self._do_followup(mid, text, last, attachments, model=model_override, model_sticky=is_sticky))
-                return
+                # Check project affinity: skip auto-resume if the message
+                # clearly targets a different project than the last session.
+                last_cwd = last.cwd
+                detected_cwd = cwd if is_project else None
+                same_project = (
+                    detected_cwd is None  # no project detected → safe to resume
+                    or detected_cwd == last_cwd  # same project
+                )
+                if same_project:
+                    self._spawn(self._do_followup(mid, text, last, attachments, model=model_override, model_sticky=is_sticky))
+                    return
+                else:
+                    log.info(
+                        "skipping auto-resume: message targets %s but last session was %s",
+                        detected_cwd, last_cwd,
+                    )
         self.sm.force_new = False
 
         # 5. Enforce concurrency limit

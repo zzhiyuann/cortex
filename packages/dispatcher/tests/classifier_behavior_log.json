@@ -1,0 +1,169 @@
+{
+  "total": 115,
+  "passed": 110,
+  "failed_count": 5,
+  "accuracy": 95.65217391304348,
+  "latency_avg_ms": 429.9811014434785,
+  "latency_p50_ms": 415.0761660000022,
+  "latency_p95_ms": 627.9134999999991,
+  "latency_max_ms": 853.8590409999997,
+  "category_stats": {
+    "cancel": {
+      "total": 22,
+      "passed": 22,
+      "accuracy": 100.0
+    },
+    "peek": {
+      "total": 11,
+      "passed": 10,
+      "accuracy": 90.9090909090909
+    },
+    "status": {
+      "total": 33,
+      "passed": 33,
+      "accuracy": 100.0
+    },
+    "task": {
+      "total": 49,
+      "passed": 45,
+      "accuracy": 91.83673469387756
+    }
+  },
+  "tag_stats": {
+    "accept_peek": {
+      "total": 2,
+      "passed": 2,
+      "accuracy": 100.0
+    },
+    "accept_status": {
+      "total": 1,
+      "passed": 1,
+      "accuracy": 100.0
+    },
+    "accept_task": {
+      "total": 4,
+      "passed": 4,
+      "accuracy": 100.0
+    },
+    "ambiguous": {
+      "total": 7,
+      "passed": 7,
+      "accuracy": 100.0
+    },
+    "cancel": {
+      "total": 21,
+      "passed": 21,
+      "accuracy": 100.0
+    },
+    "context": {
+      "total": 3,
+      "passed": 3,
+      "accuracy": 100.0
+    },
+    "critical": {
+      "total": 3,
+      "passed": 3,
+      "accuracy": 100.0
+    },
+    "english": {
+      "total": 20,
+      "passed": 20,
+      "accuracy": 100.0
+    },
+    "peek": {
+      "total": 11,
+      "passed": 10,
+      "accuracy": 90.9090909090909
+    },
+    "short": {
+      "total": 16,
+      "passed": 16,
+      "accuracy": 100.0
+    },
+    "status": {
+      "total": 30,
+      "passed": 30,
+      "accuracy": 100.0
+    },
+    "task": {
+      "total": 49,
+      "passed": 45,
+      "accuracy": 91.83673469387756
+    },
+    "tricky": {
+      "total": 19,
+      "passed": 16,
+      "accuracy": 84.21052631578947
+    }
+  },
+  "confusion_matrix": {
+    "status": {
+      "status": 30,
+      "task": 2,
+      "peek": 1
+    },
+    "cancel": {
+      "cancel": 21,
+      "task": 1
+    },
+    "peek": {
+      "peek": 9,
+      "task": 1,
+      "status": 1
+    },
+    "task": {
+      "task": 45,
+      "peek": 4
+    }
+  },
+  "failures": [
+    {
+      "message": "输出是什么",
+      "expected": "peek",
+      "got": "task",
+      "tags": [
+        "peek"
+      ],
+      "context": "default"
+    },
+    {
+      "message": "也顺便看看测试情况",
+      "expected": "task",
+      "got": "peek",
+      "tags": [
+        "task"
+      ],
+      "context": "default"
+    },
+    {
+      "message": "查看一下输出日志",
+      "expected": "task",
+      "got": "peek",
+      "tags": [
+        "task",
+        "tricky"
+      ],
+      "context": "default"
+    },
+    {
+      "message": "看看stdout有没有报错",
+      "expected": "task",
+      "got": "peek",
+      "tags": [
+        "task",
+        "tricky"
+      ],
+      "context": "default"
+    },
+    {
+      "message": "看看那个进程的output",
+      "expected": "task",
+      "got": "peek",
+      "tags": [
+        "task",
+        "tricky"
+      ],
+      "context": "default"
+    }
+  ]
+}

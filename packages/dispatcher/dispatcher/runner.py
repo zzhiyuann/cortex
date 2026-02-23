@@ -279,6 +279,12 @@ class AgentRunner:
                     self._read_stream(proc, session),
                     timeout=self.timeout,
                 )
+                # Fallback: if stream parsing returned empty but partial output
+                # was accumulated during streaming, use that instead.
+                if not out or not out.strip():
+                    if session.partial_output and session.partial_output.strip():
+                        log.info("using partial_output as fallback (%d chars)", len(session.partial_output))
+                        out = session.partial_output
             else:
                 stdout, stderr = await asyncio.wait_for(
                     proc.communicate(input=prompt.encode()),
