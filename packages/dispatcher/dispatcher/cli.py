@@ -91,7 +91,9 @@ def init():
 
 @main.command()
 @click.option("-c", "--config", "config_path", default=None, help="Config file path")
-def start(config_path):
+@click.option("--ws-port", type=int, default=None, help="WebSocket server port (default: 8765)")
+@click.option("--no-ws", is_flag=True, default=False, help="Disable WebSocket server")
+def start(config_path, ws_port, no_ws):
     """Start the dispatcher daemon (foreground)."""
     cfg = Config(config_path)
     errors = cfg.validate()
@@ -102,10 +104,19 @@ def start(config_path):
         click.echo(f"\nRun 'dispatcher init' to set up, or edit {DEFAULT_CONFIG_FILE}", err=True)
         sys.exit(1)
 
+    # CLI overrides for WebSocket settings
+    if ws_port is not None:
+        cfg._data["websocket"]["port"] = ws_port
+    if no_ws:
+        cfg._data["websocket"]["enabled"] = False
+
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
     _setup_logging(cfg.log_dir)
 
-    click.echo(f"Starting dispatcher (agent: {cfg.agent_command})...")
+    ws_info = ""
+    if cfg.ws_enabled:
+        ws_info = f", ws://0.0.0.0:{cfg.ws_port}"
+    click.echo(f"Starting dispatcher (agent: {cfg.agent_command}{ws_info})...")
     from .core import Dispatcher
     d = Dispatcher(cfg)
     asyncio.run(d.run())

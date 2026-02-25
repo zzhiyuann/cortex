@@ -19,6 +19,7 @@ from .runner import AgentRunner
 from .session import Session, SessionManager
 from .telegram import TelegramClient
 from .transcript import Transcript
+from .ws_server import WebSocketServer
 
 # Self-healing feedback loop — write issues to shared JSONL store.
 # Works standalone (no cortex_cli dependency) by writing directly to the file.
@@ -148,6 +149,16 @@ class Dispatcher:
         self._batch_task: asyncio.Task | None = None
         self._sticky_model: str | None = None  # @Model (capitalized) sets this
 
+        # WebSocket server (optional, for native app connectivity)
+        self._ws: WebSocketServer | None = None
+        if config.ws_enabled:
+            self._ws = WebSocketServer(
+                host=config.ws_host,
+                port=config.ws_port,
+                auth_token=config.ws_auth_token,
+                on_message=self._handle_ws_message,
+            )
+
     # -- Lifecycle --
 
     def _acquire_pid(self) -> bool:
@@ -195,6 +206,15 @@ class Dispatcher:
 
         self.tg.send("\u2705 Dispatcher online.")
 
+        # Start WebSocket server if enabled
+        if self._ws:
+            try:
+                await self._ws.start()
+                log.info("WebSocket server started on port %d", self.cfg.ws_port)
+            except Exception:
+                log.exception("Failed to start WebSocket server")
+                self._ws = None
+
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGTERM, signal.SIGINT):
             loop.add_signal_handler(sig, self._shutdown)
@@ -224,6 +244,10 @@ class Dispatcher:
             log.info("Draining %d in-flight tasks", len(self._tasks))
             await asyncio.gather(*self._tasks, return_exceptions=True)
 
+        # Stop WebSocket server
+        if self._ws:
+            await self._ws.stop()
+
         self._release_pid()
 
     def _shutdown(self):
@@ -235,6 +259,194 @@ class Dispatcher:
                 s.status = "cancelled"
         self._release_pid()
         self.tg.send("\u26a0\ufe0f Dispatcher offline.")
+
+    # -- WebSocket integration --
+
+    async def _handle_ws_message(
+        self, content: str, project: str | None, msg_id: str,
+    ) -> str:
+        """Handle a message received from a WebSocket client.
+
+        Routes through the same classifier and session logic as Telegram.
+        Returns the agent's response text.
+        """
+        log.info("[ws:%s] '%s' project=%s", msg_id[:8], content[:80], project)
+
+        # Use a synthetic message ID derived from the ws msg_id hash
+        # to avoid collision with Telegram message IDs.
+        synthetic_mid = abs(hash(msg_id)) % (2**31)
+
+        # Detect project from content or use the explicitly provided one
+        if project:
+            # Client specified a project — resolve to path
+            cwd = None
+            for name, path in self.routes.items():
+                if name.lower() == project.lower() and path.exists():
+                    cwd = str(path)
+                    break
+            if not cwd:
+                cwd = self._detect_project(content) or str(Path.home())
+        else:
+            cwd = self._detect_project(content) or str(Path.home())
+
+        is_project = cwd != str(Path.home())
+
+        # Extract model prefix
+        content, model_from_prefix, is_sticky = self._extract_model_prefix(content)
+        if is_sticky and model_from_prefix:
+            self._sticky_model = model_from_prefix
+        model_override = model_from_prefix or self._sticky_model
+
+        # Try to resume last session for continuity
+        if not self.sm.force_new:
+            last = self.sm.last_session()
+            active = self.sm.active()
+            if not active and last and last.status in ("done", "failed"):
+                last_cwd = last.cwd
+                detected_cwd = cwd if is_project else None
+                same_project = detected_cwd is None or detected_cwd == last_cwd
+                if same_project:
+                    return await self._do_ws_followup(
+                        synthetic_mid, content, last, msg_id,
+                        model=model_override, model_sticky=is_sticky,
+                    )
+        self.sm.force_new = False
+
+        # Enforce concurrency limit
+        active = self.sm.active()
+        if len(active) >= self.cfg.max_concurrent:
+            oldest = active[0]
+            # Wait for the oldest to finish, then dispatch
+            while oldest.status in ("pending", "running"):
+                await asyncio.sleep(1)
+            return await self._do_ws_followup(
+                synthetic_mid, content, oldest, msg_id,
+                model=model_override, model_sticky=is_sticky,
+            )
+
+        # Create new session
+        session = self.sm.create(synthetic_mid, content, cwd)
+        session.is_task = is_project
+        session.model_sticky = is_sticky
+        session.model_override = model_override
+
+        return await self._do_ws_session(synthetic_mid, session, content, msg_id, model=model_override)
+
+    async def _do_ws_session(
+        self,
+        mid: int,
+        session: Session,
+        text: str,
+        ws_msg_id: str,
+        model: str | None = None,
+    ) -> str:
+        """Run a WebSocket-originated task through the agent pipeline."""
+        session.model_override = model
+        self.transcript.append(session.conv_id, "user", text)
+
+        prompt = self._build_prompt(text, session.cwd)
+        max_turns = self.cfg.max_turns
+
+        # Update WS session count
+        self._update_ws_sessions()
+
+        result = await self.runner.invoke(
+            session, prompt, resume=False, max_turns=max_turns,
+            model=model, stream=True,
+            on_question=self._surface_question,
+        )
+
+        # Phase 2: summarization if needed
+        if session.used_partial_fallback:
+            summary = await self._summarize_session(session, text)
+            if summary and summary.strip():
+                result = summary
+                session.used_partial_fallback = False
+
+        # Record transcript
+        if result and result.strip():
+            self.transcript.append(session.conv_id, "assistant", result)
+
+        # Update WS session count
+        self._update_ws_sessions()
+
+        # Also send result to Telegram for visibility (optional notification)
+        if result and result.strip() and self._ws and self._ws.client_count > 0:
+            log.info("[ws:%s] result: %d chars", ws_msg_id[:8], len(result))
+
+        return result or ""
+
+    async def _do_ws_followup(
+        self,
+        mid: int,
+        text: str,
+        prev: Session,
+        ws_msg_id: str,
+        model: str | None = None,
+        model_sticky: bool = False,
+    ) -> str:
+        """Resume a conversation from a WebSocket message."""
+        effective_model = model or self._sticky_model
+        effective_sticky = model_sticky or (prev.model_sticky if not model else False)
+
+        model_changed = effective_model and prev.model_override != effective_model
+        if model_changed:
+            session = self.sm.create(mid, text, prev.cwd, conv_id=prev.conv_id)
+            resume = False
+        else:
+            session = self.sm.create(mid, text, prev.cwd, sid=prev.sid, conv_id=prev.conv_id)
+            resume = True
+
+        session.is_task = prev.is_task
+        session.model_override = effective_model
+        session.model_sticky = effective_sticky
+
+        prompt = self._build_prompt_with_history(text, session.cwd, session.conv_id)
+        self.transcript.append(session.conv_id, "user", text)
+
+        max_turns = self.cfg.max_turns_followup
+
+        self._update_ws_sessions()
+
+        result = await self.runner.invoke(
+            session, prompt, resume=resume,
+            max_turns=max_turns, model=effective_model,
+            stream=True,
+            on_question=self._surface_question,
+        )
+
+        # Retry as fresh session if resume returned empty
+        if resume and (not result or not result.strip()):
+            log.info("ws resume returned empty for mid=%d, retrying as fresh session", mid)
+            session = self.sm.create(mid, text, prev.cwd, conv_id=prev.conv_id)
+            session.is_task = prev.is_task
+            session.model_override = effective_model
+            session.model_sticky = effective_sticky
+            result = await self.runner.invoke(
+                session, prompt, resume=False,
+                max_turns=max_turns, model=effective_model,
+                stream=True,
+                on_question=self._surface_question,
+            )
+
+        # Phase 2: summarization if needed
+        if session.used_partial_fallback:
+            summary = await self._summarize_session(session, text)
+            if summary and summary.strip():
+                result = summary
+                session.used_partial_fallback = False
+
+        if result and result.strip():
+            self.transcript.append(session.conv_id, "assistant", result)
+
+        self._update_ws_sessions()
+
+        return result or ""
+
+    def _update_ws_sessions(self) -> None:
+        """Update the WebSocket server's active session count."""
+        if self._ws:
+            self._ws.update_session_count(self.sm.active_count())
 
     # -- Message routing --
 
@@ -1583,6 +1795,23 @@ class Dispatcher:
                 pass
         else:
             self._reply(mid, formatted, parse_mode="HTML", reply_markup=result_markup)
+
+        # Broadcast session completion to WebSocket clients
+        self._notify_ws_result(session, result)
+
+    def _notify_ws_result(self, session: Session, result: str) -> None:
+        """Notify connected WebSocket clients about a completed session."""
+        if not self._ws or self._ws.client_count == 0:
+            return
+        asyncio.create_task(self._ws.broadcast({
+            "type": "session_complete",
+            "project": session.project_name,
+            "task": session.task_text[:100],
+            "status": session.status,
+            "result": result[:2000] if result else "",
+            "elapsed": session.elapsed(),
+        }))
+        self._update_ws_sessions()
 
     def _friendly_error(self, error: str) -> str:
         """Convert raw error text to user-friendly message."""

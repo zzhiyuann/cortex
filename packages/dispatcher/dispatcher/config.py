@@ -34,6 +34,12 @@ DEFAULTS: dict[str, Any] = {
         "cancel_keywords": ["cancel", "stop"],
         "status_keywords": ["status"],
     },
+    "websocket": {
+        "enabled": True,
+        "host": "0.0.0.0",
+        "port": 8765,
+        "auth_token": "",
+    },
     "projects": {},
     "data_dir": str(DEFAULT_CONFIG_DIR / "data"),
 }
@@ -64,6 +70,10 @@ class Config:
             "DISPATCHER_MAX_CONCURRENT": ("agent", "max_concurrent"),
             "DISPATCHER_TIMEOUT": ("agent", "timeout"),
             "DISPATCHER_DATA_DIR": ("data_dir",),
+            "DISPATCHER_WS_ENABLED": ("websocket", "enabled"),
+            "DISPATCHER_WS_PORT": ("websocket", "port"),
+            "DISPATCHER_WS_HOST": ("websocket", "host"),
+            "DISPATCHER_WS_AUTH_TOKEN": ("websocket", "auth_token"),
         }
         for env_key, path in env_map.items():
             val = os.environ.get(env_key)
@@ -137,6 +147,22 @@ class Config:
     @property
     def data_dir(self) -> Path:
         return Path(self._data["data_dir"]).expanduser()
+
+    @property
+    def ws_enabled(self) -> bool:
+        return bool(self._data["websocket"]["enabled"])
+
+    @property
+    def ws_host(self) -> str:
+        return str(self._data["websocket"]["host"])
+
+    @property
+    def ws_port(self) -> int:
+        return int(self._data["websocket"]["port"])
+
+    @property
+    def ws_auth_token(self) -> str:
+        return str(self._data["websocket"]["auth_token"])
 
     @property
     def memory_file(self) -> Path:
