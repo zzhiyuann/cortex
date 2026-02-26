@@ -219,6 +219,21 @@ class WebSocketServer:
             asyncio.create_task(self._process_edit(websocket, msg_id, content))
             return
 
+        if msg_type == "notification":
+            # External services can push notifications to all connected clients
+            # without going through the agent pipeline.
+            content = data.get("content", "").strip()
+            source = data.get("source", "system")
+            if content:
+                await self.broadcast({
+                    "type": "notification",
+                    "id": msg_id,
+                    "content": content,
+                    "source": source,
+                })
+                log.info("ws notification broadcast from %s: %s", source, content[:80])
+            return
+
         if msg_type == "message":
             content = data.get("content", "").strip()
             image_base64 = data.get("image_base64")
