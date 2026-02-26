@@ -10,6 +10,7 @@ import re
 import signal
 import tempfile
 import time
+import uuid
 from pathlib import Path
 
 from .classifier import classify_intent
@@ -264,12 +265,40 @@ class Dispatcher:
 
     async def _handle_ws_message(
         self, content: str, project: str | None, msg_id: str,
+        websocket=None,
+        image_base64: str | None = None,
+        audio_base64: str | None = None,
+        audio_duration: float | None = None,
+        language: str | None = None,
     ) -> str:
         """Handle a message received from a WebSocket client.
 
         Routes through the same classifier and session logic as Telegram.
         Returns the agent's response text.
         """
+        # Transcribe audio if present
+        if audio_base64:
+            transcript_text = await self._transcribe_ws_audio(audio_base64)
+            if transcript_text:
+                if content and content not in ("[Voice message]",):
+                    content = f"{content}\n\n[Voice transcript]: {transcript_text}"
+                else:
+                    content = transcript_text
+                log.info("[ws:%s] transcribed audio: %s", msg_id[:8], content[:100])
+            else:
+                if not content or content == "[Voice message]":
+                    content = "(audio could not be transcribed)"
+
+        # Attach image context if present
+        if image_base64:
+            # Include the image as a note in the content for the AI
+            img_prefix = "[User sent an image"
+            if content and content not in ("[Image]",):
+                img_prefix += f" with caption: {content}]"
+            else:
+                img_prefix += "]"
+            content = img_prefix
+
         log.info("[ws:%s] '%s' project=%s", msg_id[:8], content[:80], project)
 
         # Use a synthetic message ID derived from the ws msg_id hash
@@ -308,6 +337,7 @@ class Dispatcher:
                 if same_project:
                     return await self._do_ws_followup(
                         synthetic_mid, content, last, msg_id,
+                        websocket=websocket,
                         model=model_override, model_sticky=is_sticky,
                     )
         self.sm.force_new = False
@@ -321,6 +351,7 @@ class Dispatcher:
                 await asyncio.sleep(1)
             return await self._do_ws_followup(
                 synthetic_mid, content, oldest, msg_id,
+                websocket=websocket,
                 model=model_override, model_sticky=is_sticky,
             )
 
@@ -330,7 +361,10 @@ class Dispatcher:
         session.model_sticky = is_sticky
         session.model_override = model_override
 
-        return await self._do_ws_session(synthetic_mid, session, content, msg_id, model=model_override)
+        return await self._do_ws_session(
+            synthetic_mid, session, content, msg_id,
+            websocket=websocket, model=model_override,
+        )
 
     async def _do_ws_session(
         self,
@@ -338,6 +372,7 @@ class Dispatcher:
         session: Session,
         text: str,
         ws_msg_id: str,
+        websocket=None,
         model: str | None = None,
     ) -> str:
         """Run a WebSocket-originated task through the agent pipeline."""
@@ -350,11 +385,26 @@ class Dispatcher:
         # Update WS session count
         self._update_ws_sessions()
 
+        # Start streaming loop concurrently
+        stream_task = None
+        if websocket and self._ws:
+            stream_task = asyncio.create_task(
+                self._ws_stream_loop(websocket, ws_msg_id, session)
+            )
+
         result = await self.runner.invoke(
             session, prompt, resume=False, max_turns=max_turns,
             model=model, stream=True,
             on_question=self._surface_question,
         )
+
+        # Cancel streaming loop
+        if stream_task:
+            stream_task.cancel()
+            try:
+                await stream_task
+            except asyncio.CancelledError:
+                pass
 
         # Phase 2: summarization if needed
         if session.used_partial_fallback:
@@ -370,7 +420,6 @@ class Dispatcher:
         # Update WS session count
         self._update_ws_sessions()
 
-        # Also send result to Telegram for visibility (optional notification)
         if result and result.strip() and self._ws and self._ws.client_count > 0:
             log.info("[ws:%s] result: %d chars", ws_msg_id[:8], len(result))
 
@@ -382,6 +431,7 @@ class Dispatcher:
         text: str,
         prev: Session,
         ws_msg_id: str,
+        websocket=None,
         model: str | None = None,
         model_sticky: bool = False,
     ) -> str:
@@ -408,6 +458,13 @@ class Dispatcher:
 
         self._update_ws_sessions()
 
+        # Start streaming loop concurrently
+        stream_task = None
+        if websocket and self._ws:
+            stream_task = asyncio.create_task(
+                self._ws_stream_loop(websocket, ws_msg_id, session)
+            )
+
         result = await self.runner.invoke(
             session, prompt, resume=resume,
             max_turns=max_turns, model=effective_model,
@@ -429,6 +486,14 @@ class Dispatcher:
                 on_question=self._surface_question,
             )
 
+        # Cancel streaming loop
+        if stream_task:
+            stream_task.cancel()
+            try:
+                await stream_task
+            except asyncio.CancelledError:
+                pass
+
         # Phase 2: summarization if needed
         if session.used_partial_fallback:
             summary = await self._summarize_session(session, text)
@@ -442,6 +507,19 @@ class Dispatcher:
         self._update_ws_sessions()
 
         return result or ""
+
+    async def _ws_stream_loop(self, websocket, msg_id: str, session: Session) -> None:
+        """Stream partial output to the WebSocket client as it's generated."""
+        last_len = 0
+        try:
+            while session.status in ("pending", "running"):
+                await asyncio.sleep(1)
+                partial = session.partial_output
+                if partial and len(partial) > last_len:
+                    last_len = len(partial)
+                    await self._ws.send_response(websocket, msg_id, partial, streaming=True)
+        except asyncio.CancelledError:
+            pass
 
     def _update_ws_sessions(self) -> None:
         """Update the WebSocket server's active session count."""
@@ -542,7 +620,20 @@ class Dispatcher:
             self.tg.answer_callback(cb_id, "Unauthorized")
             return
 
-        if data.startswith("cancel:"):
+        if data == "cancel_all":
+            active = self.sm.active()
+            cancelled = []
+            for s in active:
+                if s.proc:
+                    s.proc.kill()
+                s.status = "cancelled"
+                s.finished = time.time()
+                cancelled.append(s.project_name)
+            names = ", ".join(cancelled) if cancelled else "none"
+            self.tg.answer_callback(cb_id, f"Cancelled {len(cancelled)} tasks")
+            self.tg.edit(msg["message_id"], f"\u274c Cancelled all: {names}")
+
+        elif data.startswith("cancel:"):
             session_id = data[7:]
             target = None
             for s in self.sm.active():
@@ -766,6 +857,14 @@ class Dispatcher:
             return "help"
         if low in ("new session",):
             return "new_session"
+        # Fast-path cancel detection — catch obvious cancel phrases without LLM.
+        # Only matches when talking about "sessions"/"tasks"/"everything" (meta),
+        # not specific external targets like "stop the docker container".
+        _CANCEL_VERBS = ("stop", "cancel", "kill", "abort", "halt", "quit", "结束", "停", "取消")
+        _CANCEL_TARGETS = ("all", "everything", "session", "sessions", "task", "tasks",
+                           "所有", "全部", "任务")
+        if any(v in low for v in _CANCEL_VERBS) and any(t in low for t in _CANCEL_TARGETS):
+            return "cancel"
         # LLM classification when tasks are running
         active = self.sm.active()
         if active:
@@ -899,6 +998,28 @@ class Dispatcher:
             log.exception("whisper transcription failed for %s", audio_path)
             return None
 
+    async def _transcribe_ws_audio(self, audio_base64: str) -> str | None:
+        """Decode base64 audio from WebSocket and transcribe via Whisper."""
+        import base64
+
+        try:
+            audio_data = base64.b64decode(audio_base64)
+        except Exception:
+            log.warning("failed to decode audio base64 from WebSocket")
+            return None
+
+        # Write to a temp file for Whisper
+        tmp = os.path.join(tempfile.gettempdir(), f"ws_audio_{uuid.uuid4().hex}.m4a")
+        try:
+            with open(tmp, "wb") as f:
+                f.write(audio_data)
+            return await self._transcribe_audio(tmp)
+        finally:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+
     # _describe_image removed — images are passed directly to the agent
     # session via attachments, so it can read them in context with the
     # user's question. No more separate Sonnet pre-description step.
@@ -942,16 +1063,33 @@ class Dispatcher:
                     reply_markup=markup)
 
     def _handle_cancel(self, mid: int, text: str, reply_to: int | None):
+        low = text.lower()
+        active = self.sm.active()
+
+        # "Stop all" / "cancel everything" — kill all active sessions
+        _ALL_WORDS = ("all", "everything", "所有", "全部")
+        if any(w in low for w in _ALL_WORDS) and active:
+            cancelled = []
+            for s in active:
+                if s.proc:
+                    s.proc.kill()
+                s.status = "cancelled"
+                s.finished = time.time()
+                cancelled.append(s.project_name)
+            names = ", ".join(cancelled) if cancelled else "none"
+            self._reply(mid, f"\u274c Cancelled all tasks: {html.escape(names)}",
+                        parse_mode="HTML")
+            return
+
         target = None
         if reply_to:
             target = self.sm.find_by_reply(reply_to)
         if not target:
-            for s in self.sm.active():
-                if s.project_name.lower() in text.lower():
+            for s in active:
+                if s.project_name.lower() in low:
                     target = s
                     break
         if not target:
-            active = self.sm.active()
             if len(active) == 1:
                 target = active[0]
 
@@ -963,10 +1101,9 @@ class Dispatcher:
             self._reply(mid, f"\u274c Cancelled <b>{html.escape(target.project_name)}</b>\n"
                         f"Ran for {html.escape(elapsed)}",
                         parse_mode="HTML")
-        elif not self.sm.active():
+        elif not active:
             self._reply(mid, "No tasks running.")
         else:
-            active = self.sm.active()
             lines = ["Which one to cancel?\n"]
             buttons = []
             for s in active:
@@ -974,6 +1111,12 @@ class Dispatcher:
                 buttons.append({
                     "text": f"\u274c Cancel {s.project_name}",
                     "callback_data": f"cancel:{s.sid[:8]}",
+                })
+            # Add a "Cancel All" button when multiple sessions
+            if len(active) > 1:
+                buttons.append({
+                    "text": "\u274c Cancel All",
+                    "callback_data": "cancel_all",
                 })
             markup = {"inline_keyboard": [[b] for b in buttons]}
             self._reply(mid, "\n".join(lines), reply_markup=markup)

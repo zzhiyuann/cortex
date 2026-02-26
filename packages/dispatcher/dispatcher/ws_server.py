@@ -19,7 +19,11 @@ from websockets.asyncio.server import Server, ServerConnection
 log = logging.getLogger("dispatcher")
 
 # Type for the message handler callback provided by core.py
-MessageHandler = Callable[[str, str | None, str], Awaitable[str]]
+# Args: content, project, msg_id, websocket, image_base64, audio_base64, audio_duration, language
+MessageHandler = Callable[
+    [str, str | None, str, "ServerConnection", str | None, str | None, float | None, str | None],
+    Awaitable[str],
+]
 
 
 class WebSocketServer:
@@ -138,7 +142,13 @@ class WebSocketServer:
 
         if msg_type == "message":
             content = data.get("content", "").strip()
-            if not content:
+            image_base64 = data.get("image_base64")
+            audio_base64 = data.get("audio_base64")
+            audio_duration = data.get("duration")
+            language = data.get("language")
+
+            # Allow empty content if there's an image or audio
+            if not content and not image_base64 and not audio_base64:
                 await self._send(websocket, {
                     "type": "error",
                     "id": msg_id,
@@ -159,7 +169,10 @@ class WebSocketServer:
             # Route through the dispatcher's message handler
             if self.on_message:
                 try:
-                    result = await self.on_message(content, project, msg_id)
+                    result = await self.on_message(
+                        content, project, msg_id, websocket,
+                        image_base64, audio_base64, audio_duration, language,
+                    )
                     # Send final response
                     await self._send(websocket, {
                         "type": "response",
