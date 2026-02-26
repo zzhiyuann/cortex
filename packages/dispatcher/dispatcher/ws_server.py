@@ -33,6 +33,21 @@ CommandHandler = Callable[
     Awaitable[dict[str, Any]],
 ]
 
+# Type for the answer handler callback provided by core.py
+# Args: session_id_prefix, answer_text, msg_id
+AnswerHandler = Callable[
+    [str, str, str],
+    Awaitable[None],
+]
+
+# Type for the edit handler callback provided by core.py
+# Args: original_msg_id, new_content, websocket
+# Returns: dict with {"ok": bool, "error"?: str}
+EditHandler = Callable[
+    [str, str, "ServerConnection"],
+    Awaitable[dict[str, Any]],
+]
+
 
 class WebSocketServer:
     """WebSocket server that bridges native app clients to the Dispatcher.
@@ -48,12 +63,16 @@ class WebSocketServer:
         auth_token: str = "",
         on_message: MessageHandler | None = None,
         on_command: CommandHandler | None = None,
+        on_answer: AnswerHandler | None = None,
+        on_edit: EditHandler | None = None,
     ):
         self.host = host
         self.port = port
         self.auth_token = auth_token
         self.on_message = on_message
         self.on_command = on_command
+        self.on_answer = on_answer
+        self.on_edit = on_edit
         self._server: Server | None = None
         self._clients: set[ServerConnection] = set()
         self._status_task: asyncio.Task | None = None
@@ -164,6 +183,40 @@ class WebSocketServer:
                 })
                 return
             asyncio.create_task(self._process_command(websocket, msg_id, cmd, data))
+            return
+
+        if msg_type == "answer":
+            session_id = data.get("session_id", "").strip()
+            answer = data.get("answer", "").strip()
+            if not session_id or not answer:
+                await self._send(websocket, {
+                    "type": "error",
+                    "id": msg_id,
+                    "message": "Answer requires session_id and answer fields",
+                })
+                return
+            if self.on_answer:
+                try:
+                    await self.on_answer(session_id, answer, msg_id)
+                except Exception as exc:
+                    log.exception("ws answer handler error for session %s", session_id)
+                    await self._send(websocket, {
+                        "type": "error",
+                        "id": msg_id,
+                        "message": f"Answer error: {str(exc)[:200]}",
+                    })
+            return
+
+        if msg_type == "edit":
+            content = data.get("content", "").strip()
+            if not content:
+                await self._send(websocket, {
+                    "type": "error",
+                    "id": msg_id,
+                    "message": "Edit requires non-empty content",
+                })
+                return
+            asyncio.create_task(self._process_edit(websocket, msg_id, content))
             return
 
         if msg_type == "message":
@@ -284,6 +337,45 @@ class WebSocketServer:
                 "message": "No command handler configured",
             })
 
+    async def _process_edit(
+        self,
+        websocket: ServerConnection,
+        msg_id: str,
+        content: str,
+    ) -> None:
+        """Process an edit request for a previously sent message.
+
+        Delegates to the on_edit callback which handles session lookup,
+        process killing, and re-dispatch.
+        """
+        if self.on_edit:
+            try:
+                result = await self.on_edit(msg_id, content, websocket)
+                if result.get("ok"):
+                    await self._send(websocket, {
+                        "type": "edit_ack",
+                        "id": msg_id,
+                    })
+                else:
+                    await self._send(websocket, {
+                        "type": "error",
+                        "id": msg_id,
+                        "message": result.get("error", "Edit failed"),
+                    })
+            except Exception as exc:
+                log.exception("ws edit handler error for msg %s", msg_id[:8])
+                await self._send(websocket, {
+                    "type": "error",
+                    "id": msg_id,
+                    "message": f"Edit error: {str(exc)[:200]}",
+                })
+        else:
+            await self._send(websocket, {
+                "type": "error",
+                "id": msg_id,
+                "message": "No edit handler configured",
+            })
+
     # -- Sending helpers --
 
     async def _send(self, websocket: ServerConnection, data: dict) -> None:
@@ -316,6 +408,25 @@ class WebSocketServer:
             "type": "status",
             "connected": True,
             "active_sessions": self._active_sessions_count,
+        })
+
+    async def send_question(
+        self,
+        websocket: ServerConnection,
+        msg_id: str,
+        session_id: str,
+        question: str,
+        options: list[str],
+        allow_free_text: bool = True,
+    ) -> None:
+        """Send an AskUserQuestion to a specific WebSocket client."""
+        await self._send(websocket, {
+            "type": "question",
+            "id": msg_id,
+            "session_id": session_id,
+            "question": question,
+            "options": options,
+            "allow_free_text": allow_free_text,
         })
 
     async def broadcast(self, data: dict) -> None:

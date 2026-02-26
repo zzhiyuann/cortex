@@ -20,6 +20,8 @@ class Session:
         "pending_question", "answer_event", "answer_data",
         "stdin_writer", "stdin_drain",
         "used_partial_fallback",
+        # WebSocket client reference (for question routing)
+        "ws_client", "ws_msg_id",
     )
 
     def __init__(
@@ -49,6 +51,9 @@ class Session:
         self.stdin_drain = None    # proc.stdin.drain reference
         # True when result is partial_output fallback (turns exhausted mid-task)
         self.used_partial_fallback: bool = False
+        # WebSocket client reference — set when session originates from WS
+        self.ws_client = None   # ServerConnection or None
+        self.ws_msg_id: str | None = None  # Original WS message ID
 
     def elapsed(self) -> float:
         end = self.finished or time.time()

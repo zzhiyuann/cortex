@@ -149,6 +149,8 @@ class Dispatcher:
         self._msg_buffer: list[tuple] = []  # (mid, text, reply_to, attachments)
         self._batch_task: asyncio.Task | None = None
         self._sticky_model: str | None = None  # @Model (capitalized) sets this
+        # Maps WebSocket msg_id (str) → synthetic_mid (int) for edit lookups
+        self._ws_msg_to_mid: dict[str, int] = {}
 
         # WebSocket server (optional, for native app connectivity)
         self._ws: WebSocketServer | None = None
@@ -159,6 +161,8 @@ class Dispatcher:
                 auth_token=config.ws_auth_token,
                 on_message=self._handle_ws_message,
                 on_command=self._handle_ws_command,
+                on_answer=self._handle_ws_answer,
+                on_edit=self._handle_ws_edit,
             )
 
     # -- Lifecycle --
@@ -306,6 +310,9 @@ class Dispatcher:
         # to avoid collision with Telegram message IDs.
         synthetic_mid = abs(hash(msg_id)) % (2**31)
 
+        # Store mapping so edits can look up the session by ws msg_id
+        self._ws_msg_to_mid[msg_id] = synthetic_mid
+
         # Detect project from content or use the explicitly provided one
         if project:
             # Client specified a project — resolve to path
@@ -377,6 +384,9 @@ class Dispatcher:
         model: str | None = None,
     ) -> str:
         """Run a WebSocket-originated task through the agent pipeline."""
+        # Store WS client reference for question routing
+        session.ws_client = websocket
+        session.ws_msg_id = ws_msg_id
         session.model_override = model
         self.transcript.append(session.conv_id, "user", text)
 
@@ -424,6 +434,13 @@ class Dispatcher:
         if result and result.strip() and self._ws and self._ws.client_count > 0:
             log.info("[ws:%s] result: %d chars", ws_msg_id[:8], len(result))
 
+        # Capture memory in background — non-blocking
+        if HAS_MEMORY and result and result.strip() and session.status == "done":
+            conversation = f"User: {text}\n\nAssistant: {result}"
+            asyncio.create_task(
+                self._capture_memory(conversation, session.project_name)
+            )
+
         return result or ""
 
     async def _do_ws_followup(
@@ -451,6 +468,9 @@ class Dispatcher:
         session.is_task = prev.is_task
         session.model_override = effective_model
         session.model_sticky = effective_sticky
+        # Store WS client reference for question routing
+        session.ws_client = websocket
+        session.ws_msg_id = ws_msg_id
 
         prompt = self._build_prompt_with_history(text, session.cwd, session.conv_id)
         self.transcript.append(session.conv_id, "user", text)
@@ -506,6 +526,13 @@ class Dispatcher:
             self.transcript.append(session.conv_id, "assistant", result)
 
         self._update_ws_sessions()
+
+        # Capture memory in background — non-blocking
+        if HAS_MEMORY and result and result.strip() and session.status == "done":
+            conversation = f"User: {text}\n\nAssistant: {result}"
+            asyncio.create_task(
+                self._capture_memory(conversation, session.project_name)
+            )
 
         return result or ""
 
