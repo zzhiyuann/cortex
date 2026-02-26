@@ -132,7 +132,11 @@ class WebSocketServer:
             log.info("ws client disconnected: %s (remaining: %d)", remote, len(self._clients))
 
     async def _handle_message(self, websocket: ServerConnection, data: dict) -> None:
-        """Process an incoming WebSocket message."""
+        """Process an incoming WebSocket message.
+
+        Messages are dispatched concurrently so multiple user messages
+        can be in-flight at the same time (first-response-first-arrive).
+        """
         msg_type = data.get("type", "")
         msg_id = data.get("id", str(uuid.uuid4()))
 
@@ -158,41 +162,21 @@ class WebSocketServer:
 
             project = data.get("project")
 
-            # Acknowledge receipt
+            # Acknowledge receipt immediately so the client can show 👀
             await self._send(websocket, {
-                "type": "response",
+                "type": "ack",
                 "id": msg_id,
-                "content": "",
-                "streaming": True,
             })
 
-            # Route through the dispatcher's message handler
-            if self.on_message:
-                try:
-                    result = await self.on_message(
-                        content, project, msg_id, websocket,
-                        image_base64, audio_base64, audio_duration, language,
-                    )
-                    # Send final response
-                    await self._send(websocket, {
-                        "type": "response",
-                        "id": msg_id,
-                        "content": result or "",
-                        "streaming": False,
-                    })
-                except Exception as exc:
-                    log.exception("ws message handler error")
-                    await self._send(websocket, {
-                        "type": "error",
-                        "id": msg_id,
-                        "message": f"Handler error: {str(exc)[:200]}",
-                    })
-            else:
-                await self._send(websocket, {
-                    "type": "error",
-                    "id": msg_id,
-                    "message": "No message handler configured",
-                })
+            # Dispatch handling concurrently (fire-and-forget) so we don't
+            # block the receive loop — the next message can start processing
+            # right away.
+            asyncio.create_task(
+                self._process_message(
+                    websocket, msg_id, content, project,
+                    image_base64, audio_base64, audio_duration, language,
+                )
+            )
             return
 
         # Unknown message type
@@ -201,6 +185,48 @@ class WebSocketServer:
             "id": msg_id,
             "message": f"Unknown message type: {msg_type}",
         })
+
+    async def _process_message(
+        self,
+        websocket: ServerConnection,
+        msg_id: str,
+        content: str,
+        project: str | None,
+        image_base64: str | None,
+        audio_base64: str | None,
+        audio_duration: float | None,
+        language: str | None,
+    ) -> None:
+        """Process a single message through the dispatcher pipeline.
+
+        Runs as a concurrent task so multiple messages can be handled in parallel.
+        """
+        if self.on_message:
+            try:
+                result = await self.on_message(
+                    content, project, msg_id, websocket,
+                    image_base64, audio_base64, audio_duration, language,
+                )
+                # Send final response
+                await self._send(websocket, {
+                    "type": "response",
+                    "id": msg_id,
+                    "content": result or "",
+                    "streaming": False,
+                })
+            except Exception as exc:
+                log.exception("ws message handler error for msg %s", msg_id[:8])
+                await self._send(websocket, {
+                    "type": "error",
+                    "id": msg_id,
+                    "message": f"Handler error: {str(exc)[:200]}",
+                })
+        else:
+            await self._send(websocket, {
+                "type": "error",
+                "id": msg_id,
+                "message": "No message handler configured",
+            })
 
     # -- Sending helpers --
 
