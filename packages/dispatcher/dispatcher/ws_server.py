@@ -170,7 +170,7 @@ class WebSocketServer:
         msg_id = data.get("id", str(uuid.uuid4()))
 
         if msg_type == "ping":
-            await self._send(websocket, {"type": "pong"})
+            await self._send(websocket, {"type": "pong", "id": msg_id})
             return
 
         if msg_type == "command":

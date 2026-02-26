@@ -306,6 +306,64 @@ class Dispatcher:
 
         log.info("[ws:%s] '%s' project=%s", msg_id[:8], content[:80], project)
 
+        # Intercept slash commands sent as regular messages (the iOS client
+        # sends /status, /cancel, etc. as type="message" with slash-prefixed
+        # content rather than type="command").
+        stripped = content.strip()
+        if stripped.startswith("/"):
+            cmd = stripped.split()[0].lstrip("/").lower().split("@")[0]
+            _WS_CMDS = {"status", "cancel", "stop", "history", "new", "help", "peek"}
+            if cmd in _WS_CMDS:
+                effective_cmd = "cancel" if cmd == "stop" else cmd
+                result = await self._handle_ws_command(effective_cmd, {"index": None})
+                # Format as readable text for the chat bubble
+                if effective_cmd == "status":
+                    lines = []
+                    if result.get("active_count", 0) == 0:
+                        lines.append("No active tasks.")
+                    else:
+                        lines.append(f"{result['active_count']} active task(s):")
+                        for s in result.get("sessions", []):
+                            lines.append(f"  [{s['id']}] {s['project']} — {s['task']} ({s['elapsed']})")
+                    lines.append(f"Uptime: {result.get('uptime', '?')}")
+                    return "\n".join(lines)
+                elif effective_cmd == "cancel":
+                    if result.get("cancelled"):
+                        return f"Cancelled [{result['session_id']}] {result['project']} — {result['task']} ({result['elapsed']})"
+                    else:
+                        return result.get("message", "Nothing to cancel.")
+                elif effective_cmd == "history":
+                    sessions = result.get("sessions", [])
+                    if not sessions:
+                        return "No recent sessions."
+                    lines = [f"{len(sessions)} recent session(s):"]
+                    for e in sessions:
+                        lines.append(f"  [{e.get('id', '?')}] {e.get('project', '?')} — {e.get('task', '?')[:60]} ({e.get('status', '?')})")
+                    return "\n".join(lines)
+                elif effective_cmd == "new":
+                    return result.get("message", "New session started.")
+                elif effective_cmd == "help":
+                    return (
+                        "Available commands:\n"
+                        "  /status — Show active tasks\n"
+                        "  /cancel — Cancel the running task\n"
+                        "  /history — Recent sessions\n"
+                        "  /new — Start a new session\n"
+                        "  /peek — Preview current output\n"
+                        "  /q <question> — Quick Q&A\n"
+                        "  @haiku/@sonnet/@opus — Switch model"
+                    )
+                elif effective_cmd == "peek":
+                    active = self.sm.active()
+                    if not active:
+                        return "No active tasks to peek."
+                    s = active[-1]
+                    preview = s.partial_output.strip() if s.partial_output else "(no output yet)"
+                    if len(preview) > 1000:
+                        preview = "..." + preview[-1000:]
+                    return f"[{s.sid[:8]}] {s.project_name}:\n{preview}"
+                return result.get("message", str(result))
+
         # Use a synthetic message ID derived from the ws msg_id hash
         # to avoid collision with Telegram message IDs.
         synthetic_mid = abs(hash(msg_id)) % (2**31)
@@ -719,7 +777,7 @@ class Dispatcher:
                 "F7: ws answer for sid=%s but no pending question found",
                 session_id_prefix,
             )
-            return
+            raise ValueError(f"No pending question for session {session_id_prefix}")
 
         log.info("F7: ws answer received for sid=%s: %s", session_id_prefix, answer[:80])
 
