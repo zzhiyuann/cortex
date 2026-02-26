@@ -158,6 +158,7 @@ class Dispatcher:
                 port=config.ws_port,
                 auth_token=config.ws_auth_token,
                 on_message=self._handle_ws_message,
+                on_command=self._handle_ws_command,
             )
 
     # -- Lifecycle --
@@ -525,6 +526,117 @@ class Dispatcher:
         """Update the WebSocket server's active session count."""
         if self._ws:
             self._ws.update_session_count(self.sm.active_count())
+
+    async def _handle_ws_command(self, command: str, data: dict) -> dict:
+        """Handle a slash command from a WebSocket client.
+
+        Returns structured data (dict) instead of Telegram-formatted HTML.
+        """
+        cmd = command.lstrip("/").lower().split()[0]
+
+        if cmd == "status":
+            return self._ws_cmd_status()
+        elif cmd == "cancel":
+            index = data.get("index")
+            return self._ws_cmd_cancel(index)
+        elif cmd == "history":
+            return self._ws_cmd_history()
+        elif cmd == "new":
+            return self._ws_cmd_new()
+        else:
+            return {"ok": False, "error": f"Unknown command: {command}"}
+
+    def _ws_cmd_status(self) -> dict:
+        """Return structured status of active sessions."""
+        uptime = time.time() - self._start_time
+        active = self.sm.active()
+        sessions = []
+        for s in active:
+            entry: dict = {
+                "id": s.sid[:8],
+                "project": s.project_name,
+                "task": s.task_text[:80],
+                "elapsed": _format_duration(s.elapsed()),
+                "elapsed_seconds": round(s.elapsed(), 1),
+                "status": s.status,
+            }
+            if s.partial_output:
+                preview = s.partial_output.strip()
+                if len(preview) > 500:
+                    preview = "..." + preview[-500:]
+                entry["output_preview"] = preview
+            sessions.append(entry)
+
+        return {
+            "ok": True,
+            "active_count": len(active),
+            "sessions": sessions,
+            "uptime": _format_duration(uptime),
+            "uptime_seconds": round(uptime, 1),
+        }
+
+    def _ws_cmd_cancel(self, index: int | None = None) -> dict:
+        """Cancel a session by index (0-based) or the most recent one."""
+        active = self.sm.active()
+        if not active:
+            return {"ok": True, "cancelled": False, "message": "No tasks running"}
+
+        if index is not None:
+            if index < 0 or index >= len(active):
+                return {
+                    "ok": False,
+                    "error": f"Invalid index {index}, {len(active)} task(s) running",
+                    "active_count": len(active),
+                }
+            target = active[index]
+        else:
+            # Cancel the most recent (last started)
+            target = active[-1]
+
+        if target.proc:
+            target.proc.kill()
+        target.status = "cancelled"
+        target.finished = time.time()
+        elapsed = _format_duration(target.elapsed())
+
+        return {
+            "ok": True,
+            "cancelled": True,
+            "session_id": target.sid[:8],
+            "project": target.project_name,
+            "task": target.task_text[:80],
+            "elapsed": elapsed,
+            "remaining_active": len(self.sm.active()),
+        }
+
+    def _ws_cmd_history(self) -> dict:
+        """Return structured history of recent completed sessions."""
+        recent = []
+        for rmid in self.sm.recent[:20]:
+            s = self.sm.by_msg.get(rmid)
+            if s and s.status in ("done", "failed", "cancelled"):
+                recent.append(s)
+        if not recent:
+            return {"ok": True, "sessions": []}
+
+        sessions = []
+        for s in recent[:8]:
+            elapsed = _format_duration(s.elapsed()) if s.started else "--"
+            sessions.append({
+                "id": s.sid[:8],
+                "project": s.project_name,
+                "task": s.task_text[:80],
+                "status": s.status,
+                "elapsed": elapsed,
+                "elapsed_seconds": round(s.elapsed(), 1) if s.started else 0,
+            })
+
+        return {"ok": True, "sessions": sessions}
+
+    def _ws_cmd_new(self) -> dict:
+        """Set force_new flag so the next message starts a fresh session."""
+        self.sm.force_new = True
+        return {"ok": True, "message": "Next message will start a new session"}
 
     # -- Message routing --
 

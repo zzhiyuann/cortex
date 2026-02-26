@@ -25,6 +25,14 @@ MessageHandler = Callable[
     Awaitable[str],
 ]
 
+# Type for the command handler callback provided by core.py
+# Args: command, data (full message dict)
+# Returns: dict with structured response data
+CommandHandler = Callable[
+    [str, dict[str, Any]],
+    Awaitable[dict[str, Any]],
+]
+
 
 class WebSocketServer:
     """WebSocket server that bridges native app clients to the Dispatcher.
@@ -39,11 +47,13 @@ class WebSocketServer:
         port: int = 8765,
         auth_token: str = "",
         on_message: MessageHandler | None = None,
+        on_command: CommandHandler | None = None,
     ):
         self.host = host
         self.port = port
         self.auth_token = auth_token
         self.on_message = on_message
+        self.on_command = on_command
         self._server: Server | None = None
         self._clients: set[ServerConnection] = set()
         self._status_task: asyncio.Task | None = None
@@ -144,6 +154,18 @@ class WebSocketServer:
             await self._send(websocket, {"type": "pong"})
             return
 
+        if msg_type == "command":
+            cmd = data.get("command", "").strip()
+            if not cmd:
+                await self._send(websocket, {
+                    "type": "error",
+                    "id": msg_id,
+                    "message": "Empty command",
+                })
+                return
+            asyncio.create_task(self._process_command(websocket, msg_id, cmd, data))
+            return
+
         if msg_type == "message":
             content = data.get("content", "").strip()
             image_base64 = data.get("image_base64")
@@ -226,6 +248,40 @@ class WebSocketServer:
                 "type": "error",
                 "id": msg_id,
                 "message": "No message handler configured",
+            })
+
+    async def _process_command(
+        self,
+        websocket: ServerConnection,
+        msg_id: str,
+        command: str,
+        data: dict,
+    ) -> None:
+        """Process a slash command and return a structured response.
+
+        Runs as a concurrent task so it doesn't block the receive loop.
+        """
+        if self.on_command:
+            try:
+                result = await self.on_command(command, data)
+                await self._send(websocket, {
+                    "type": "command_result",
+                    "id": msg_id,
+                    "command": command,
+                    "data": result,
+                })
+            except Exception as exc:
+                log.exception("ws command handler error for %s", command)
+                await self._send(websocket, {
+                    "type": "error",
+                    "id": msg_id,
+                    "message": f"Command error: {str(exc)[:200]}",
+                })
+        else:
+            await self._send(websocket, {
+                "type": "error",
+                "id": msg_id,
+                "message": "No command handler configured",
             })
 
     # -- Sending helpers --
