@@ -554,6 +554,42 @@ class Dispatcher:
         if self._ws:
             self._ws.update_session_count(self.sm.active_count())
 
+    async def _handle_ws_edit(self, msg_id: str, new_content: str, websocket=None) -> dict:
+        """Handle an edit request from a WebSocket client.
+
+        Finds the session associated with the original message, kills it if
+        it's still running and young enough (< 10s), then re-dispatches with
+        the new content. Mirrors _on_edited_message() for Telegram.
+        """
+        synthetic_mid = self._ws_msg_to_mid.get(msg_id)
+        if synthetic_mid is None:
+            return {"ok": False, "error": "Original message not found"}
+
+        session = self.sm.by_msg.get(synthetic_mid)
+        if not session:
+            return {"ok": False, "error": "No session for this message"}
+
+        if session.status != "running" or not session.started:
+            return {"ok": False, "error": "Session is not running"}
+
+        age = time.time() - session.started
+        if age >= 10:
+            return {"ok": False, "error": f"Session too old to edit ({age:.1f}s)"}
+
+        if not session.proc:
+            return {"ok": False, "error": "No running process to cancel"}
+
+        log.info("re-dispatching edited ws message [%s] (age=%.1fs)", msg_id[:8], age)
+        session.proc.kill()
+        session.status = "cancelled"
+        session.finished = time.time()
+
+        # Re-dispatch with new text (fire-and-forget task so we can return immediately)
+        asyncio.create_task(self._handle_ws_message(
+            new_content, None, msg_id, websocket,
+        ))
+        return {"ok": True}
+
     async def _handle_ws_command(self, command: str, data: dict) -> dict:
         """Handle a slash command from a WebSocket client.
 
@@ -664,6 +700,37 @@ class Dispatcher:
         """Set force_new flag so the next message starts a fresh session."""
         self.sm.force_new = True
         return {"ok": True, "message": "Next message will start a new session"}
+
+    async def _handle_ws_answer(self, session_id_prefix: str, answer: str, msg_id: str):
+        """Handle an answer to an AskUserQuestion from a WebSocket client.
+
+        Finds the session by sid prefix, sets answer_data, and signals answer_event.
+        """
+        target = None
+        for s in self.sm.by_msg.values():
+            if (s.pending_question
+                    and s.sid.startswith(session_id_prefix)
+                    and s.answer_event):
+                target = s
+                break
+
+        if not target:
+            log.warning(
+                "F7: ws answer for sid=%s but no pending question found",
+                session_id_prefix,
+            )
+            return
+
+        log.info("F7: ws answer received for sid=%s: %s", session_id_prefix, answer[:80])
+
+        # Signal the runner with the answer
+        target.answer_data = answer
+        target.answer_event.set()
+
+        # Also update the Telegram question message if one was sent
+        tg_msg_id = target.pending_question.get("tg_msg_id")
+        if tg_msg_id:
+            self.tg.edit(tg_msg_id, f"\u2705 Answered (via app): {answer}")
 
     # -- Message routing --
 
@@ -886,7 +953,7 @@ class Dispatcher:
         log.debug("ignoring edit for [%d] -- session too old or not running", mid)
 
     async def _surface_question(self, session: Session):
-        """F7: Send AskUserQuestion to Telegram as inline keyboard buttons."""
+        """F7: Send AskUserQuestion to Telegram and/or WebSocket clients."""
         pq = session.pending_question
         if not pq:
             return
@@ -901,8 +968,28 @@ class Dispatcher:
         sid_prefix = session.sid[:8]
 
         # Store option labels for index->label resolution in callback
-        pq["option_labels"] = [opt.get("label", "?") for opt in options]
+        option_labels = [opt.get("label", "?") for opt in options]
+        pq["option_labels"] = option_labels
 
+        # Surface to WebSocket client if session originated from WS
+        if session.ws_client and self._ws:
+            try:
+                await self._ws.send_question(
+                    websocket=session.ws_client,
+                    msg_id=session.ws_msg_id or sid_prefix,
+                    session_id=sid_prefix,
+                    question=q_text,
+                    options=option_labels,
+                    allow_free_text=True,
+                )
+                log.info(
+                    "F7: question surfaced to WS client, sid=%s",
+                    sid_prefix,
+                )
+            except Exception:
+                log.exception("F7: failed to surface question to WS client")
+
+        # Surface to Telegram as inline keyboard buttons
         rows = []
         for i, opt in enumerate(options):
             label = opt.get("label", "?")
