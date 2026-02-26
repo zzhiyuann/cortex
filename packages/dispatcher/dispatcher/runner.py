@@ -421,7 +421,8 @@ class AgentRunner:
                 message = event.get("message", {})
                 content_blocks = message.get("content", [])
                 for block in content_blocks:
-                    if block.get("type") == "text":
+                    block_type = block.get("type", "")
+                    if block_type == "text":
                         text = block.get("text", "")
                         if text:
                             if last_text and not text.startswith(last_text):
@@ -429,6 +430,19 @@ class AgentRunner:
                             last_text = text
                             all_parts = completed_turns + [text]
                             session.partial_output = "\n\n".join(all_parts)
+
+                    elif block_type == "image":
+                        # Agent generated an image (e.g. matplotlib figure).
+                        # We can't relay binary images through the text stream,
+                        # so append a placeholder so partial_output keeps growing
+                        # and the client doesn't appear stuck.
+                        img_note = "[Generated image]"
+                        log.info("agent produced image content block")
+                        if last_text and not last_text.endswith(img_note):
+                            completed_turns.append(last_text)
+                        last_text = img_note
+                        all_parts = completed_turns + [img_note]
+                        session.partial_output = "\n\n".join(all_parts)
 
                     # F7: Detect AskUserQuestion tool_use
                     elif (
