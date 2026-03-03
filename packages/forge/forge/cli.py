@@ -38,9 +38,9 @@ def cli() -> None:
 @click.option(
     "--type", "-t",
     "output_type",
-    type=click.Choice(["mcp", "cli", "python"], case_sensitive=False),
+    type=click.Choice(["mcp", "cli", "python", "module"], case_sensitive=False),
     default="python",
-    help="Output type: MCP server tool, CLI command, or Python function.",
+    help="Output type: MCP server tool, CLI command, Python function, or app module.",
 )
 @click.option(
     "--no-clarify",

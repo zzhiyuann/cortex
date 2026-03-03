@@ -6,6 +6,8 @@ from forge.models import (
     GenerationResult,
     InstallResult,
     InstallTarget,
+    ModuleFile,
+    ModuleSpec,
     OutputType,
     Session,
     SessionState,
@@ -21,6 +23,7 @@ class TestOutputType:
         assert OutputType.MCP == "mcp"
         assert OutputType.CLI == "cli"
         assert OutputType.PYTHON == "python"
+        assert OutputType.MODULE == "module"
 
 
 class TestSessionState:
@@ -104,6 +107,33 @@ class TestClarificationQuestion:
         )
         assert q.required is True
         assert q.options is None
+
+
+class TestModuleFile:
+    def test_basic(self):
+        f = ModuleFile(filename="models.py", content="class Foo: pass")
+        assert f.filename == "models.py"
+        assert f.file_type == "python"
+
+
+class TestModuleSpec:
+    def test_creation(self):
+        spec = ModuleSpec(
+            name="expense_tracker",
+            description="Track expenses.",
+            data_model="class Expense: pass",
+            service="class ExpenseService: pass",
+            ui_schema={"module": "expense_tracker"},
+            context_provider="class ExpenseContext: pass",
+        )
+        assert spec.name == "expense_tracker"
+        assert "module" in spec.ui_schema
+
+    def test_defaults(self):
+        spec = ModuleSpec(name="test", description="Test module.")
+        assert spec.data_model == ""
+        assert spec.ui_schema == {}
+        assert spec.dependencies == []
 
 
 class TestToolMetadata:

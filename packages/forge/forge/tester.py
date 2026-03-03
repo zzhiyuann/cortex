@@ -127,9 +127,10 @@ def _test_env(work_dir: Path) -> dict[str, str]:
     import os
 
     env = os.environ.copy()
-    # Ensure the work directory is on PYTHONPATH so imports work
+    # Use os.pathsep for cross-platform compatibility (';' on Windows, ':' on Unix)
+    sep = os.pathsep
     existing = env.get("PYTHONPATH", "")
-    env["PYTHONPATH"] = f"{work_dir}:{existing}" if existing else str(work_dir)
+    env["PYTHONPATH"] = f"{work_dir}{sep}{existing}" if existing else str(work_dir)
     return env
 
 

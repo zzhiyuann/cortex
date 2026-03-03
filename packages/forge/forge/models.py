@@ -17,6 +17,7 @@ class OutputType(str, Enum):
     MCP = "mcp"
     CLI = "cli"
     PYTHON = "python"
+    MODULE = "module"
 
 
 class SessionState(str, Enum):
@@ -75,6 +76,49 @@ class ToolSpec(BaseModel):
     error_handling: str = Field(default="", description="Error handling notes")
     examples: list[dict[str, Any]] = Field(
         default_factory=list, description="Example input/output pairs"
+    )
+
+
+class ModuleFile(BaseModel):
+    """A single file within a generated module."""
+
+    filename: str = Field(description="Relative filename (e.g., 'models.py')")
+    content: str = Field(default="", description="File content")
+    file_type: str = Field(
+        default="python",
+        description="File type: python, json, or text",
+    )
+
+
+class ModuleSpec(BaseModel):
+    """Specification for a complete app module (multi-file generation).
+
+    Modules are used by the /new-app feature in RyanHub to generate
+    complete personal app components with data models, services,
+    UI descriptions, and context provider interfaces.
+    """
+
+    name: str = Field(description="Module name (snake_case)")
+    display_name: str = Field(default="", description="Human-readable module name")
+    description: str = Field(description="What the module does")
+    data_model: str = Field(default="", description="Pydantic data model code")
+    service: str = Field(default="", description="Service/API layer code")
+    ui_schema: dict[str, Any] = Field(
+        default_factory=dict,
+        description="JSON schema describing the UI (consumed by frontend)",
+    )
+    context_provider: str = Field(
+        default="",
+        description="PersonalContext bus integration interface code",
+    )
+    dependencies: list[str] = Field(
+        default_factory=list, description="pip packages needed"
+    )
+    params: list[ToolParam] = Field(
+        default_factory=list, description="Module configuration parameters"
+    )
+    examples: list[dict[str, Any]] = Field(
+        default_factory=list, description="Example usage"
     )
 
 

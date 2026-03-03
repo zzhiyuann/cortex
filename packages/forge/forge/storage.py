@@ -2,17 +2,27 @@
 
 Each created tool gets its own directory containing source code, tests,
 and a metadata JSON file for tracking and management.
+
+Storage paths use pathlib.Path throughout for cross-platform compatibility
+(Windows, macOS, Linux). The FORGE_HOME environment variable can override
+the default location.
 """
 
 from __future__ import annotations
 
 import json
+import logging
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 from forge.models import OutputType, Session, ToolMetadata
 
-FORGE_HOME = Path.home() / ".forge"
+logger = logging.getLogger(__name__)
+
+# Allow overriding the forge home directory via environment variable
+_forge_home_env = os.environ.get("FORGE_HOME")
+FORGE_HOME = Path(_forge_home_env) if _forge_home_env else Path.home() / ".forge"
 TOOLS_DIR = FORGE_HOME / "tools"
 
 
@@ -87,8 +97,12 @@ def load_tool(name: str) -> ToolMetadata | None:
     if not meta_file.exists():
         return None
 
-    data = json.loads(meta_file.read_text(encoding="utf-8"))
-    return ToolMetadata(**data)
+    try:
+        data = json.loads(meta_file.read_text(encoding="utf-8"))
+        return ToolMetadata(**data)
+    except (json.JSONDecodeError, Exception) as e:
+        logger.warning("Failed to load metadata for '%s': %s", name, e)
+        return None
 
 
 def list_tools() -> list[ToolMetadata]:

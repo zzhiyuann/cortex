@@ -7,7 +7,12 @@ generation -> testing -> iteration -> packaging -> installation.
 from __future__ import annotations
 
 from forge.clarifier import analyze_ambiguity
-from forge.generator import generate_tool, regenerate_with_fixes, spec_from_description
+from forge.generator import (
+    generate_tool,
+    module_spec_from_description,
+    regenerate_with_fixes,
+    spec_from_description,
+)
 from forge.installer import install as install_tool
 from forge.models import (
     ClarificationResult,
