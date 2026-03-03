@@ -522,23 +522,113 @@ def _generate_shared_config(
 
 # ---- Status ----
 
+def _get_memory_stats() -> dict:
+    """Get Memory module stats if the database exists."""
+    import sqlite3
+    db_path = Path.home() / ".cortex" / "memory.db"
+    stats = {"total": 0, "categories": []}
+    if not db_path.exists():
+        return stats
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT COUNT(*) as cnt FROM memories "
+            "WHERE expires_at IS NULL OR expires_at > ?",
+            (import_time(),),
+        ).fetchone()
+        stats["total"] = row["cnt"] if row else 0
+
+        cats = conn.execute(
+            "SELECT DISTINCT category FROM memories "
+            "WHERE category != '' AND (expires_at IS NULL OR expires_at > ?)",
+            (import_time(),),
+        ).fetchall()
+        stats["categories"] = [r["category"] for r in cats]
+        conn.close()
+    except Exception:
+        pass
+    return stats
+
+
+def import_time():
+    """Lazy time import to avoid circular imports."""
+    import time
+    return time.time()
+
+
 def run_status():
-    """Show full Cortex status."""
+    """Show full Cortex status as a clean dashboard."""
+    from cortex_cli.config import CONFIG_PATH
+
     console.print()
-    console.print("[bold]Cortex Status[/bold]")
+    console.print("[bold]Cortex Status Dashboard[/bold]")
     console.print()
 
-    # Detection
+    # ---- Services ----
+    from rich.table import Table as RichTable
+    svc_table = RichTable(title="Services", show_header=True, expand=False)
+    svc_table.add_column("Service", style="bold", min_width=14)
+    svc_table.add_column("Status", min_width=12)
+    svc_table.add_column("Details")
+
+    # Dispatcher
+    pid = read_pid("dispatcher")
+    if pid:
+        svc_table.add_row("Dispatcher", "[green]Running[/green]", f"pid {pid}")
+    else:
+        svc_table.add_row("Dispatcher", "[dim]Stopped[/dim]", "")
+
+    # A2A Hub
+    pid = read_pid("a2a-hub")
+    a2a_config = load_config().get("services", {}).get("a2a_hub", {})
+    a2a_port = a2a_config.get("port", 8765)
+    if pid:
+        svc_table.add_row("A2A Hub", "[green]Running[/green]", f"pid {pid}, port {a2a_port}")
+    else:
+        svc_table.add_row("A2A Hub", "[dim]Stopped[/dim]", f"port {a2a_port}")
+
+    # Forge
+    forge_tools_dir = Path.home() / ".forge" / "tools"
+    tools_count = 0
+    if forge_tools_dir.exists():
+        tools_count = len([d for d in forge_tools_dir.iterdir() if d.is_dir()])
+    svc_table.add_row("Forge", "[green]Available[/green]" if tools_count else "[dim]No tools[/dim]",
+                       f"{tools_count} tools installed")
+
+    # Vibe Replay
+    sessions_dir = VIBE_REPLAY_DIR / "sessions"
+    session_count = 0
+    if sessions_dir.exists():
+        session_count = len([d for d in sessions_dir.iterdir() if d.is_dir()])
+    svc_table.add_row("Vibe Replay", "[green]Active[/green]" if session_count else "[dim]No sessions[/dim]",
+                       f"{session_count} sessions captured")
+
+    # Memory
+    mem_stats = _get_memory_stats()
+    mem_total = mem_stats["total"]
+    mem_cats = mem_stats["categories"]
+    if mem_total > 0:
+        cat_str = f", {len(mem_cats)} categories" if mem_cats else ""
+        svc_table.add_row("Memory", "[green]Active[/green]", f"{mem_total} memories{cat_str}")
+    else:
+        svc_table.add_row("Memory", "[dim]Empty[/dim]", "No memories stored")
+
+    console.print(svc_table)
+
+    # ---- Components ----
+    console.print()
     components = detect_all()
     _print_detection(components)
 
-    # MCP config
+    # ---- MCP Servers ----
     console.print("[bold]MCP Servers[/bold] (~/.mcp.json)")
     if MCP_CONFIG.exists():
         try:
             config = json.loads(MCP_CONFIG.read_text())
             servers = config.get("mcpServers", {})
-            cortex_servers = {k: v for k, v in servers.items() if k in ("forge", "a2a-hub")}
+            cortex_servers = {k: v for k, v in servers.items()
+                             if k in ("forge", "a2a-hub", "cortex-memory")}
             if cortex_servers:
                 for name, cfg in cortex_servers.items():
                     cmd = cfg.get("command", "?")
@@ -550,7 +640,7 @@ def run_status():
     else:
         console.print("  [dim]No MCP config found[/dim]")
 
-    # Hooks
+    # ---- Hooks ----
     console.print()
     console.print("[bold]Vibe Replay Hooks[/bold] (~/.claude/settings.json)")
     if CLAUDE_SETTINGS.exists():
@@ -571,45 +661,16 @@ def run_status():
         except Exception:
             console.print("  [red]Error reading settings[/red]")
 
-    # Services
-    console.print()
-    console.print("[bold]Services[/bold]")
-    for svc_name, svc_label in [("a2a-hub", "A2A Hub"), ("dispatcher", "Dispatcher")]:
-        pid = read_pid(svc_name)
-        if pid:
-            console.print(f"  [green]{svc_label}[/green] → Running (pid {pid})")
-        else:
-            console.print(f"  [dim]{svc_label}[/dim] → Not running")
-
-    # Dispatcher config
-    console.print()
-    console.print("[bold]Dispatcher Config[/bold]")
-    if DISPATCHER_CONFIG.exists():
-        console.print(f"  [green]Config[/green] → {DISPATCHER_CONFIG}")
-    else:
-        console.print("  [dim]Not configured[/dim]")
-
-    # Session data
-    console.print()
-    console.print("[bold]Vibe Replay Sessions[/bold]")
-    sessions_dir = VIBE_REPLAY_DIR / "sessions"
-    if sessions_dir.exists():
-        sessions = [d for d in sessions_dir.iterdir() if d.is_dir()]
-        console.print(f"  [green]{len(sessions)}[/green] sessions captured")
-    else:
-        console.print("  [dim]No sessions yet[/dim]")
-
-    # Shared config
+    # ---- Shared Config ----
     console.print()
     console.print("[bold]Shared Config[/bold] (~/.cortex/config.yaml)")
-    from cortex_cli.config import CONFIG_PATH
     if CONFIG_PATH.exists():
         config = load_config()
         projects = config.get("projects", {})
         tg = config.get("telegram", {})
         tg_status = "configured" if tg.get("bot_token") else "not set"
-        console.print(f"  [green]Telegram[/green] → {tg_status}")
-        console.print(f"  [green]Projects[/green] → {len(projects)} registered")
+        console.print(f"  Telegram: {tg_status}")
+        console.print(f"  Projects: {len(projects)} registered")
         for name, path in projects.items():
             console.print(f"    {name}: {path}")
     else:

@@ -1,9 +1,14 @@
 """Cortex CLI — unified entry point for the agent infrastructure stack.
 
-cortex init   → detect components, configure everything in one shot
-cortex start  → bring up dispatcher + a2a-hub
-cortex stop   → shut them down
-cortex status → show what's running and configured
+cortex init     → detect components, configure everything in one shot
+cortex start    → bring up services (all or specific)
+cortex stop     → shut down services (all or specific)
+cortex restart  → restart services (all or specific)
+cortex status   → show a clean dashboard of all services
+cortex doctor   → diagnose common issues
+cortex logs     → tail logs for a service
+cortex health   → run deep health checks
+cortex info     → show cross-project stats
 """
 
 from __future__ import annotations
@@ -12,12 +17,13 @@ import click
 from rich.console import Console
 
 from cortex_cli.setup import run_init, run_status
-from cortex_cli.services import start_all, stop_all
+from cortex_cli.services import start_services, stop_services, restart_services, show_logs
 from cortex_cli.agent import start_agent, stop_agent, agent_status, agent_log
 from cortex_cli.health import run_health
 from cortex_cli.process import tail_log, log_file
 from cortex_cli.errors import get_recent_errors, clear_error_log, ERROR_LOG
 from cortex_cli.info import run_info
+from cortex_cli.doctor import run_doctor
 from cortex_cli.feedback import (
     get_open_issues, get_issue_summary, resolver_status,
     get_resolution_history, RESOLVER_LOG,
@@ -27,7 +33,7 @@ console = Console()
 
 
 @click.group()
-@click.version_option("0.1.1", prog_name="cortex")
+@click.version_option("0.2.0", prog_name="cortex")
 def cli():
     """Cortex — Personal Agent Infrastructure Stack.
 
@@ -59,26 +65,55 @@ def init(telegram_token, telegram_chat_id, skip_dispatcher, skip_forge, skip_a2a
 
 
 @cli.command()
-def start():
-    """Start all Cortex services (Dispatcher + A2A Hub)."""
-    start_all()
+@click.argument("service", default="all")
+def start(service):
+    """Start Cortex services.
+
+    SERVICE can be: a2a-hub, dispatcher, or all (default).
+    """
+    start_services(service)
 
 
 @cli.command()
-def stop():
-    """Stop all Cortex services."""
-    stop_all()
+@click.argument("service", default="all")
+def stop(service):
+    """Stop Cortex services.
+
+    SERVICE can be: a2a-hub, dispatcher, or all (default).
+    """
+    stop_services(service)
+
+
+@cli.command()
+@click.argument("service", default="all")
+def restart(service):
+    """Restart Cortex services.
+
+    SERVICE can be: a2a-hub, dispatcher, or all (default).
+    """
+    restart_services(service)
 
 
 @cli.command()
 def status():
-    """Show what's installed, configured, and running."""
+    """Show a clean dashboard of all services and components."""
     run_status()
 
 
 @cli.command()
+@click.option("--fix", is_flag=True, help="Auto-fix issues where possible.")
+def doctor(fix):
+    """Diagnose common issues across the Cortex ecosystem.
+
+    Checks for: missing configs, port conflicts, stale processes,
+    broken MCP wiring, and other common problems.
+    """
+    run_doctor(auto_fix=fix)
+
+
+@cli.command()
 def health():
-    """Run health checks on all Cortex components and wiring."""
+    """Run deep health checks on all Cortex components and wiring."""
     run_health()
 
 
@@ -96,37 +131,19 @@ def logs(service, lines):
 
     SERVICE can be: a2a-hub, dispatcher, agent, or all (default).
     """
-    services = ["a2a-hub", "dispatcher"]
-    if service == "all":
-        targets = services
-    elif service in services or service == "agent":
-        targets = [service]
-    else:
-        console.print(f"[red]Unknown service: {service}[/red]")
-        console.print(f"[dim]Available: {', '.join(services + ['agent', 'all'])}[/dim]")
-        return
-
-    for target in targets:
-        if target == "agent":
-            from cortex_cli.agent import LOG_FILE
-            path = LOG_FILE
-        else:
-            path = log_file(target)
-
-        if not path.exists():
-            console.print(f"[dim]{target}: no log file[/dim]")
-            continue
-
-        console.print(f"\n[bold]--- {target} ---[/bold] ({path})")
-        log_lines = tail_log(target) if target != "agent" else []
-        if target == "agent":
-            content = path.read_text().strip()
-            log_lines = content.split("\n")[-lines:] if content else []
-
-        for line in log_lines[-lines:]:
+    if service == "agent":
+        from cortex_cli.agent import LOG_FILE
+        if not LOG_FILE.exists():
+            console.print("[dim]agent: no log file[/dim]")
+            return
+        console.print(f"\n[bold]--- Agent ---[/bold] ({LOG_FILE})")
+        content = LOG_FILE.read_text().strip()
+        log_lines = content.split("\n")[-lines:] if content else []
+        for line in log_lines:
             console.print(f"  {line[:200]}")
-
-    console.print()
+        console.print()
+    else:
+        show_logs(service, lines)
 
 
 @cli.command()
