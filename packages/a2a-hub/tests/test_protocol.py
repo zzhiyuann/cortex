@@ -34,6 +34,11 @@ class TestMessageType:
         actual = {mt.value for mt in MessageType}
         assert actual == expected
 
+    def test_task_statuses_include_assigned(self) -> None:
+        expected = {"pending", "assigned", "in_progress", "completed", "failed", "timeout"}
+        actual = {ts.value for ts in TaskStatus}
+        assert actual == expected
+
     def test_string_comparison(self) -> None:
         assert MessageType.REGISTER == "register"
         assert MessageType.DELEGATE == "delegate"
@@ -103,6 +108,8 @@ class TestAgentInfo:
         assert info.capabilities == ["echo", "code-review"]
         assert info.status == "online"
         assert info.metadata == {}
+        assert info.last_heartbeat is not None
+        assert info.registered_at is not None
 
     def test_serialize(self) -> None:
         info = AgentInfo(id="a1", name="A1", capabilities=["x"])
@@ -126,12 +133,29 @@ class TestTaskRecord:
         assert task.result is None
         assert task.error is None
         assert task.ttl_seconds == 300
+        assert task.priority == 0
+        assert task.retry_count == 0
+        assert task.max_retries == 0
+
+    def test_task_with_priority(self) -> None:
+        task = TaskRecord(
+            from_agent="a",
+            to_agent="b",
+            capability="x",
+            priority=10,
+            max_retries=3,
+        )
+        assert task.priority == 10
+        assert task.max_retries == 3
 
     def test_task_status_transitions(self) -> None:
         task = TaskRecord(
             from_agent="a", to_agent="b", capability="x"
         )
         assert task.status == TaskStatus.PENDING
+
+        task.status = TaskStatus.ASSIGNED
+        assert task.status == TaskStatus.ASSIGNED
 
         task.status = TaskStatus.IN_PROGRESS
         assert task.status == TaskStatus.IN_PROGRESS

@@ -30,9 +30,13 @@ class MessageType(str, Enum):
 
 
 class TaskStatus(str, Enum):
-    """Lifecycle states of a delegated task."""
+    """Lifecycle states of a delegated task.
+
+    Flow: PENDING -> ASSIGNED -> IN_PROGRESS -> COMPLETED / FAILED / TIMEOUT
+    """
 
     PENDING = "pending"
+    ASSIGNED = "assigned"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
@@ -53,10 +57,22 @@ class AgentInfo(BaseModel):
         default_factory=dict,
         description="Optional metadata (description, version, etc.)",
     )
+    last_heartbeat: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Timestamp of the last heartbeat received from this agent",
+    )
+    registered_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Timestamp when the agent registered",
+    )
 
 
 class TaskRecord(BaseModel):
-    """Tracks the state of a delegated task."""
+    """Tracks the state of a delegated task.
+
+    Lifecycle: PENDING -> ASSIGNED -> IN_PROGRESS -> COMPLETED / FAILED / TIMEOUT
+    Tasks support configurable TTL, priority ordering, and automatic retries.
+    """
 
     task_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     from_agent: str = Field(..., description="Agent that delegated the task")
@@ -69,6 +85,15 @@ class TaskRecord(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: datetime | None = Field(default=None)
     ttl_seconds: int = Field(default=300, description="Time-to-live in seconds")
+    priority: int = Field(
+        default=0,
+        description="Task priority (higher = more urgent). Default 0 = normal.",
+    )
+    retry_count: int = Field(default=0, description="Number of retries attempted so far")
+    max_retries: int = Field(
+        default=0,
+        description="Maximum number of retries if the assigned agent disconnects mid-task",
+    )
 
 
 class A2AMessage(BaseModel):
