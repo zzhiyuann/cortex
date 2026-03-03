@@ -85,11 +85,7 @@ body {
   background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
   border-bottom: 1px solid var(--border);
   padding: 1.5rem 2rem;
-  position: sticky;
-  top: 0;
   z-index: 100;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
 }
 
 .header-inner {
@@ -171,6 +167,15 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 2rem;
+}
+
+.minimap-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 99;
+  background: var(--bg-primary);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .minimap-bar {
@@ -825,13 +830,27 @@ body {
 }
 
 .diff-file-header {
-  padding: 0.4rem 0.75rem;
+  padding: 0.5rem 0.75rem;
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border);
   font-size: 0.75rem;
   font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, monospace;
   color: var(--text-secondary);
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.diff-file-icon {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.diff-file-extra {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 0.7rem;
 }
 
 .diff-content {
@@ -879,6 +898,17 @@ body {
   color: var(--text-secondary);
 }
 .diff-context .diff-line-content::before { content: ' '; margin-right: 4px; }
+
+.diff-hunk {
+  background: rgba(88,166,255,0.08);
+}
+.diff-hunk .diff-line-content {
+  color: var(--accent);
+  font-style: italic;
+}
+.diff-hunk .diff-line-num {
+  visibility: hidden;
+}
 
 /* Syntax highlighting */
 .diff-line-content .kw { color: var(--purple); }
@@ -1270,27 +1300,30 @@ html { scroll-behavior: smooth; }
   </div>
 </header>
 
-<!-- ===== PHASE MINIMAP ===== -->
+<!-- ===== PHASE MINIMAP (sticky below header) ===== -->
 {% if phases %}
-<div class="minimap">
-  <div class="minimap-bar">
-    {% for phase in phases %}
-    <div class="minimap-segment {{ phase.phase }}"
-         style="flex: {{ phase.event_count }};"
-         onclick="jumpToPhase({{ loop.index0 }})">
-      {% if phase.event_count > 5 %}<span class="minimap-label">{{ phase.phase_display }}</span>{% endif %}
-      <span class="minimap-tooltip">{{ phase.phase_display }} &middot; {{ phase.event_count }} events &middot; {{ phase.start_time }}&ndash;{{ phase.end_time }}</span>
+<div class="minimap-sticky">
+  <div class="minimap">
+    <div class="minimap-bar">
+      {% for phase in phases %}
+      <div class="minimap-segment {{ phase.phase }}"
+           style="flex: {{ phase.event_count }};"
+           onclick="jumpToPhase({{ loop.index0 }})"
+           title="{{ phase.phase_display }} — {{ phase.event_count }} events ({{ phase.start_time }}–{{ phase.end_time }})">
+        {% if phase.event_count > 5 %}<span class="minimap-label">{{ phase.phase_display }}</span>{% endif %}
+        <span class="minimap-tooltip">{{ phase.phase_display }} &middot; {{ phase.event_count }} events &middot; {{ phase.start_time }}&ndash;{{ phase.end_time }}</span>
+      </div>
+      {% endfor %}
     </div>
-    {% endfor %}
-  </div>
-  <div class="minimap-legend">
-    <div class="minimap-legend-item"><div class="minimap-legend-dot" style="background:var(--accent)"></div>Explore</div>
-    <div class="minimap-legend-item"><div class="minimap-legend-dot" style="background:var(--success)"></div>Build</div>
-    <div class="minimap-legend-item"><div class="minimap-legend-dot" style="background:var(--danger)"></div>Debug</div>
-    <div class="minimap-legend-item"><div class="minimap-legend-dot" style="background:var(--warning)"></div>Test</div>
-    <div class="minimap-legend-item"><div class="minimap-legend-dot" style="background:var(--purple)"></div>Refactor</div>
-    <div class="minimap-legend-item"><div class="minimap-legend-dot" style="background:var(--orange)"></div>Config</div>
-    <div class="minimap-legend-item"><div class="minimap-legend-dot" style="background:var(--cyan)"></div>Docs</div>
+    <div class="minimap-legend">
+      <div class="minimap-legend-item"><div class="minimap-legend-dot" style="background:var(--accent)"></div>Explore</div>
+      <div class="minimap-legend-item"><div class="minimap-legend-dot" style="background:var(--success)"></div>Build</div>
+      <div class="minimap-legend-item"><div class="minimap-legend-dot" style="background:var(--danger)"></div>Debug</div>
+      <div class="minimap-legend-item"><div class="minimap-legend-dot" style="background:var(--warning)"></div>Test</div>
+      <div class="minimap-legend-item"><div class="minimap-legend-dot" style="background:var(--purple)"></div>Refactor</div>
+      <div class="minimap-legend-item"><div class="minimap-legend-dot" style="background:var(--orange)"></div>Config</div>
+      <div class="minimap-legend-item"><div class="minimap-legend-dot" style="background:var(--cyan)"></div>Docs</div>
+    </div>
   </div>
 </div>
 {% endif %}
@@ -1498,14 +1531,22 @@ html { scroll-behavior: smooth; }
                 {% if event.has_diff %}
                 <div class="diff-block">
                   {% if event.files_affected %}
-                  <div class="diff-file-header">{{ event.files_affected[0] }}</div>
+                  <div class="diff-file-header">
+                    <span class="diff-file-icon">&#128196;</span>
+                    {{ event.files_affected[0] }}
+                    {% if event.files_affected | length > 1 %}
+                    <span class="diff-file-extra">(+{{ event.files_affected | length - 1 }} more)</span>
+                    {% endif %}
+                  </div>
                   {% endif %}
                   <div class="diff-content">
                     {% for line in event.code_diff.split('\n') %}
-                    <div class="diff-line {% if line.startswith('+') %}diff-add{% elif line.startswith('-') %}diff-del{% else %}diff-context{% endif %}">
+                    {% if line %}
+                    <div class="diff-line {% if line.startswith('+') and not line.startswith('+++') %}diff-add{% elif line.startswith('-') and not line.startswith('---') %}diff-del{% elif line.startswith('@@') %}diff-hunk{% else %}diff-context{% endif %}">
                       <span class="diff-line-num">{{ loop.index }}</span>
                       <span class="diff-line-content">{{ line }}</span>
                     </div>
+                    {% endif %}
                     {% endfor %}
                   </div>
                 </div>

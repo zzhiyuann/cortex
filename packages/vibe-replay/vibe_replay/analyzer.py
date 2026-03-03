@@ -153,15 +153,33 @@ def _identify_phase_runs(events: list[Event]) -> list[TimelinePhase]:
     )
 
     # Aggressive merging to reduce fragmentation
-    # Step 1: Absorb tiny runs (< 3 events or < 2 min) into neighbors
-    merged: list[TimelinePhase] = []
+    # Step 1: Merge consecutive same-type phases first (before any size-based merging)
+    same_type_merged: list[TimelinePhase] = []
     for run in runs:
+        if same_type_merged and same_type_merged[-1].phase == run.phase:
+            prev = same_type_merged[-1]
+            same_type_merged[-1] = TimelinePhase(
+                phase=prev.phase,
+                start_index=prev.start_index,
+                end_index=run.end_index,
+                start_time=prev.start_time,
+                end_time=run.end_time,
+                event_count=prev.event_count + run.event_count,
+                key_events=prev.key_events + run.key_events,
+            )
+        else:
+            same_type_merged.append(run)
+
+    # Step 2: Absorb tiny runs (< 3 events or < 2 min) into the larger neighbor
+    merged: list[TimelinePhase] = []
+    for run in same_type_merged:
         run_duration = (run.end_time - run.start_time).total_seconds()
         if merged and (run.event_count < 3 or run_duration < 120):
-            # Absorb into previous phase
+            # Absorb into previous phase (keep the larger phase's type)
             prev = merged[-1]
+            keep_phase = prev.phase if prev.event_count >= run.event_count else run.phase
             merged[-1] = TimelinePhase(
-                phase=prev.phase,
+                phase=keep_phase,
                 start_index=prev.start_index,
                 end_index=run.end_index,
                 start_time=prev.start_time,
@@ -172,7 +190,7 @@ def _identify_phase_runs(events: list[Event]) -> list[TimelinePhase]:
         else:
             merged.append(run)
 
-    # Step 2: If still too many phases, merge adjacent same-type phases
+    # Step 3: After absorbing tiny phases, merge adjacent same-type again
     consolidated: list[TimelinePhase] = []
     for run in merged:
         if consolidated and consolidated[-1].phase == run.phase:
@@ -189,7 +207,7 @@ def _identify_phase_runs(events: list[Event]) -> list[TimelinePhase]:
         else:
             consolidated.append(run)
 
-    # Step 3: Target max 4-8 phases for sessions under 60 min
+    # Step 4: Target max 4-8 phases based on session duration
     total_duration = 0
     if consolidated:
         total_duration = (consolidated[-1].end_time - consolidated[0].start_time).total_seconds()
@@ -202,10 +220,18 @@ def _identify_phase_runs(events: list[Event]) -> list[TimelinePhase]:
         elif min_idx == len(consolidated) - 1:
             merge_with = min_idx - 1
         else:
-            # Merge with the smaller neighbor
-            left = consolidated[min_idx - 1].event_count
-            right = consolidated[min_idx + 1].event_count
-            merge_with = min_idx - 1 if left <= right else min_idx + 1
+            # Prefer merging with same-type neighbor, then smaller neighbor
+            left_phase = consolidated[min_idx - 1].phase
+            right_phase = consolidated[min_idx + 1].phase
+            curr_phase = consolidated[min_idx].phase
+            if left_phase == curr_phase:
+                merge_with = min_idx - 1
+            elif right_phase == curr_phase:
+                merge_with = min_idx + 1
+            else:
+                left = consolidated[min_idx - 1].event_count
+                right = consolidated[min_idx + 1].event_count
+                merge_with = min_idx - 1 if left <= right else min_idx + 1
         a, b = sorted([min_idx, merge_with])
         pa, pb = consolidated[a], consolidated[b]
         # Keep the phase type of the larger one
@@ -621,7 +647,15 @@ def _format_duration(seconds: float) -> str:
 
 
 def _detect_project_name(events: list[Event]) -> str:
-    """Auto-detect project name from event file paths and working directories."""
+    """Auto-detect project name from event file paths and working directories.
+
+    Strategy:
+    1. Collect all absolute file paths from events.
+    2. Find the deepest common directory across all paths.
+    3. Use frequency-based detection: split paths into directory segments,
+       skip generic/root directories, count the most common project-level dir.
+    4. Fall back to git remote name if found in bash event summaries.
+    """
     # Collect all absolute file paths from events
     all_paths: list[str] = []
     for e in events:
@@ -629,36 +663,80 @@ def _detect_project_name(events: list[Event]) -> str:
             if p.startswith("/"):
                 all_paths.append(p)
 
-    if not all_paths:
-        return ""
-
-    # Count project-level directories
-    # Look for paths like /Users/X/projects/PROJECT/ or /home/X/PROJECT/
+    # Generic directories that should never be treated as project names
     skip_dirs = {
         "", "Users", "home", "root", "var", "tmp", "etc", "opt", "usr",
         "src", "lib", "bin", "projects", "repos", "code", "workspace",
+        "Documents", "Desktop", "Downloads", "Applications",
+        "packages", "node_modules", "dist", "build", "out", "target",
+        "venv", ".venv", "env", ".env", "__pycache__",
     }
-    project_counts: Counter = Counter()
-    for p in all_paths:
-        parts = p.strip("/").split("/")
-        # Walk the path to find the first "project-like" directory
-        # Skip: root dirs, username, and generic parent dirs
-        for i, part in enumerate(parts):
-            if part in skip_dirs or part.startswith("."):
-                continue
-            # Skip the username (usually index 1 in /Users/username)
-            if i <= 1:
-                continue
-            # This is likely a project directory
-            project_counts[part] += 1
-            break
 
-    if project_counts:
-        # Return the most common project-level directory
-        name, count = project_counts.most_common(1)[0]
-        # Only use it if it appears in a meaningful number of paths
-        if count >= 2 or len(all_paths) < 5:
-            return name
+    # Strategy 1: Find deepest common directory of all file paths
+    if len(all_paths) >= 2:
+        split_paths = [p.strip("/").split("/") for p in all_paths]
+        min_depth = min(len(sp) for sp in split_paths)
+        common_depth = 0
+        for depth in range(min_depth):
+            if len(set(sp[depth] for sp in split_paths)) == 1:
+                common_depth = depth + 1
+            else:
+                break
+        if common_depth >= 2:
+            # Walk the common prefix from deepest to shallowest,
+            # pick the first non-generic directory name.
+            # Skip index <= 1 (root + username, e.g. "Users"/"dev")
+            common_parts = split_paths[0][:common_depth]
+            for idx in range(len(common_parts) - 1, -1, -1):
+                part = common_parts[idx]
+                if idx <= 1:
+                    continue
+                if part not in skip_dirs and not part.startswith("."):
+                    return part
+
+    # Strategy 2: Frequency-based detection across all paths
+    if all_paths:
+        project_counts: Counter = Counter()
+        for p in all_paths:
+            parts = p.strip("/").split("/")
+            # Walk the path to find the first "project-like" directory
+            # Skip: root dirs, username, and generic parent dirs
+            for i, part in enumerate(parts):
+                if part in skip_dirs or part.startswith("."):
+                    continue
+                # Skip the username (usually index 1 in /Users/username)
+                if i <= 1:
+                    continue
+                # This is likely a project directory
+                project_counts[part] += 1
+                break
+
+        if project_counts:
+            name, count = project_counts.most_common(1)[0]
+            if count >= 2 or len(all_paths) < 5:
+                return name
+
+    # Strategy 3: Look for git remote name in bash event summaries
+    git_remote_pattern = re.compile(
+        r"(?:git[@/]|github\.com[:/])[\w.-]+/([\w.-]+?)(?:\.git)?(?:\s|$|\")"
+    )
+    for e in events:
+        if e.tool_name == "Bash" and e.summary:
+            match = git_remote_pattern.search(e.summary)
+            if match:
+                return match.group(1)
+
+    # Strategy 4: Extract from working directory in bash events
+    # Look for patterns like "cd /path/to/project" or "Ran: ... in /path/to/project"
+    cwd_pattern = re.compile(r"(?:^cd\s+|in\s+)(/\S+)")
+    for e in events:
+        if e.tool_name == "Bash" and e.summary:
+            match = cwd_pattern.search(e.summary)
+            if match:
+                parts = match.group(1).strip("/").split("/")
+                for part in reversed(parts):
+                    if part not in skip_dirs and not part.startswith("."):
+                        return part
 
     return ""
 
@@ -754,90 +832,128 @@ def _generate_session_summary(
     phases: list[TimelinePhase],
     insights: list[Insight],
 ) -> str:
-    """Generate a narrative session summary."""
+    """Generate a narrative session summary.
+
+    Detects the primary activity (building, fixing, refactoring, etc.),
+    names the most-modified files, and produces a human-readable sentence.
+    """
     if not events:
         return "Session recorded"
 
-    # Collect all files and extract key directories
+    # Collect all files and categorize by event type
     all_files: set[str] = set()
     edited_files: set[str] = set()
+    created_files: set[str] = set()
+    file_edit_counts: Counter = Counter()
     for e in events:
         all_files.update(e.files_affected)
         if e.event_type == EventType.CODE_CHANGE:
             edited_files.update(e.files_affected)
+            for f in e.files_affected:
+                file_edit_counts[f] += 1
+        if e.tool_name == "Write" and e.files_affected:
+            created_files.update(e.files_affected)
 
-    # Identify the main project area by most common parent directory
+    # Identify the most-modified files (hotspots)
+    top_files = [f for f, _ in file_edit_counts.most_common(5)]
+    top_short = _extract_short_names(set(top_files[:3]), max_names=3) if top_files else []
+
+    # Detect the primary activity by analyzing the dominant phase
+    phase_durations: dict[SessionPhase, float] = {}
+    phase_events: dict[SessionPhase, int] = {}
+    for phase in phases:
+        dur = (phase.end_time - phase.start_time).total_seconds()
+        phase_durations[phase.phase] = phase_durations.get(phase.phase, 0) + dur
+        phase_events[phase.phase] = phase_events.get(phase.phase, 0) + phase.event_count
+
+    dominant_phase = max(phase_events, key=phase_events.get) if phase_events else None
+
+    # Detect specific activity from event summaries
+    activity_keywords: dict[str, list[str]] = {
+        "building a feature": ["add", "create", "implement", "build", "new"],
+        "fixing bugs": ["fix", "bug", "patch", "resolve", "repair"],
+        "refactoring": ["refactor", "rename", "move", "clean", "restructure"],
+        "setting up": ["setup", "install", "config", "init", "bootstrap"],
+        "writing tests": ["test", "spec", "assert", "coverage"],
+    }
+    activity_scores: Counter = Counter()
+    for e in events:
+        summary_lower = e.summary.lower()
+        for activity, keywords in activity_keywords.items():
+            for kw in keywords:
+                if kw in summary_lower:
+                    activity_scores[activity] += 1
+
+    # Determine primary activity label
+    primary_activity = ""
+    if activity_scores:
+        top_activity, top_score = activity_scores.most_common(1)[0]
+        if top_score >= 3:
+            primary_activity = top_activity
+
+    # Identify the main area
     project_dirs: Counter = Counter()
     for f in edited_files or all_files:
         parts = f.rstrip("/").split("/")
-        # Find a meaningful directory (skip generic ones)
         for i in range(len(parts) - 1, 0, -1):
             parent = parts[i - 1]
-            if parent not in ("", "src", "lib", "bin", "var", "tmp", "usr"):
+            if parent not in ("", "src", "lib", "bin", "var", "tmp", "usr",
+                              "packages", "node_modules"):
                 project_dirs[parent] += 1
                 break
+    main_area = project_dirs.most_common(1)[0][0] if project_dirs else ""
 
-    main_area = ""
-    if project_dirs:
-        main_area = project_dirs.most_common(1)[0][0]
-
-    # Build narrative from phases
-    activities: list[str] = []
-    for phase in phases:
-        phase_files = set()
-        for e in events[phase.start_index : phase.end_index + 1]:
-            phase_files.update(e.files_affected)
-        short_files = _extract_short_names(phase_files, max_names=2)
-
-        if phase.phase == SessionPhase.EXPLORATION:
-            if short_files:
-                activities.append(f"explored {', '.join(short_files)}")
-            else:
-                activities.append("explored the codebase")
-        elif phase.phase == SessionPhase.IMPLEMENTATION:
-            if short_files:
-                activities.append(f"built {', '.join(short_files)}")
-            else:
-                activities.append("implemented new code")
-        elif phase.phase == SessionPhase.DEBUGGING:
-            activities.append("debugged issues")
-        elif phase.phase == SessionPhase.TESTING:
-            activities.append("ran tests")
-        elif phase.phase == SessionPhase.CONFIGURATION:
-            if short_files:
-                activities.append(f"configured {', '.join(short_files)}")
-            else:
-                activities.append("set up configuration")
-        elif phase.phase == SessionPhase.REFACTORING:
-            activities.append("refactored code")
-        elif phase.phase == SessionPhase.DOCUMENTATION:
-            activities.append("updated documentation")
-
-    # Deduplicate while preserving order
-    seen: set[str] = set()
-    unique_activities: list[str] = []
-    for a in activities:
-        if a not in seen:
-            seen.add(a)
-            unique_activities.append(a)
-
-    # Build the narrative
-    if len(unique_activities) <= 1:
-        narrative = unique_activities[0] if unique_activities else "worked on files"
-    elif len(unique_activities) == 2:
-        narrative = f"{unique_activities[0]}, then {unique_activities[1]}"
+    # Build the narrative sentence
+    # Start with the primary action
+    if primary_activity and top_short:
+        narrative = f"{primary_activity.capitalize()} in {', '.join(top_short)}"
+    elif primary_activity and main_area:
+        narrative = f"{primary_activity.capitalize()} in {main_area}"
+    elif dominant_phase == SessionPhase.IMPLEMENTATION and top_short:
+        if created_files:
+            narrative = f"Built {', '.join(_extract_short_names(created_files, max_names=2))}"
+            if edited_files - created_files:
+                other = _extract_short_names(edited_files - created_files, max_names=2)
+                narrative += f" and modified {', '.join(other)}"
+        else:
+            narrative = f"Modified {', '.join(top_short)}"
+    elif dominant_phase == SessionPhase.DEBUGGING:
+        narrative = "Debugged and fixed issues"
+        if top_short:
+            narrative += f" in {', '.join(top_short[:2])}"
+    elif dominant_phase == SessionPhase.EXPLORATION:
+        narrative = "Explored and analyzed the codebase"
+        if top_short:
+            narrative += f", focusing on {', '.join(top_short[:2])}"
+    elif dominant_phase == SessionPhase.TESTING:
+        narrative = "Ran and updated tests"
+        if top_short:
+            narrative += f" for {', '.join(top_short[:2])}"
+    elif dominant_phase == SessionPhase.CONFIGURATION:
+        narrative = "Configured project settings"
+        if top_short:
+            narrative += f" ({', '.join(top_short[:2])})"
+    elif top_short:
+        narrative = f"Worked on {', '.join(top_short)}"
     else:
-        narrative = ", ".join(unique_activities[:-1]) + f", and {unique_activities[-1]}"
+        narrative = "Coding session"
 
-    # Capitalize first letter
-    narrative = narrative[0].upper() + narrative[1:]
+    # Add the workflow arc (how the session progressed)
+    if len(phases) >= 2:
+        phase_names = []
+        seen: set[str] = set()
+        for p in phases:
+            name = p.phase.value.replace("_", " ")
+            if name not in seen:
+                seen.add(name)
+                phase_names.append(name)
+        if len(phase_names) >= 2:
+            arc = " -> ".join(phase_names[:4])
+            narrative += f". Flow: {arc}"
 
     # Add scope context
-    if main_area and len(edited_files) > 1:
-        narrative += f". Focused on {main_area}/ ({len(edited_files)} files changed)"
-    elif edited_files:
-        short = _extract_short_names(edited_files, max_names=3)
-        narrative += f". Changed {', '.join(short)}"
+    if len(edited_files) > 3:
+        narrative += f" ({len(edited_files)} files changed)"
 
     # Add error context if relevant
     error_count = sum(1 for e in events if e.event_type == EventType.ERROR)

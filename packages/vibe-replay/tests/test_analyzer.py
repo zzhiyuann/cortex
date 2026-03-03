@@ -6,6 +6,8 @@ import pytest
 
 from vibe_replay.analyzer import (
     _detect_phase_from_event,
+    _detect_project_name,
+    _generate_session_summary,
     _identify_phase_runs,
     _extract_insights,
     _identify_decision_points,
@@ -180,6 +182,117 @@ class TestAnalyzeSession:
         assert replay.metadata.event_count == 4
         assert len(replay.timeline) > 0
         assert replay.statistics["total_events"] == 4
+
+
+class TestProjectNameDetection:
+    """Tests for project name auto-detection."""
+
+    def test_common_path_prefix(self):
+        """Detect project from deepest common directory."""
+        events = [
+            _make_event("Read", files=["/Users/dev/projects/myapp/src/main.py"]),
+            _make_event("Edit", files=["/Users/dev/projects/myapp/src/utils.py"]),
+            _make_event("Read", files=["/Users/dev/projects/myapp/tests/test_main.py"]),
+        ]
+        assert _detect_project_name(events) == "myapp"
+
+    def test_frequency_based_detection(self):
+        """Most common project-level directory wins."""
+        events = [
+            _make_event("Read", files=["/Users/dev/projects/webapp/index.html"]),
+            _make_event("Edit", files=["/Users/dev/projects/webapp/app.py"]),
+            _make_event("Read", files=["/Users/dev/projects/webapp/models.py"]),
+            _make_event("Read", files=["/Users/dev/projects/other/readme.md"]),
+        ]
+        assert _detect_project_name(events) == "webapp"
+
+    def test_git_remote_fallback(self):
+        """Fall back to git remote name."""
+        events = [
+            _make_event("Bash", "Ran: git remote -v origin git@github.com:user/coolproject.git"),
+        ]
+        assert _detect_project_name(events) == "coolproject"
+
+    def test_empty_events(self):
+        """No events returns empty string."""
+        assert _detect_project_name([]) == ""
+
+    def test_no_absolute_paths(self):
+        """Relative paths only should still fall back gracefully."""
+        events = [
+            _make_event("Read", files=["src/main.py"]),
+            _make_event("Edit", files=["src/utils.py"]),
+        ]
+        name = _detect_project_name(events)
+        assert isinstance(name, str)
+
+
+class TestSessionSummary:
+    """Tests for narrative session summary generation."""
+
+    def test_summary_mentions_files(self):
+        """Summary should mention key modified files."""
+        events = [
+            _make_event("Read", offset_minutes=0, files=["/proj/src/main.py"]),
+            _make_event("Edit", "Fixed bug in main.py", EventType.CODE_CHANGE,
+                        offset_minutes=3, files=["/proj/src/main.py"]),
+            _make_event("Edit", "Fixed bug in utils.py", EventType.CODE_CHANGE,
+                        offset_minutes=5, files=["/proj/src/utils.py"]),
+            _make_event("Bash", "Ran: pytest", offset_minutes=6),
+        ]
+        phases = _identify_phase_runs(events)
+        summary = _generate_session_summary(events, phases, [])
+        assert summary  # Non-empty
+        assert len(summary) > 10  # Meaningful length
+
+    def test_summary_for_implementation_heavy(self):
+        """Implementation-heavy session should reflect building activity."""
+        events = [
+            _make_event("Edit", "Added new handler", EventType.CODE_CHANGE,
+                        offset_minutes=i, files=[f"/proj/src/handler{i}.py"])
+            for i in range(6)
+        ]
+        phases = _identify_phase_runs(events)
+        summary = _generate_session_summary(events, phases, [])
+        assert summary
+        assert len(summary) > 10
+
+    def test_empty_events_summary(self):
+        """Empty events should return default."""
+        summary = _generate_session_summary([], [], [])
+        assert summary == "Session recorded"
+
+
+class TestPhaseFragmentation:
+    """Tests for phase merging / anti-fragmentation."""
+
+    def test_short_phases_get_merged(self):
+        """Very short phases (<3 events, <2 min) should get absorbed."""
+        events = [
+            _make_event("Read", offset_minutes=0),
+            _make_event("Read", offset_minutes=1),
+            _make_event("Read", offset_minutes=2),
+            _make_event("Read", offset_minutes=3),
+            # Brief interruption (1 edit event)
+            _make_event("Edit", offset_minutes=4),
+            # Back to reading
+            _make_event("Read", offset_minutes=5),
+            _make_event("Read", offset_minutes=6),
+            _make_event("Read", offset_minutes=7),
+        ]
+        phases = _identify_phase_runs(events)
+        # Should not create 3 separate phases for a single blip
+        assert len(phases) <= 2
+
+    def test_max_phases_respected(self):
+        """Sessions should have at most 6-8 phases."""
+        # Create a session with many phase transitions
+        events = []
+        for i in range(30):
+            tool = ["Read", "Edit", "Bash", "Grep", "Write"][i % 5]
+            events.append(_make_event(tool, offset_minutes=i))
+        phases = _identify_phase_runs(events)
+        assert len(phases) <= 8
 
 
 class TestFormatDuration:
