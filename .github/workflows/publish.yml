@@ -1,0 +1,35 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    strategy:
+      matrix:
+        package:
+          - vibe-replay
+          - agent-dispatcher
+          - forge-agent
+          - a2a-hub
+          - cortex-cli-agent
+          - cortex-memory
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Build ${{ matrix.package }}
+        run: uv build --package ${{ matrix.package }}
+
+      - name: Publish ${{ matrix.package }}
+        run: uv publish dist/*
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}

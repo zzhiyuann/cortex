@@ -6,14 +6,31 @@ build-backend = "hatchling.build"
 name = "cortex-memory"
 version = "0.1.0"
 description = "Long-term memory module for Cortex — semantic search + LLM extraction"
+readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
-authors = [{ name = "Zhe Wang" }]
+authors = [{ name = "Zhiyuan Wang" }]
 dependencies = [
     "numpy",
     "anthropic",
     "mcp",
 ]
+
+keywords = ["memory", "ai", "semantic-search", "mcp", "agent"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[project.urls]
+Homepage = "https://github.com/zzhiyuann/cortex/tree/main/packages/memory"
+Repository = "https://github.com/zzhiyuann/cortex"
+Issues = "https://github.com/zzhiyuann/cortex/issues"
 
 [project.scripts]
 memory = "memory.cli:main"

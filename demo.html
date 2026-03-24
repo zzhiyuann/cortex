@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cortex Demo — MCP Plug-in Layer for AI Coding Agents</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-surface: #161b22;
+    --bg-terminal: #0d1117;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --green: #3fb950;
+    --blue: #58a6ff;
+    --purple: #bc8cff;
+    --yellow: #d29922;
+    --red: #f85149;
+    --cyan: #39d2c0;
+    --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 4rem 2rem 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .header h1 span { color: var(--blue); }
+  .header .subtitle {
+    color: var(--text-muted);
+    font-size: 1.15rem;
+    margin-bottom: 2rem;
+  }
+  .header .badges {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+  }
+  .badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-family: var(--font-mono);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  .badge.green { border-color: var(--green); color: var(--green); }
+  .badge.blue { border-color: var(--blue); color: var(--blue); }
+  .badge.purple { border-color: var(--purple); color: var(--purple); }
+  .badge.yellow { border-color: var(--yellow); color: var(--yellow); }
+
+  /* Demo container */
+  .demo-section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 2rem 4rem;
+  }
+  .demo-section h2 {
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  /* Terminal */
+  .terminal {
+    background: var(--bg-terminal);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .terminal-bar {
+    background: var(--bg-surface);
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .terminal-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .terminal-dot.red { background: #ff5f57; }
+  .terminal-dot.yellow { background: #febc2e; }
+  .terminal-dot.green { background: #28c840; }
+  .terminal-title {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+  }
+  .terminal-body {
+    padding: 1.25rem;
+    line-height: 1.7;
+    min-height: 120px;
+    overflow-x: auto;
+  }
+  .terminal-body .line {
+    white-space: pre;
+    opacity: 0;
+    transform: translateY(4px);
+    animation: lineAppear 0.3s ease forwards;
+  }
+  .prompt { color: var(--green); }
+  .cmd { color: var(--text); }
+  .output { color: var(--text-muted); }
+  .highlight { color: var(--blue); }
+  .accent { color: var(--purple); }
+  .warn { color: var(--yellow); }
+  .success { color: var(--green); }
+  .dim { color: #484f58; }
+
+  @keyframes lineAppear {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Scenario tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .tab.active {
+    color: var(--blue);
+    border-bottom-color: var(--blue);
+    background: rgba(88,166,255,0.05);
+  }
+
+  .scenario { display: none; }
+  .scenario.active { display: block; }
+
+  /* Architecture diagram */
+  .arch {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    line-height: 1.8;
+    white-space: pre;
+    overflow-x: auto;
+    color: var(--text-muted);
+  }
+
+  /* Component cards */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--blue); }
+  .card h3 {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+  .card .tag {
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 0.75rem;
+  }
+  .card .tag.beta { background: rgba(63,185,80,0.15); color: var(--green); }
+  .card .tag.alpha { background: rgba(210,153,34,0.15); color: var(--yellow); }
+  .card p { color: var(--text-muted); font-size: 0.85rem; }
+  .card code {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    background: rgba(255,255,255,0.06);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    color: var(--cyan);
+  }
+
+  /* Install section */
+  .install-cmd {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .install-cmd .dollar { color: var(--green); user-select: none; }
+  .install-cmd .copy-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-family: var(--font-sans);
+  }
+  .install-cmd .copy-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+  .footer {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border);
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .footer a { color: var(--blue); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>Cortex</span></h1>
+  <p class="subtitle">MCP plug-in layer for AI coding agents</p>
+  <div class="badges">
+    <span class="badge green">MCP Native</span>
+    <span class="badge blue">Claude Code</span>
+    <span class="badge purple">52K LOC Python</span>
+    <span class="badge yellow">MIT License</span>
+  </div>
+</div>
+
+<div class="demo-section">
+  <h2>What it looks like</h2>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showScenario('replay')">Vibe Replay</button>
+    <button class="tab" onclick="showScenario('forge')">Forge</button>
+    <button class="tab" onclick="showScenario('dispatcher')">Dispatcher</button>
+    <button class="tab" onclick="showScenario('a2a')">A2A Hub</button>
+  </div>
+
+  <!-- Vibe Replay scenario -->
+  <div class="scenario active" id="scenario-replay">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">Claude Code — with Vibe Replay</span>
+      </div>
+      <div class="terminal-body" id="replay-body"></div>
+    </div>
+  </div>
+
+  <!-- Forge scenario -->
+  <div class="scenario" id="scenario-forge">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">Claude Code — with Forge</span>
+      </div>
+      <div class="terminal-body" id="forge-body"></div>
+    </div>
+  </div>
+
+  <!-- Dispatcher scenario -->
+  <div class="scenario" id="scenario-dispatcher">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">Telegram — Dispatcher</span>
+      </div>
+      <div class="terminal-body" id="dispatcher-body"></div>
+    </div>
+  </div>
+
+  <!-- A2A Hub scenario -->
+  <div class="scenario" id="scenario-a2a">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <span class="terminal-dot red"></span>
+        <span class="terminal-dot yellow"></span>
+        <span class="terminal-dot green"></span>
+        <span class="terminal-title">Claude Code — with A2A Hub</span>
+      </div>
+      <div class="terminal-body" id="a2a-body"></div>
+    </div>
+  </div>
+
+  <h2 style="margin-top: 2rem;">How it works</h2>
+
+  <div class="arch"><span class="highlight">Cortex</span> extends your agent through the <span class="accent">Model Context Protocol (MCP)</span>.
+Each component is an MCP server that plugs into Claude Code / Cursor / Windsurf.
+
+<span class="dim">┌──────────────────────────────────────────────────────────┐</span>
+<span class="dim">│</span>                   <span class="highlight">CORTEX</span> (plug-in layer)                  <span class="dim">│</span>
+<span class="dim">│</span>                                                          <span class="dim">│</span>
+<span class="dim">│</span>  <span class="warn">Dispatcher</span>      <span class="accent">A2A Hub</span>      <span class="success">Forge</span>      <span class="highlight">Vibe Replay</span>  <span class="dim">│</span>
+<span class="dim">│</span>  <span class="output">remote cmd</span>      <span class="output">agent comms</span>   <span class="output">tool gen</span>   <span class="output">session mem</span>  <span class="dim">│</span>
+<span class="dim">│</span>                                                          <span class="dim">│</span>
+<span class="dim">│</span>     <span class="output">MCP</span>             <span class="output">MCP</span>          <span class="output">MCP</span>      <span class="output">MCP + Hooks</span>  <span class="dim">│</span>
+<span class="dim">└──────────────────────────┬───────────────────────────────┘</span>
+                           <span class="dim">│</span>
+              <span class="dim">┌────────────▼─────────────────┐</span>
+              <span class="dim">│</span>  <span class="text">Your Agent</span>                    <span class="dim">│</span>
+              <span class="dim">│</span>  <span class="output">Claude Code / Cursor / etc.</span>  <span class="dim">│</span>
+              <span class="dim">└──────────────────────────────┘</span></div>
+
+  <h2>Components</h2>
+
+  <div class="cards">
+    <div class="card">
+      <h3>Dispatcher</h3>
+      <span class="tag beta">Beta</span>
+      <p>Control your agent from your phone via Telegram. Session management, project routing, concurrent tasks.</p>
+      <p style="margin-top: 0.5rem;"><code>pip install agent-dispatcher</code></p>
+    </div>
+    <div class="card">
+      <h3>A2A Hub</h3>
+      <span class="tag alpha">Alpha</span>
+      <p>Agent-to-Agent protocol. WebSocket hub with service discovery, task delegation, and MCP bridge.</p>
+      <p style="margin-top: 0.5rem;"><code>pip install a2a-hub</code></p>
+    </div>
+    <div class="card">
+      <h3>Forge</h3>
+      <span class="tag alpha">Alpha</span>
+      <p>Self-evolving tool agent. Describe what you need &mdash; Forge generates, tests, iterates, and installs it.</p>
+      <p style="margin-top: 0.5rem;"><code>pip install forge-agent</code></p>
+    </div>
+    <div class="card">
+      <h3>Vibe Replay</h3>
+      <span class="tag alpha">Alpha</span>
+      <p>Capture AI coding sessions, extract decisions and patterns, generate shareable HTML replays.</p>
+      <p style="margin-top: 0.5rem;"><code>pip install vibe-replay</code></p>
+    </div>
+  </div>
+
+  <h2>Install</h2>
+
+  <div class="install-cmd">
+    <span class="dollar">$</span>
+    <span>pip install cortex-cli-agent[all]</span>
+    <button class="copy-btn" onclick="copyCmd(this, 'pip install cortex-cli-agent[all]')">Copy</button>
+  </div>
+  <div class="install-cmd">
+    <span class="dollar">$</span>
+    <span>cortex init</span>
+    <button class="copy-btn" onclick="copyCmd(this, 'cortex init')">Copy</button>
+  </div>
+  <div class="install-cmd">
+    <span class="dollar">$</span>
+    <span>cortex status</span>
+    <button class="copy-btn" onclick="copyCmd(this, 'cortex status')">Copy</button>
+  </div>
+</div>
+
+<div class="footer">
+  <p>
+    <a href="https://github.com/zzhiyuann/cortex">GitHub</a> &middot;
+    <a href="https://zzhiyuann.github.io/cortex/">Docs</a> &middot;
+    <a href="https://pypi.org/project/cortex-cli-agent/">PyPI</a>
+  </p>
+  <p style="margin-top: 0.5rem;">MIT License &middot; Built by Zhiyuan Wang</p>
+</div>
+
+<script>
+const scenarios = {
+  replay: [
+    { type: 'prompt', text: '$ vibe-replay sessions' },
+    { type: 'output', text: '' },
+    { type: 'output', text: '  ID          Date        Duration  Events  Project' },
+    { type: 'output', text: '  ────────────────────────────────────────────────────────' },
+    { type: 'highlight', text: '  bb15505a    2026-03-22  47min     127     cortex' },
+    { type: 'output', text: '  a3c81f02    2026-03-21  1h 12min  203     webapp' },
+    { type: 'output', text: '  f7d429e1    2026-03-20  23min     54      api-server' },
+    { type: 'output', text: '' },
+    { type: 'prompt', text: '$ vibe-replay replay bb15505a' },
+    { type: 'output', text: '' },
+    { type: 'success', text: '  Analyzing 127 events...' },
+    { type: 'success', text: '  Detected 5 phases: exploration → implementation → debugging → testing → cleanup' },
+    { type: 'success', text: '  Found 3 key decisions, 1 turning point' },
+    { type: 'success', text: '  Generated replay → opening in browser...' },
+    { type: 'output', text: '' },
+    { type: 'accent', text: '  Key Decision: Chose WebSocket over HTTP polling for real-time agent status' },
+    { type: 'accent', text: '  Turning Point: Race condition in session tracker fixed with mutex' },
+    { type: 'accent', text: '  Pattern: Test → fix → verify cycle repeated 3x for concurrent dispatch' },
+  ],
+  forge: [
+    { type: 'prompt', text: '$ claude' },
+    { type: 'output', text: '' },
+    { type: 'highlight', text: '  You: I need a tool that validates YAML configs against a JSON schema' },
+    { type: 'output', text: '' },
+    { type: 'accent', text: '  Claude: I\'ll use Forge to build that for you.' },
+    { type: 'output', text: '' },
+    { type: 'output', text: '  [MCP] forge_create("validate YAML against JSON schema", type="cli")' },
+    { type: 'warn', text: '  Forge: 2 clarification questions:' },
+    { type: 'warn', text: '    1. Should it support $ref in JSON schemas?' },
+    { type: 'warn', text: '    2. Output format: exit code only, or detailed error report?' },
+    { type: 'output', text: '' },
+    { type: 'highlight', text: '  You: Yes to $ref, detailed errors please.' },
+    { type: 'output', text: '' },
+    { type: 'output', text: '  [MCP] forge_generate()' },
+    { type: 'success', text: '  Generated yaml_validator.py (87 lines)' },
+    { type: 'success', text: '  Generated test_yaml_validator.py (12 tests)' },
+    { type: 'success', text: '  Running tests... 12/12 passed' },
+    { type: 'output', text: '' },
+    { type: 'output', text: '  [MCP] forge_install(target="cli")' },
+    { type: 'success', text: '  Installed to ~/.local/bin/yaml-validator' },
+    { type: 'accent', text: '  Claude: Done! Run: yaml-validator config.yaml schema.json' },
+  ],
+  dispatcher: [
+    { type: 'output', text: '  ┌──────────────────────────────────────┐' },
+    { type: 'output', text: '  │  Telegram                            │' },
+    { type: 'output', text: '  ├──────────────────────────────────────┤' },
+    { type: 'output', text: '  │                                      │' },
+    { type: 'highlight', text: '  │  You: Fix the login bug in webapp   │' },
+    { type: 'output', text: '  │                                      │' },
+    { type: 'warn', text: '  │  Bot: On it. Routing to ~/projects/  │' },
+    { type: 'warn', text: '  │       webapp (matched: "webapp")      │' },
+    { type: 'output', text: '  │                                      │' },
+    { type: 'warn', text: '  │  Bot: Working... (3 files changed)    │' },
+    { type: 'output', text: '  │                                      │' },
+    { type: 'success', text: '  │  Bot: Fixed. The issue was a race    │' },
+    { type: 'success', text: '  │  condition in the OAuth callback.    │' },
+    { type: 'success', text: '  │  Added mutex around token refresh.   │' },
+    { type: 'success', text: '  │  All 48 tests passing.              │' },
+    { type: 'output', text: '  │                                      │' },
+    { type: 'highlight', text: '  │  You: Nice, now add rate limiting   │' },
+    { type: 'output', text: '  │                                      │' },
+    { type: 'warn', text: '  │  Bot: Following up on same project.  │' },
+    { type: 'warn', text: '  │  Starting new session...              │' },
+    { type: 'output', text: '  │                                      │' },
+    { type: 'output', text: '  └──────────────────────────────────────┘' },
+  ],
+  a2a: [
+    { type: 'prompt', text: '$ a2a-hub start' },
+    { type: 'output', text: '  Hub listening on ws://localhost:8765' },
+    { type: 'output', text: '' },
+    { type: 'output', text: '  [agent] code-reviewer registered (capabilities: code-review)' },
+    { type: 'output', text: '  [agent] test-runner registered (capabilities: run-tests, coverage)' },
+    { type: 'output', text: '  [bridge] MCP bridge connected' },
+    { type: 'output', text: '' },
+    { type: 'output', text: '  ─── Claude Code session ───' },
+    { type: 'output', text: '' },
+    { type: 'highlight', text: '  You: Review the changes in src/auth.py and run the test suite' },
+    { type: 'output', text: '' },
+    { type: 'accent', text: '  Claude: I\'ll delegate to the specialized agents.' },
+    { type: 'output', text: '' },
+    { type: 'output', text: '  [MCP] discover_agents(capability="code-review")' },
+    { type: 'output', text: '  [MCP] delegate_task(agent="code-reviewer", params={file: "src/auth.py"})' },
+    { type: 'output', text: '  [MCP] delegate_task(agent="test-runner", params={suite: "all"})' },
+    { type: 'output', text: '' },
+    { type: 'success', text: '  code-reviewer: 2 issues found (missing input validation, unused import)' },
+    { type: 'success', text: '  test-runner: 147/148 tests pass, 1 flaky (test_concurrent_login)' },
+    { type: 'output', text: '' },
+    { type: 'accent', text: '  Claude: Review complete. I\'ll fix the validation issue and investigate the flaky test.' },
+  ],
+};
+
+let activeScenario = 'replay';
+let animationTimer = null;
+
+function showScenario(name) {
+  activeScenario = name;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.scenario').forEach(s => s.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('scenario-' + name).classList.add('active');
+
+  if (animationTimer) clearInterval(animationTimer);
+  animateScenario(name);
+}
+
+function animateScenario(name) {
+  const body = document.getElementById(name + '-body');
+  body.innerHTML = '';
+  const lines = scenarios[name];
+  let i = 0;
+
+  function addLine() {
+    if (i >= lines.length) return;
+    const line = lines[i];
+    const div = document.createElement('div');
+    div.className = 'line';
+    div.style.animationDelay = '0s';
+
+    let cls = line.type;
+    if (cls === 'prompt') {
+      div.innerHTML = '<span class="prompt">' + escapeHtml(line.text) + '</span>';
+    } else if (cls === 'highlight') {
+      div.innerHTML = '<span class="highlight">' + escapeHtml(line.text) + '</span>';
+    } else if (cls === 'accent') {
+      div.innerHTML = '<span class="accent">' + escapeHtml(line.text) + '</span>';
+    } else if (cls === 'warn') {
+      div.innerHTML = '<span class="warn">' + escapeHtml(line.text) + '</span>';
+    } else if (cls === 'success') {
+      div.innerHTML = '<span class="success">' + escapeHtml(line.text) + '</span>';
+    } else {
+      div.innerHTML = '<span class="output">' + escapeHtml(line.text) + '</span>';
+    }
+
+    body.appendChild(div);
+    i++;
+    animationTimer = setTimeout(addLine, line.text.trim() === '' ? 50 : 120);
+  }
+  addLine();
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function copyCmd(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
+// Auto-start first scenario
+animateScenario('replay');
+</script>
+</body>
+</html>
