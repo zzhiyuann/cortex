@@ -51,11 +51,11 @@ except ImportError:
 
 log = logging.getLogger("dispatcher")
 
-# Optional long-term memory integration (cortex-memory package)
+# Optional long-term memory integration (cortex-agent-memory package)
 try:
     from memory import MemoryStore, FactExtractor  # type: ignore
     HAS_MEMORY = True
-    log.debug("cortex-memory available")
+    log.debug("cortex-agent-memory available")
 except ImportError:
     HAS_MEMORY = False
 
@@ -1528,7 +1528,7 @@ class Dispatcher:
                     + history
                 )
 
-        # 2. Query cortex-memory for semantically relevant facts
+        # 2. Query cortex-agent-memory for semantically relevant facts
         if HAS_MEMORY:
             try:
                 def _search():
@@ -2277,7 +2277,7 @@ class Dispatcher:
         """Extract facts from a completed conversation and store them in memory.
 
         Runs in background via asyncio.create_task — never blocks dispatch loop.
-        Silently no-ops if cortex-memory is unavailable.
+        Silently no-ops if cortex-agent-memory is unavailable.
         """
         if not HAS_MEMORY:
             return

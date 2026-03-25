@@ -18,7 +18,7 @@ jobs:
           - forge-agent
           - a2a-hub
           - cortex-cli-agent
-          - cortex-memory
+          - cortex-agent-memory
     steps:
       - uses: actions/checkout@v4
 

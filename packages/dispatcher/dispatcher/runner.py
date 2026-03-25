@@ -46,7 +46,7 @@ class AgentRunner:
         question_timeout: int = 600,
     ):
         self.command = command
-        self.args = args or ["-p", "--dangerously-skip-permissions"]
+        self.args = args or ["-p", "--permission-mode", "auto"]
         self.timeout = timeout
         self.question_timeout = question_timeout
         self._resolve_command()

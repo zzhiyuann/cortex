@@ -25,7 +25,7 @@ def _run_server():
     from .store import MemoryStore
 
     store = MemoryStore()
-    mcp = FastMCP("cortex-memory")
+    mcp = FastMCP("cortex-agent-memory")
 
     @mcp.tool()
     def remember(
@@ -141,7 +141,7 @@ def _run_server():
         except Exception as exc:
             return f"Error listing memories: {exc}"
 
-    log.info("Starting cortex-memory MCP server")
+    log.info("Starting cortex-agent-memory MCP server")
     mcp.run()
 
 

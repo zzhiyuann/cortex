@@ -8,7 +8,7 @@ telegram:
 
 agent:
   command: "claude"                    # AI agent CLI command (claude, aider, etc.)
-  args: ["-p", "--dangerously-skip-permissions"]
+  args: ["-p", "--permission-mode", "auto"]
   max_concurrent: 3                    # Max parallel agent sessions
   timeout: 1800                        # Task timeout in seconds (30 min)
   max_turns: 50                        # Max agent turns for project tasks

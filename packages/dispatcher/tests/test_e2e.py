@@ -699,7 +699,7 @@ class TestStreamParsing:
 class TestRunnerCommandBuild:
     def test_stream_json_with_verbose(self):
         """stream-json mode must include --verbose."""
-        runner = AgentRunner(command="claude", args=["-p", "--dangerously-skip-permissions"])
+        runner = AgentRunner(command="claude", args=["-p", "--permission-mode", "auto"])
         # Simulate command building by checking _is_claude
         assert runner._is_claude()
 

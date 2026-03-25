@@ -170,10 +170,10 @@ vibe-replay export <id> --format json -o data.json
 ## Development
 
 ```bash
-git clone https://github.com/zzhiyuann/vibe-replay.git
-cd vibe-replay
-pip install -e ".[dev]"
-pytest
+git clone https://github.com/zzhiyuann/cortex.git
+cd cortex
+uv sync --all-packages
+uv run pytest packages/vibe-replay/tests/
 ```
 
 ## License

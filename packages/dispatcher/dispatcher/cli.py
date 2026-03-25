@@ -58,7 +58,7 @@ def init():
         },
         "agent": {
             "command": agent_cmd,
-            "args": ["-p", "--dangerously-skip-permissions"],
+            "args": ["-p", "--permission-mode", "auto"],
             "max_concurrent": 3,
             "timeout": 1800,
         },

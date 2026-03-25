@@ -427,7 +427,7 @@ telegram:
 
 agent:
   command: "claude"
-  args: ["-p", "--dangerously-skip-permissions"]
+  args: ["-p", "--permission-mode", "auto"]
   max_concurrent: 3
   timeout: 1800
   max_turns: 50
@@ -626,7 +626,7 @@ def run_status():
             config = json.loads(MCP_CONFIG.read_text())
             servers = config.get("mcpServers", {})
             cortex_servers = {k: v for k, v in servers.items()
-                             if k in ("forge", "a2a-hub", "cortex-memory")}
+                             if k in ("forge", "a2a-hub", "cortex-agent-memory")}
             if cortex_servers:
                 for name, cfg in cortex_servers.items():
                     cmd = cfg.get("command", "?")

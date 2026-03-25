@@ -43,6 +43,7 @@ all = [
     "a2a-hub",
     "vibe-replay",
     "agent-dispatcher",
+    "cortex-agent-memory",
 ]
 
 [tool.uv.sources]
@@ -50,3 +51,4 @@ forge-agent = { workspace = true }
 a2a-hub = { workspace = true }
 vibe-replay = { workspace = true }
 agent-dispatcher = { workspace = true }
+cortex-agent-memory = { workspace = true }

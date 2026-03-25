@@ -7,7 +7,7 @@ Memory stores learnings, patterns, and decisions from past sessions and makes th
 ## Quick Start
 
 ```bash
-pip install cortex-memory
+pip install cortex-agent-memory
 
 # Start the MCP server
 python -m memory.server

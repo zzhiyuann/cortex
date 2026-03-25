@@ -236,7 +236,7 @@ def _wake_resolver(trigger_issue: dict):
             proc = subprocess.Popen(
                 [
                     claude_bin, "-p",
-                    "--dangerously-skip-permissions",
+                    "--permission-mode", "auto",
                     "--max-turns", "15",
                     prompt,
                 ],

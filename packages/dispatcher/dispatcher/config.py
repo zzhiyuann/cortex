@@ -20,7 +20,7 @@ DEFAULTS: dict[str, Any] = {
     },
     "agent": {
         "command": "claude",
-        "args": ["-p", "--dangerously-skip-permissions"],
+        "args": ["-p", "--permission-mode", "auto"],
         "max_concurrent": 3,
         "timeout": 1800,
         "max_turns": 50,

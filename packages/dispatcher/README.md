@@ -53,7 +53,7 @@ telegram:
 
 agent:
   command: "claude"                   # Or "aider", any CLI agent
-  args: ["-p", "--dangerously-skip-permissions"]
+  args: ["-p", "--permission-mode", "auto"]
   max_concurrent: 3
   timeout: 1800                       # 30 min
 

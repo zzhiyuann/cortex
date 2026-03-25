@@ -223,7 +223,7 @@ def start_agent(
         proc = subprocess.Popen(
             [
                 "claude", "-p",
-                "--dangerously-skip-permissions",
+                "--permission-mode", "auto",
                 "--max-turns", str(max_turns),
                 prompt,
             ],

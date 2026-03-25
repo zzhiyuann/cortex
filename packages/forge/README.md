@@ -26,10 +26,13 @@ Forge will:
 ### Install
 
 ```bash
-# Clone and install
-git clone https://github.com/zzhiyuann/forge.git
-cd forge
-pip install -e ".[dev]"
+# Install from PyPI
+pip install forge-agent
+
+# Or from source
+git clone https://github.com/zzhiyuann/cortex.git
+cd cortex
+uv sync --all-packages
 ```
 
 ### Create a Tool (CLI)

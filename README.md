@@ -1,31 +1,35 @@
 <p align="center">
   <strong>Cortex</strong><br>
-  <em>MCP plug-in layer for AI coding agents</em>
+  <em>The missing plug-in layer for AI coding agents</em>
 </p>
 
 <p align="center">
+  <a href="https://github.com/zzhiyuann/cortex/actions/workflows/tests.yml"><img src="https://github.com/zzhiyuann/cortex/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
   <a href="https://pypi.org/project/vibe-replay/"><img src="https://img.shields.io/pypi/v/vibe-replay?label=vibe-replay&color=blue" alt="vibe-replay"></a>
   <a href="https://pypi.org/project/agent-dispatcher/"><img src="https://img.shields.io/pypi/v/agent-dispatcher?label=dispatcher&color=blue" alt="dispatcher"></a>
   <a href="https://pypi.org/project/forge-agent/"><img src="https://img.shields.io/pypi/v/forge-agent?label=forge&color=blue" alt="forge"></a>
   <a href="https://pypi.org/project/a2a-hub/"><img src="https://img.shields.io/pypi/v/a2a-hub?label=a2a-hub&color=blue" alt="a2a-hub"></a>
+  <a href="https://pypi.org/project/cortex-agent-memory/"><img src="https://img.shields.io/pypi/v/cortex-agent-memory?label=memory&color=blue" alt="memory"></a>
   <img src="https://img.shields.io/badge/python-3.11+-blue" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
 </p>
 
 ---
 
-Your AI coding agent is powerful — but isolated. It can't be reached from your phone, can't talk to other agents, can't build its own tools, and forgets everything between sessions. **Cortex fixes this.**
+Claude Code, Cursor, Windsurf — your AI coding agent is powerful, but isolated. It can't be reached from your phone. It can't talk to other agents. It can't build its own tools. And it forgets everything between sessions.
 
-Cortex is a **plug-in layer** that sits on top of Claude Code, Cursor, or any MCP-compatible agent — adding the capabilities they don't ship with:
+**Cortex fixes all four.**
+
+It's a set of independent Python packages that plug into any MCP-compatible agent via the standard [Model Context Protocol](https://modelcontextprotocol.io). No vendor lock-in, no platform to adopt — just `pip install` the capabilities you need.
 
 ```
               ┌──────────────────────────────────────────────┐
               │              CORTEX (plug-in layer)           │
               │                                               │
-              │  Dispatcher   A2A Hub   Forge   Vibe Replay   │
-              │  (command)    (comms)  (tools)   (memory)     │
+              │  Dispatcher  A2A Hub  Forge  Memory  Replay    │
+              │  (command)   (comms) (tools) (recall) (capture)│
               └──────────────────┬─────────────────────────────┘
-                                 │  plugs in via MCP + hooks
+                                 │  MCP + hooks
               ┌──────────────────▼─────────────────────────────┐
               │     Your Agent (Claude Code / Cursor / etc.)    │
               └────────────────────────────────────────────────┘
@@ -33,83 +37,58 @@ Cortex is a **plug-in layer** that sits on top of Claude Code, Cursor, or any MC
 
 ## Components
 
-| Package | What's Missing | What Cortex Adds | Install |
-|---------|---------------|------------------|---------|
-| **[Dispatcher](packages/dispatcher)** | Can't command your agent from your phone | Mobile JARVIS — Telegram bridge with session management, project routing, concurrent tasks | `pip install agent-dispatcher` |
-| **[A2A Hub](packages/a2a-hub)** | Agents can't discover or delegate to each other | Agent-to-Agent protocol — WebSocket hub + MCP bridge for multi-agent orchestration | `pip install a2a-hub` |
-| **[Forge](packages/forge)** | Agent can't build its own tools | Self-evolving tool agent — describe → generate → test → iterate → install | `pip install forge-agent` |
-| **[Vibe Replay](packages/vibe-replay)** | Sessions are ephemeral — wisdom is lost | Session capture & replay — decisions, phases, patterns extracted into shareable HTML | `pip install vibe-replay` |
+| Package | Problem | Solution | Status | Install |
+|---------|---------|----------|--------|---------|
+| **[Dispatcher](packages/dispatcher)** | Can't reach your agent from your phone | Telegram bot that bridges to your local agent — sessions, routing, concurrent tasks | Beta | `pip install agent-dispatcher` |
+| **[Forge](packages/forge)** | Agent can't build its own tools | Describe a tool in English → generates code → runs tests → iterates up to 5x → installs it | Alpha | `pip install forge-agent` |
+| **[A2A Hub](packages/a2a-hub)** | Agents can't discover or delegate to each other | WebSocket hub + MCP bridge for agent-to-agent communication | Alpha | `pip install a2a-hub` |
+| **[Vibe Replay](packages/vibe-replay)** | Sessions are ephemeral — decisions and learnings are lost | Auto-captures sessions via hooks, extracts phases/decisions/patterns, generates interactive HTML replays | Alpha | `pip install vibe-replay` |
+| **[Memory](packages/memory)** | Agent forgets everything between sessions | Semantic memory store — LLM extraction + vector search via MCP | Alpha | `pip install cortex-agent-memory` |
+
+Each package is independently installable and useful on its own. No coupling between components.
 
 ## Quick Start
 
-### Option 1: Install everything
-
 ```bash
+# Install one component
+pip install agent-dispatcher
+dispatcher init    # interactive setup — Telegram bot token, project paths
+dispatcher start   # your agent is now reachable from your phone
+
+# Or install everything
 pip install cortex-cli-agent[all]
-
-# Set up MCP servers, hooks, Telegram config
-cortex init
-
-# Check what's connected
-cortex status
+cortex init        # sets up MCP servers, hooks, Telegram
+cortex status      # health check all components
 ```
 
-### Option 2: Install one component
+## How It Works: MCP Plug-ins
 
-```bash
-# Example: capture your Claude Code sessions
-pip install vibe-replay
-vibe-replay install     # hooks into Claude Code
-# ... code as normal ...
-vibe-replay sessions    # see what was captured
-vibe-replay replay <id> # open interactive HTML replay
-```
-
-### Option 3: From source (monorepo)
-
-```bash
-git clone https://github.com/zzhiyuann/cortex.git
-cd cortex
-uv sync --all-packages
-uv run cortex init
-```
-
-## Demo: Extending Claude Code with MCP
-
-Every Cortex component is an **MCP server** that Claude Code can call directly. Add to your MCP config:
+Every Cortex component is an **MCP server**. Add one line to your agent's config and it gains new abilities:
 
 ```json
 {
   "mcpServers": {
-    "vibe-replay": {
-      "command": "python3",
-      "args": ["-m", "vibe_replay.mcp_server"]
-    },
-    "forge": {
-      "command": "forge-mcp"
-    },
-    "a2a-hub": {
-      "command": "a2a-hub",
-      "args": ["bridge"]
-    }
+    "forge": { "command": "forge-mcp" },
+    "a2a-hub": { "command": "a2a-hub", "args": ["bridge"] },
+    "memory": { "command": "python3", "args": ["-m", "memory.server"] }
   }
 }
 ```
 
-Now Claude Code gains new abilities:
+Now your agent can do things it couldn't before:
 
 ```
-You: "What patterns came up in yesterday's debugging session?"
-      → Claude calls vibe-replay to search session history
-
 You: "I need a tool that validates YAML configs against a schema"
-      → Claude calls forge to generate, test, and install the tool
+→ Claude calls Forge → generates code → runs tests → installs the tool
 
 You: "Delegate the code review to the review agent"
-      → Claude calls a2a-hub to discover agents and send the task
+→ Claude calls A2A Hub → discovers agents → sends the task → gets results
+
+You: "What did we learn from yesterday's debugging session?"
+→ Claude calls Memory → semantic search → returns relevant learnings
 ```
 
-**This is the plug-in model** — Cortex doesn't replace your agent, it gives it new capabilities through the standard MCP protocol.
+The agent doesn't know these are plug-ins — they appear as native capabilities through the MCP protocol.
 
 ## Architecture
 
@@ -117,22 +96,21 @@ You: "Delegate the code review to the review agent"
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        cortex-cli (orchestrator)                     │
 │                    cortex init / cortex status                        │
-├────────────┬────────────┬──────────────┬────────────────────────────┤
-│            │            │              │                            │
-│ Dispatcher │  A2A Hub   │    Forge     │       Vibe Replay          │
-│            │            │              │                            │
-│ Telegram   │ WebSocket  │ Code gen +   │ Hook-based capture →       │
-│ → Agent    │ hub for    │ test loop +  │ phase detection →          │
-│ bridge     │ agent-to-  │ auto-install │ HTML replay generation     │
-│            │ agent      │ (MCP/CLI/    │                            │
-│ Sessions,  │ comms      │ module)      │ Decision points, patterns, │
-│ routing,   │            │              │ cross-session wisdom       │
-│ memory     │ MCP bridge │ Clarify →    │                            │
-│            │ for Claude │ Generate →   │ Exports: HTML, Markdown,   │
-│            │ Code       │ Test → Fix   │ JSON                       │
-├────────────┼────────────┼──────────────┼────────────────────────────┤
-│    MCP     │    MCP     │     MCP      │    MCP + Hooks             │
-└────────────┴────────────┴──────────────┴────────────────────────────┘
+├────────────┬────────────┬──────────────┬──────────────┬─────────────┤
+│            │            │              │              │             │
+│ Dispatcher │  A2A Hub   │    Forge     │ Vibe Replay  │   Memory    │
+│            │            │              │              │             │
+│ Telegram   │ WebSocket  │ Desc → Gen   │ Hook-based   │ Semantic    │
+│ → Agent    │ hub for    │ → Test → Fix │ capture →    │ search +    │
+│ bridge     │ agent-to-  │ → Install    │ analyze →    │ LLM         │
+│            │ agent      │ (MCP/CLI/    │ HTML replay  │ extraction  │
+│ Sessions,  │ comms      │ module)      │              │             │
+│ routing,   │            │              │ Decisions,   │ MCP server  │
+│ memory     │ MCP bridge │ 5x iterate   │ patterns,    │ for agents  │
+│            │ for agents │ loop         │ wisdom       │             │
+├────────────┼────────────┼──────────────┼──────────────┼─────────────┤
+│    MCP     │    MCP     │     MCP      │  MCP + Hooks │    MCP      │
+└────────────┴────────────┴──────────────┴──────────────┴─────────────┘
                               │
                     plugs into any MCP host
                               │
@@ -143,37 +121,48 @@ You: "Delegate the code review to the review agent"
 
 For detailed architecture documentation, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Design Principles
+
+1. **Plug-in, not platform** — extends your existing agent, doesn't replace it
+2. **Each component stands alone** — install one or all, no coupling
+3. **MCP-first** — every component is an MCP server, one JSON line to connect
+4. **No external services** — SQLite, JSONL, local WebSocket — everything runs on your machine
+5. **Fail-safe** — capture hooks are non-blocking; if Cortex fails, your agent keeps working
+
 ## Project Structure
 
 ```
 cortex/
 ├── packages/
 │   ├── cortex-cli/      # Umbrella CLI — setup, status, health checks
-│   ├── dispatcher/      # Telegram → agent bridge (Beta)
-│   ├── a2a-hub/         # Agent-to-Agent protocol hub (Alpha)
-│   ├── forge/           # Self-evolving tool generation (Alpha)
-│   ├── vibe-replay/     # Session capture & replay (Alpha)
-│   └── memory/          # Semantic memory module (Alpha)
-├── pyproject.toml       # uv workspace definition
-└── index.html           # GitHub Pages site
+│   ├── dispatcher/      # Telegram → agent bridge (Beta, 310 tests)
+│   ├── a2a-hub/         # Agent-to-Agent protocol hub (Alpha, 80 tests)
+│   ├── forge/           # Self-evolving tool generation (Alpha, 120 tests)
+│   ├── vibe-replay/     # Session capture & replay (Alpha, 50 tests)
+│   └── memory/          # Semantic memory module (Alpha, 30 tests)
+├── docs/                # Architecture guide
+├── examples/            # Walkthroughs
+├── pyproject.toml       # uv workspace
+└── CONTRIBUTING.md      # How to contribute
 ```
 
 ## Development
 
 ```bash
-# Run all tests
-uv run pytest
+git clone https://github.com/zzhiyuann/cortex.git
+cd cortex
+uv sync --all-packages   # install all packages in dev mode
 
-# Run a single package's tests
-uv run pytest packages/vibe-replay/tests/ -v
-
-# Lint
-uv run ruff check packages/
+uv run pytest                              # all 600+ tests
+uv run pytest packages/dispatcher/tests/   # one package
+uv run ruff check packages/                # lint
 ```
 
-## Website
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
 
-[zzhiyuann.github.io/cortex](https://zzhiyuann.github.io/cortex/) — interactive docs and component deep-dives.
+## Status
+
+Cortex is **early-stage open source**. The Dispatcher is in beta (daily driver for the author); other components are alpha. APIs may change. Contributions and feedback are very welcome.
 
 ## License
 
