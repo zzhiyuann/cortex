@@ -92,7 +92,7 @@ class ModuleFile(BaseModel):
 class ModuleSpec(BaseModel):
     """Specification for a complete app module (multi-file generation).
 
-    Modules are used by the /new-app feature in RyanHub to generate
+    Modules are used by the /new-app feature to generate
     complete personal app components with data models, services,
     UI descriptions, and context provider interfaces.
     """

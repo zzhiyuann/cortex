@@ -2022,7 +2022,7 @@ class TestSessionManagerDetails:
         assert 4 < elapsed < 7
 
     def test_session_project_name(self):
-        s = Session(1, "test", "/Users/zwang/projects/cortex")
+        s = Session(1, "test", "/tmp/test-project/cortex")
         assert s.project_name == "cortex"
 
     def test_active_returns_only_running(self):
