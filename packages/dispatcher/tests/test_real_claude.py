@@ -6,6 +6,7 @@ Run with: pytest tests/test_real_claude.py -v -s
 
 import asyncio
 import os
+import shutil
 import time
 from pathlib import Path
 
@@ -13,6 +14,11 @@ import pytest
 
 CLAUDE_BIN = str(Path.home() / ".local" / "bin" / "claude")
 TIMEOUT = 60
+
+pytestmark = pytest.mark.skipif(
+    not shutil.which("claude") and not Path(CLAUDE_BIN).exists(),
+    reason="claude CLI not installed",
+)
 
 
 def _clean_env():

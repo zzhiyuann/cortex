@@ -75,50 +75,51 @@ def make_dispatcher(tmp_path, projects=None):
 # -- Classification tests --
 
 class TestClassification:
-    def test_status_chinese(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_slash_status(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        assert d._classify("在干嘛") == "status"
+        assert await d._classify("/status") == "status"
+        assert await d._classify("/status@ryanwangclaudebot") == "status"
 
-    def test_status_english(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_slash_cancel(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        assert d._classify("status") == "status"
+        assert await d._classify("/cancel") == "cancel"
+        assert await d._classify("/cancel@ryanwangclaudebot") == "cancel"
 
-    def test_cancel_chinese(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_cancel_with_target(self, tmp_path):
+        """Cancel requires both a cancel verb and a target (task/session/all)."""
         d = make_dispatcher(tmp_path)
-        assert d._classify("取消") == "cancel"
-        assert d._classify("停") == "cancel"
+        assert await d._classify("cancel all tasks") == "cancel"
+        assert await d._classify("stop everything") == "cancel"
+        assert await d._classify("取消所有任务") == "cancel"
 
-    def test_cancel_english(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_bare_keywords_are_tasks(self, tmp_path):
+        """Bare status/cancel keywords without slash or target are classified as tasks."""
         d = make_dispatcher(tmp_path)
-        assert d._classify("cancel") == "cancel"
-        assert d._classify("stop that") == "cancel"
+        assert await d._classify("status") == "task"
+        assert await d._classify("cancel") == "task"
 
-    def test_normal_message(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_normal_message(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        assert d._classify("hi") == "task"
-        assert d._classify("fix the login bug") == "task"
-        assert d._classify("帮我看看代码") == "task"
+        assert await d._classify("hi") == "task"
+        assert await d._classify("fix the login bug") == "task"
+        assert await d._classify("帮我看看代码") == "task"
 
-    def test_slash_commands(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_slash_history_and_help(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        assert d._classify("/status") == "status"
-        assert d._classify("/cancel") == "cancel"
-        assert d._classify("/history") == "history"
-        assert d._classify("/help") == "help"
-        # With @botname suffix
-        assert d._classify("/status@ryanwangclaudebot") == "status"
-        assert d._classify("/cancel@ryanwangclaudebot") == "cancel"
+        assert await d._classify("/history") == "history"
+        assert await d._classify("/help") == "help"
 
-    def test_history_keywords(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_exact_history_and_help(self, tmp_path):
         d = make_dispatcher(tmp_path)
-        assert d._classify("history") == "history"
-        assert d._classify("历史") == "history"
-        assert d._classify("最近任务") == "history"
-
-    def test_help_keywords(self, tmp_path):
-        d = make_dispatcher(tmp_path)
-        assert d._classify("help") == "help"
-        assert d._classify("帮助") == "help"
+        assert await d._classify("history") == "history"
+        assert await d._classify("help") == "help"
 
 
 # -- Model prefix extraction tests --
@@ -277,7 +278,7 @@ class TestHandlers:
         d._handle_status(1)
         d.tg.send.assert_called_once()
         msg = d.tg.send.call_args[1].get("text", d.tg.send.call_args[0][0])
-        assert "空闲" in msg
+        assert "Idle" in msg
 
     def test_status_with_tasks(self, tmp_path):
         d = make_dispatcher(tmp_path)
@@ -301,13 +302,13 @@ class TestHandlers:
         d = make_dispatcher(tmp_path)
         d._handle_cancel(1, "cancel", None)
         msg = d.tg.send.call_args[0][0]
-        assert "没有" in msg
+        assert "No tasks running" in msg
 
     def test_history_empty(self, tmp_path):
         d = make_dispatcher(tmp_path)
         d._handle_history(1)
         msg = d.tg.send.call_args[0][0]
-        assert "没有" in msg
+        assert "No recent tasks" in msg
 
     def test_history_with_items(self, tmp_path):
         d = make_dispatcher(tmp_path)
@@ -323,7 +324,7 @@ class TestHandlers:
         d = make_dispatcher(tmp_path)
         d._handle_help(1)
         msg = d.tg.send.call_args[0][0]
-        assert "使用指南" in msg
+        assert "Dispatcher Help" in msg
 
 
 # -- Do-session tests (with mock runner) --
@@ -336,7 +337,7 @@ class TestDoSession:
         session = d.sm.create(1, "hi", str(Path.home()))
         session.is_task = False
 
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, on_question=None):
             session.status = "running"
             session.started = time.time()
             await asyncio.sleep(0.1)
@@ -358,7 +359,7 @@ class TestDoSession:
         session = d.sm.create(1, "fix the bug", "/tmp/webapp")
         session.is_task = True
 
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, on_question=None):
             session.status = "running"
             session.started = time.time()
             await asyncio.sleep(0.2)
@@ -379,7 +380,7 @@ class TestDoSession:
         session = d.sm.create(1, "test", str(Path.home()))
 
         captured_model = []
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, on_question=None):
             captured_model.append(model)
             session.status = "done"
             session.finished = time.time()
@@ -405,7 +406,7 @@ class TestDoSession:
         d.transcript.append(prev.conv_id, "assistant", "I completed the task.")
 
         invocations = []
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, on_question=None):
             invocations.append({
                 "sid": session.sid, "resume": resume,
                 "model": model, "prompt": prompt,
@@ -436,7 +437,7 @@ class TestDoSession:
         prev.finished = time.time()
 
         invocations = []
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, on_question=None):
             invocations.append({
                 "sid": session.sid, "resume": resume,
                 "model": model, "conv_id": session.conv_id,
@@ -465,15 +466,15 @@ class TestSendResult:
         s.status = "done"
         d._send_result(1, s, "")
         msg = d.tg.send.call_args[0][0]
-        assert "没有返回" in msg or "没有输出" in msg or "完成" in msg
+        assert "no output" in msg.lower() or "run out of turns" in msg.lower()
 
     def test_failed_result(self, tmp_path):
         d = make_dispatcher(tmp_path)
         s = Session(1, "test", "/tmp")
         s.status = "failed"
-        d._send_result(1, s, "something broke")
+        d._send_result(1, s, "(stderr) something broke")
         msg = d.tg.send.call_args[0][0]
-        assert "失败" in msg or "出错" in msg
+        assert "failed" in msg.lower() or "Task failed" in msg
 
     def test_long_result_split(self, tmp_path):
         d = make_dispatcher(tmp_path)
@@ -500,7 +501,7 @@ class TestSendResult:
         s.finished = time.time()
         d._send_result(1, s, "Here is the answer")
         msg = d.tg.send.call_args[0][0]
-        assert "完成" not in msg  # No duration prefix for quick tasks
+        assert "Done" not in msg  # No duration prefix for quick tasks
 
     def test_long_running_done_prefix(self, tmp_path):
         d = make_dispatcher(tmp_path)
@@ -510,7 +511,7 @@ class TestSendResult:
         s.finished = time.time()
         d._send_result(1, s, "Refactored the module")
         msg = d.tg.send.call_args[0][0]
-        assert "完成" in msg
+        assert "Done" in msg
 
 
 # -- Markdown to HTML conversion tests --
@@ -765,27 +766,27 @@ class TestFriendlyError:
     def test_timeout_error(self, tmp_path):
         d = make_dispatcher(tmp_path)
         result = d._friendly_error("Timed out after 30 minutes")
-        assert "超时" in result
+        assert "timed out" in result.lower()
 
     def test_rate_limit_error(self, tmp_path):
         d = make_dispatcher(tmp_path)
         result = d._friendly_error("429 rate limit exceeded")
-        assert "限流" in result
+        assert "rate limit" in result.lower()
 
     def test_max_turns_error(self, tmp_path):
         d = make_dispatcher(tmp_path)
         result = d._friendly_error("max turns reached")
-        assert "轮次" in result
+        assert "max turn" in result.lower()
 
     def test_permission_error(self, tmp_path):
         d = make_dispatcher(tmp_path)
         result = d._friendly_error("permission denied: /etc/secret")
-        assert "权限" in result
+        assert "Permission denied" in result
 
     def test_generic_error(self, tmp_path):
         d = make_dispatcher(tmp_path)
         result = d._friendly_error("something unexpected")
-        assert "出错" in result
+        assert "Error" in result
 
 
 # ============================================================
@@ -804,7 +805,7 @@ class TestUXResponseLatency:
         session.is_task = False
 
         captured = {}
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, on_question=None):
             captured["stream"] = stream
             captured["max_turns"] = max_turns
             session.status = "done"
@@ -900,6 +901,7 @@ class TestUXNoNoise:
 class TestUXReactionFeedback:
     """Verify reaction emojis provide instant, non-intrusive status feedback."""
 
+    @pytest.mark.skip(reason="reactions disabled in _send_result — 400 error from Telegram")
     def test_success_reaction(self, tmp_path):
         """Successful task triggers checkmark reaction."""
         d = make_dispatcher(tmp_path)
@@ -912,6 +914,7 @@ class TestUXReactionFeedback:
         d._send_result(1, s, "Done!")
         assert (1, "\u2705") in reactions, "Success should trigger checkmark reaction"
 
+    @pytest.mark.skip(reason="reactions disabled in _send_result — 400 error from Telegram")
     def test_failure_reaction(self, tmp_path):
         """Failed task triggers X reaction."""
         d = make_dispatcher(tmp_path)
@@ -922,6 +925,7 @@ class TestUXReactionFeedback:
         d._send_result(1, s, "Error occurred")
         assert (1, "\u274c") in reactions, "Failure should trigger X reaction"
 
+    @pytest.mark.skip(reason="reactions disabled in _on_message — 400 error from Telegram")
     @pytest.mark.asyncio
     async def test_incoming_task_gets_eyes(self, tmp_path):
         """Task messages should get eyes reaction immediately on receive."""
@@ -1012,7 +1016,7 @@ class TestUXRetryButton:
         assert len(dispatched) == 1, "Retry should dispatch exactly 1 task"
         assert dispatched[0]["text"] == "fix the auth bug"
         assert dispatched[0]["model"] == "haiku"
-        d.tg.answer_callback.assert_called_with("cb123", "\U0001f504 重试中...")
+        d.tg.answer_callback.assert_called_with("cb123", "\U0001f504 Retrying...")
 
     @pytest.mark.asyncio
     async def test_retry_missing_session(self, tmp_path):
@@ -1027,7 +1031,7 @@ class TestUXRetryButton:
             "message": {"chat": {"id": d.cfg.chat_id}, "message_id": 99},
         }
         await d._on_callback(cb)
-        d.tg.answer_callback.assert_called_with("cb456", "找不到原始任务")
+        d.tg.answer_callback.assert_called_with("cb456", "Original task not found")
 
 
 class TestUXLongOutput:
@@ -1264,11 +1268,11 @@ class TestUXForwardMessage:
 class TestUXNewSession:
     """Verify 'new session' UX flow works correctly."""
 
-    def test_classify_new_session_keywords(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_classify_new_session_keywords(self, tmp_path):
         """Known new-session phrases should classify as 'new_session'."""
         d = make_dispatcher(tmp_path)
-        for phrase in ["新对话", "new session", "开个新的", "新session", "新建session"]:
-            assert d._classify(phrase) == "new_session", f"'{phrase}' should classify as new_session"
+        assert await d._classify("new session") == "new_session"
 
     def test_new_session_sets_force_flag(self, tmp_path):
         """_handle_new_session should set sm.force_new = True."""
@@ -1292,7 +1296,7 @@ class TestUXNewSession:
         d.sm.force_new = True
 
         invocations = []
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, on_question=None):
             invocations.append({"resume": resume, "sid": session.sid})
             session.status = "done"
             session.started = time.time()
@@ -1325,7 +1329,7 @@ class TestUXNewSession:
         await d._on_callback(cb)
 
         assert d.sm.force_new is True
-        d.tg.answer_callback.assert_called_with("cb789", "好的，下条消息将开始新对话")
+        d.tg.answer_callback.assert_called_with("cb789", "OK, next message starts a new session")
 
 
 class TestUXConsecutiveFailures:
@@ -1336,15 +1340,15 @@ class TestUXConsecutiveFailures:
         d = make_dispatcher(tmp_path)
         d._fire_reaction = MagicMock()
 
-        # Simulate 3 consecutive failures
+        # Simulate 3 consecutive failures (must look like real errors)
         for i in range(3):
             s = Session(i + 1, f"task{i}", "/tmp")
             s.status = "failed"
-            d._send_result(i + 1, s, f"Error {i}")
+            d._send_result(i + 1, s, f"(stderr) crash {i}")
 
         # The third call should contain the warning
         last_msg = d.tg.send.call_args[0][0]
-        assert "连续失败" in last_msg, "3 failures should trigger escalation warning"
+        assert "consecutive failures" in last_msg, "3 failures should trigger escalation warning"
         assert "3" in last_msg
 
     def test_success_resets_counter(self, tmp_path):
@@ -1352,11 +1356,11 @@ class TestUXConsecutiveFailures:
         d = make_dispatcher(tmp_path)
         d._fire_reaction = MagicMock()
 
-        # 2 failures
+        # 2 failures (must look like real errors)
         for i in range(2):
             s = Session(i + 1, f"fail{i}", "/tmp")
             s.status = "failed"
-            d._send_result(i + 1, s, f"Error {i}")
+            d._send_result(i + 1, s, f"(stderr) crash {i}")
 
         assert d._consecutive_failures == 2
 
@@ -1372,11 +1376,11 @@ class TestUXConsecutiveFailures:
         # Next failure should be count 1, not 3
         s = Session(11, "fail again", "/tmp")
         s.status = "failed"
-        d._send_result(11, s, "Error again")
+        d._send_result(11, s, "(stderr) crash again")
 
         assert d._consecutive_failures == 1
         last_msg = d.tg.send.call_args[0][0]
-        assert "连续失败" not in last_msg, "Single failure should not trigger escalation"
+        assert "consecutive failures" not in last_msg, "Single failure should not trigger escalation"
 
 
 class TestUXQuickActionButtons:
@@ -1496,7 +1500,7 @@ class TestTranscriptIntegration:
         d = make_dispatcher(tmp_path)
         session = d.sm.create(1, "what is python", str(Path.home()))
 
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, on_question=None):
             session.status = "done"
             session.started = time.time()
             session.finished = time.time()
@@ -1527,7 +1531,7 @@ class TestTranscriptIntegration:
         d.transcript.append(prev.conv_id, "assistant", "Cats are great pets.")
 
         captured_prompts = []
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, on_question=None):
             captured_prompts.append(prompt)
             session.status = "done"
             session.started = time.time()
@@ -1565,7 +1569,7 @@ class TestTranscriptIntegration:
         d.transcript.append(prev.conv_id, "user", "hello")
         d.transcript.append(prev.conv_id, "assistant", "Hi!")
 
-        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True):
+        async def mock_invoke(session, prompt, resume=False, max_turns=10, model=None, stream=True, on_question=None):
             session.status = "done"
             session.started = time.time()
             session.finished = time.time()

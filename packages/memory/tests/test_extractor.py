@@ -15,7 +15,8 @@ class TestFactExtractor:
         mock_result.returncode = 0
         mock_result.stdout = json.dumps({"result": "Fact one.\nFact two.\nFact three."})
 
-        with patch("subprocess.run", return_value=mock_result):
+        with patch("shutil.which", return_value="/usr/bin/claude"), \
+             patch("subprocess.run", return_value=mock_result):
             extractor = FactExtractor()
             facts = extractor.extract(
                 "User: Can you fix the bug?\nAssistant: Fixed in store.py.",
@@ -33,7 +34,8 @@ class TestFactExtractor:
         mock_result.returncode = 0
         mock_result.stdout = json.dumps({"result": six_lines})
 
-        with patch("subprocess.run", return_value=mock_result):
+        with patch("shutil.which", return_value="/usr/bin/claude"), \
+             patch("subprocess.run", return_value=mock_result):
             extractor = FactExtractor()
             facts = extractor.extract("some long conversation", source="cli")
 
@@ -47,7 +49,8 @@ class TestFactExtractor:
         mock_result.returncode = 0
         mock_result.stdout = json.dumps({"result": "# Ignored header\nReal fact."})
 
-        with patch("subprocess.run", return_value=mock_result):
+        with patch("shutil.which", return_value="/usr/bin/claude"), \
+             patch("subprocess.run", return_value=mock_result):
             extractor = FactExtractor()
             facts = extractor.extract("conversation text", source="manual")
 
@@ -72,7 +75,8 @@ class TestFactExtractor:
         mock_result.returncode = 1
         mock_result.stderr = "some error"
 
-        with patch("subprocess.run", return_value=mock_result):
+        with patch("shutil.which", return_value="/usr/bin/claude"), \
+             patch("subprocess.run", return_value=mock_result):
             extractor = FactExtractor()
             facts = extractor.extract("important conversation content", source="bot")
 
@@ -103,7 +107,8 @@ class TestFactExtractor:
         import subprocess
         from memory.extractor import FactExtractor
 
-        with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("claude", 30)):
+        with patch("shutil.which", return_value="/usr/bin/claude"), \
+             patch("subprocess.run", side_effect=subprocess.TimeoutExpired("claude", 30)):
             extractor = FactExtractor()
             facts = extractor.extract("important content", source="cli")
 
@@ -118,7 +123,8 @@ class TestFactExtractor:
         mock_result.returncode = 0
         mock_result.stdout = json.dumps({"result": ""})
 
-        with patch("subprocess.run", return_value=mock_result):
+        with patch("shutil.which", return_value="/usr/bin/claude"), \
+             patch("subprocess.run", return_value=mock_result):
             extractor = FactExtractor()
             facts = extractor.extract("A test conversation.", source="test")
 

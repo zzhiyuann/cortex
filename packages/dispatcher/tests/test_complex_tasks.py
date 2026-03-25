@@ -9,6 +9,7 @@ Run with: pytest tests/test_complex_tasks.py -v -s
 
 import asyncio
 import os
+import shutil
 import time
 from pathlib import Path
 
@@ -17,6 +18,11 @@ import pytest
 CLAUDE_BIN = str(Path.home() / ".local" / "bin" / "claude")
 DISPATCHER_DIR = str(Path.home() / "projects" / "dispatcher")
 TIMEOUT = 120
+
+pytestmark = pytest.mark.skipif(
+    not shutil.which("claude") and not Path(CLAUDE_BIN).exists(),
+    reason="claude CLI not installed",
+)
 
 MEMORY = (
     "## User Preferences\n"
