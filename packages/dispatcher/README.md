@@ -125,8 +125,8 @@ dispatcher/
 ## Development
 
 ```bash
-git clone https://github.com/mephisto0/dispatcher
-cd dispatcher
+git clone https://github.com/zzhiyuann/cortex.git
+cd cortex/packages/dispatcher
 pip install -e .
 dispatcher start
 ```

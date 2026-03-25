@@ -1,14 +1,18 @@
 [project]
 name = "cortex-workspace"
 version = "0.1.0"
-description = "Cortex monorepo — personal agent infrastructure stack"
+description = "MCP plug-in infrastructure for AI coding agents"
+readme = "README.md"
+license = "MIT"
 requires-python = ">=3.11"
+authors = [{ name = "Zhiyuan Wang" }]
 
 [dependency-groups]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "pytest-cov>=4.0",
+    "ruff>=0.4.0",
 ]
 
 [tool.uv.workspace]
@@ -17,3 +21,9 @@ members = ["packages/*"]
 [tool.pytest.ini_options]
 testpaths = ["packages/*/tests"]
 asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+ignore = ["E501", "E741", "F841", "UP042"]
