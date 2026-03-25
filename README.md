@@ -16,6 +16,10 @@
 
 ---
 
+<p align="center">
+  <img src="docs/assets/demo.gif" alt="Cortex Demo" width="800">
+</p>
+
 Claude Code, Cursor, Windsurf — your AI coding agent is powerful, but isolated. It can't be reached from your phone. It can't talk to other agents. It can't build its own tools. And it forgets everything between sessions.
 
 **Cortex fixes all four.**
