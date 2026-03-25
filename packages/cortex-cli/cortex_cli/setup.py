@@ -10,7 +10,6 @@ Handles:
 from __future__ import annotations
 
 import json
-import os
 import shutil
 import stat
 from pathlib import Path
@@ -21,9 +20,8 @@ from rich.panel import Panel
 from rich.table import Table
 
 from cortex_cli.detect import Component, detect_all
-from cortex_cli.process import is_running, read_pid
-from cortex_cli.config import load_config, save_config, CORTEX_DIR
-from cortex_cli.errors import log_error, ConfigError
+from cortex_cli.process import read_pid
+from cortex_cli.config import load_config, save_config
 
 console = Console()
 
@@ -517,7 +515,7 @@ def _generate_shared_config(
             pass
 
     save_config(config)
-    console.print(f"[green]+ Shared config[/green] → ~/.cortex/config.yaml")
+    console.print("[green]+ Shared config[/green] → ~/.cortex/config.yaml")
 
 
 # ---- Status ----

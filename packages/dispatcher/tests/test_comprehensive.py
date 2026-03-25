@@ -10,11 +10,10 @@ Uses mock runner + mock Telegram client: no real Claude CLI calls.
 from __future__ import annotations
 
 import asyncio
-import html
 import json
 import time
 from pathlib import Path
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, AsyncMock
 
 import pytest
 import yaml
@@ -23,7 +22,6 @@ from dispatcher.config import Config
 from dispatcher.core import Dispatcher, _md_to_telegram_html
 from dispatcher.runner import AgentRunner
 from dispatcher.session import Session, SessionManager
-from dispatcher.transcript import Transcript
 
 
 # ========================================================================

@@ -1,8 +1,6 @@
 """Tests for cortex_cli.health — basic health check utility functions."""
 
-from pathlib import Path
 
-import pytest
 
 from cortex_cli.health import _dir_size_mb, _check_telegram_connectivity, _get_component_version
 from cortex_cli.detect import Component

@@ -1,14 +1,13 @@
 """Tests for the capture engine."""
 
 import json
-from datetime import datetime
 
 from vibe_replay.capture import (
-    create_event_from_hook,
-    parse_hook_stdin,
     _extract_code_diff,
     _extract_files_affected,
     _summarize_tool_call,
+    create_event_from_hook,
+    parse_hook_stdin,
 )
 from vibe_replay.models import EventType, HookPayload
 

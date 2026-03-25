@@ -2214,7 +2214,7 @@ class Dispatcher:
             summary = result[:150].replace('\n', ' ')
             if len(result) > 150:
                 summary += "..."
-            caption = f"\u2705 Done" + (f" ({elapsed})" if session.elapsed() > 60 else "")
+            caption = "\u2705 Done" + (f" ({elapsed})" if session.elapsed() > 60 else "")
             self._reply_document(mid, tmp_path, caption=caption)
             try:
                 os.unlink(tmp_path)

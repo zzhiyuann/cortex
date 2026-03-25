@@ -430,7 +430,7 @@ def _build_service(
         "",
         f"from .models import {class_name}Item, {class_name}Config",
         "",
-        f"logger = logging.getLogger(__name__)",
+        "logger = logging.getLogger(__name__)",
         "",
         "",
         f"class {class_name}Service:",
@@ -558,7 +558,7 @@ def _build_context_provider(name: str, description: str) -> str:
         f"from .models import {class_name}Config",
         f"from .service import {class_name}Service",
         "",
-        f"logger = logging.getLogger(__name__)",
+        "logger = logging.getLogger(__name__)",
         "",
         "",
         "class ContextBus(Protocol):",
@@ -592,8 +592,8 @@ def _build_context_provider(name: str, description: str) -> str:
         '        """Handle context refresh events."""',
         "        items = await self.service.list_all()",
         f'        await self.bus.publish("{name}.updated", ' + "{",
-        f'            "count": len(items),',
-        f'            "items": [item.model_dump() for item in items],',
+        '            "count": len(items),',
+        '            "items": [item.model_dump() for item in items],',
         "        })",
         "",
         "    async def notify_created(self, item_data: dict) -> None:",
@@ -905,9 +905,9 @@ def _logic_generic(params: list[ToolParam], description: str) -> str:
     """Generate generic tool logic as a starting point."""
     param_name = params[0].name if params else "input_data"
     return "\n".join([
-        f"# Process the input",
+        "# Process the input",
         f"result = str({param_name})",
-        f"return result",
+        "return result",
     ])
 
 

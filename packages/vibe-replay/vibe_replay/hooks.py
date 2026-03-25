@@ -7,12 +7,10 @@ that capture session events for Vibe Replay.
 from __future__ import annotations
 
 import json
-import os
 import shutil
 import stat
 from pathlib import Path
 from typing import Any
-
 
 SETTINGS_PATH = Path.home() / ".claude" / "settings.json"
 VIBE_REPLAY_DIR = Path.home() / ".vibe-replay"

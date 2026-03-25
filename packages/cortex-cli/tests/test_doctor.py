@@ -1,9 +1,7 @@
 """Tests for cortex_cli.doctor — diagnostic checks for common issues."""
 
-import json
 import os
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -14,7 +12,6 @@ from cortex_cli.doctor import _check_port_available, _check_stale_pid, run_docto
 def _patch_paths(tmp_path, monkeypatch):
     """Redirect file paths to temp directory for safe testing."""
     import cortex_cli.process as process_mod
-    import cortex_cli.doctor as doctor_mod
     import cortex_cli.config as config_mod
     import cortex_cli.setup as setup_mod
 

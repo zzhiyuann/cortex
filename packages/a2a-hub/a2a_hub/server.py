@@ -13,7 +13,7 @@ import signal
 import time
 import uuid
 from collections import defaultdict, deque
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import websockets
@@ -286,7 +286,7 @@ class HubServer:
                 "Agent %s re-registering (replacing old connection)", agent_id
             )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         info = AgentInfo(
             id=agent_id,
             name=payload.get("name", agent_id),
@@ -414,7 +414,7 @@ class HubServer:
         if not target_ws:
             task.status = TaskStatus.FAILED
             task.error = f"Agent '{task.to_agent}' has no active connection"
-            task.completed_at = datetime.now(timezone.utc)
+            task.completed_at = datetime.now(UTC)
             logger.error("No connection for agent %s to forward task %s", task.to_agent, task.task_id)
             return
 
@@ -439,7 +439,7 @@ class HubServer:
             logger.error("Failed to forward task %s to %s: %s", task.task_id, task.to_agent, exc)
             task.status = TaskStatus.FAILED
             task.error = str(exc)
-            task.completed_at = datetime.now(timezone.utc)
+            task.completed_at = datetime.now(UTC)
 
     async def _handle_result(
         self, msg: A2AMessage, ws: ServerConnection
@@ -453,7 +453,7 @@ class HubServer:
         task.result = payload.get("result")
         task.error = payload.get("error")
         task.status = TaskStatus.FAILED if task.error else TaskStatus.COMPLETED
-        task.completed_at = datetime.now(timezone.utc)
+        task.completed_at = datetime.now(UTC)
 
         logger.info(
             "Task %s %s (from=%s, to=%s)",
@@ -544,7 +544,7 @@ class HubServer:
     ) -> A2AMessage:
         agent_id = msg.from_agent
         if agent_id in self.agents:
-            self.agents[agent_id].last_heartbeat = datetime.now(timezone.utc)
+            self.agents[agent_id].last_heartbeat = datetime.now(UTC)
 
         return A2AMessage(
             type=MessageType.HEARTBEAT_ACK,
@@ -580,7 +580,7 @@ class HubServer:
                 else:
                     task.status = TaskStatus.FAILED
                     task.error = f"Agent '{agent_id}' disconnected and max retries ({task.max_retries}) exhausted"
-                    task.completed_at = datetime.now(timezone.utc)
+                    task.completed_at = datetime.now(UTC)
                     logger.info(
                         "Task %s failed — agent %s disconnected, no retries left",
                         task.task_id,
@@ -615,7 +615,7 @@ class HubServer:
         else:
             task.status = TaskStatus.FAILED
             task.error = f"No available agent for capability '{task.capability}' after retry"
-            task.completed_at = datetime.now(timezone.utc)
+            task.completed_at = datetime.now(UTC)
             logger.warning(
                 "Task %s failed — no agent available for capability '%s'",
                 task.task_id,
@@ -647,7 +647,7 @@ class HubServer:
             if self._shutting_down:
                 break
 
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             # --- Task TTL expiry ---
             for task in list(self.tasks.values()):

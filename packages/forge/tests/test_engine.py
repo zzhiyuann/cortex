@@ -1,7 +1,7 @@
 """Tests for forge.engine."""
 
 from forge.engine import ForgeEngine
-from forge.models import OutputType, SessionState, InstallTarget
+from forge.models import OutputType, SessionState
 
 
 class TestForgeEngine:

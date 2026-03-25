@@ -16,16 +16,15 @@ import asyncio
 import json
 import sys
 import time
-import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dispatcher.config import Config, DEFAULTS, _deep_copy
 from dispatcher.core import Dispatcher
-from dispatcher.session import Session, SessionManager
+from dispatcher.session import Session
 
 
 # ── Mock components ─────────────────────────────────────────────────────

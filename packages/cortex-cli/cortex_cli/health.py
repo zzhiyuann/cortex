@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 from pathlib import Path
 from urllib.error import URLError
 from urllib.request import Request, urlopen
@@ -13,7 +12,7 @@ from rich.console import Console
 from rich.table import Table
 
 from cortex_cli.detect import detect_all
-from cortex_cli.process import is_running, read_pid, log_file, log_size
+from cortex_cli.process import read_pid, log_size
 from cortex_cli.setup import MCP_CONFIG, CLAUDE_SETTINGS, DISPATCHER_CONFIG, VIBE_REPLAY_DIR
 from cortex_cli.config import load_config, CONFIG_PATH
 from cortex_cli.errors import ERROR_LOG
@@ -214,7 +213,6 @@ def run_health():
         checks.append(("Data: Forge Tools", "skip", "No forge tools directory"))
 
     # Log files disk usage
-    from cortex_cli.process import LOG_DIR
     total_log_size = 0
     for svc in ("a2a-hub", "dispatcher"):
         total_log_size += log_size(svc)

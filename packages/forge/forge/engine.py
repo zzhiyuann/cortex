@@ -9,7 +9,6 @@ from __future__ import annotations
 from forge.clarifier import analyze_ambiguity
 from forge.generator import (
     generate_tool,
-    module_spec_from_description,
     regenerate_with_fixes,
     spec_from_description,
 )
@@ -22,7 +21,6 @@ from forge.models import (
     OutputType,
     Session,
     SessionState,
-    TestResult,
 )
 from forge.storage import save_tool
 from forge.tester import run_tests

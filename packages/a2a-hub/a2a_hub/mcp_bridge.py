@@ -19,7 +19,7 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import websockets
@@ -78,7 +78,7 @@ class HubConnection:
                 websockets.connect(url),
                 timeout=10.0,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return f"Connection to hub at {url} timed out"
         except Exception as exc:
             return f"Failed to connect to hub at {url}: {exc}"
@@ -173,7 +173,7 @@ class HubConnection:
                 error = msg.payload.get("error")
                 self._delegated_tasks[task_id]["status"] = "failed" if error else "completed"
                 self._delegated_tasks[task_id]["completed_at"] = (
-                    datetime.now(timezone.utc).isoformat()
+                    datetime.now(UTC).isoformat()
                 )
                 if error:
                     self._delegated_tasks[task_id]["error"] = error
@@ -395,7 +395,7 @@ async def delegate_task(
         "params": params_dict,
         "priority": priority,
         "status": resp.payload.get("status", "unknown"),
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
     }
 
     status = resp.payload.get("status", "unknown")
@@ -448,7 +448,7 @@ async def get_task_result(
         if payload.get("error"):
             return f"Task {task_id} FAILED: {payload['error']}"
         return f"Task {task_id} COMPLETED:\n{json.dumps(payload.get('result'), indent=2)}"
-    except asyncio.TimeoutError:
+    except TimeoutError:
         # Try querying the hub for the task status
         try:
             status_msg = A2AMessage(

@@ -20,13 +20,12 @@ from cortex_cli.setup import run_init, run_status
 from cortex_cli.services import start_services, stop_services, restart_services, show_logs
 from cortex_cli.agent import start_agent, stop_agent, agent_status, agent_log
 from cortex_cli.health import run_health
-from cortex_cli.process import tail_log, log_file
 from cortex_cli.errors import get_recent_errors, clear_error_log, ERROR_LOG
 from cortex_cli.info import run_info
 from cortex_cli.doctor import run_doctor
 from cortex_cli.feedback import (
-    get_open_issues, get_issue_summary, resolver_status,
-    get_resolution_history, RESOLVER_LOG,
+    get_open_issues, resolver_status,
+    get_resolution_history,
 )
 
 console = Console()

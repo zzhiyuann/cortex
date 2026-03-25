@@ -1,8 +1,5 @@
 """Tests for cortex_cli.services — service start/stop/restart/logs."""
 
-import os
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 import pytest
 

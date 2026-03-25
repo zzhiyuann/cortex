@@ -7,7 +7,7 @@ but with a mock agent runner and mock Telegram client.
 import asyncio
 import json
 import time
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, AsyncMock
 from pathlib import Path
 
 import pytest

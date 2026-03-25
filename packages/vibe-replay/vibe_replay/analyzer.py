@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 from .models import (
@@ -25,7 +25,6 @@ from .models import (
     TimelinePhase,
 )
 from .store import SessionStore
-
 
 # Tool-to-phase mapping heuristics
 PHASE_INDICATORS: dict[str, list[SessionPhase]] = {

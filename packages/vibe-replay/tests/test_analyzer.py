@@ -7,19 +7,17 @@ import pytest
 from vibe_replay.analyzer import (
     _detect_phase_from_event,
     _detect_project_name,
-    _generate_session_summary,
-    _identify_phase_runs,
     _extract_insights,
-    _identify_decision_points,
-    _identify_turning_points,
-    _compute_statistics,
     _format_duration,
+    _generate_session_summary,
+    _identify_decision_points,
+    _identify_phase_runs,
+    _identify_turning_points,
     analyze_session,
 )
 from vibe_replay.models import (
     Event,
     EventType,
-    SessionMetadata,
     SessionPhase,
 )
 from vibe_replay.store import SessionStore

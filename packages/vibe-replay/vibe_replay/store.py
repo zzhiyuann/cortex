@@ -10,14 +10,12 @@ Manages persistent storage of captured sessions, including:
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Iterator
 
 from .models import Event, SessionMetadata, SessionReplay
-
 
 DEFAULT_BASE_DIR = Path.home() / ".vibe-replay"
 

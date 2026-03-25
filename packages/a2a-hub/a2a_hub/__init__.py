@@ -6,14 +6,14 @@ each other, communicate, and collaborate.
 
 __version__ = "0.1.0"
 
+from a2a_hub.agent import Agent, capability
 from a2a_hub.protocol import (
     A2AMessage,
-    MessageType,
     AgentInfo,
-    TaskStatus,
+    MessageType,
     TaskRecord,
+    TaskStatus,
 )
-from a2a_hub.agent import Agent, capability
 
 __all__ = [
     "A2AMessage",

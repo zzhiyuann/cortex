@@ -9,14 +9,12 @@ Generates shareable outputs from analyzed sessions:
 from __future__ import annotations
 
 import json
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from .models import Event, SessionReplay
-
 
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 

@@ -15,10 +15,10 @@ from vibe_replay.models import (
     TimelinePhase,
 )
 from vibe_replay.renderer import (
+    _prepare_events_for_template,
     render_html,
     render_json,
     render_markdown,
-    _prepare_events_for_template,
 )
 
 

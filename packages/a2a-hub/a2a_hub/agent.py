@@ -34,10 +34,9 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-import json
 import uuid
-from functools import wraps
-from typing import Any, Callable, Coroutine
+from collections.abc import Callable, Coroutine
+from typing import Any
 
 import websockets
 

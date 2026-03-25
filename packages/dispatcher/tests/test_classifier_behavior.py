@@ -358,7 +358,7 @@ async def main():
 
     # Exit code based on accuracy
     if report["accuracy"] < 90:
-        print(f"\n⚠ Accuracy below 90% — needs iteration!")
+        print("\n⚠ Accuracy below 90% — needs iteration!")
         return 1
     return 0
 

@@ -7,7 +7,7 @@ and the hub server. All messages are validated with Pydantic.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -58,11 +58,11 @@ class AgentInfo(BaseModel):
         description="Optional metadata (description, version, etc.)",
     )
     last_heartbeat: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Timestamp of the last heartbeat received from this agent",
     )
     registered_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Timestamp when the agent registered",
     )
 
@@ -82,7 +82,7 @@ class TaskRecord(BaseModel):
     status: TaskStatus = Field(default=TaskStatus.PENDING)
     result: Any = Field(default=None)
     error: str | None = Field(default=None)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = Field(default=None)
     ttl_seconds: int = Field(default=300, description="Time-to-live in seconds")
     priority: int = Field(
@@ -117,7 +117,7 @@ class A2AMessage(BaseModel):
         description="Recipient agent ID, 'hub', or 'broadcast'",
     )
     timestamp: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
+        default_factory=lambda: datetime.now(UTC).isoformat(),
         description="ISO-8601 timestamp",
     )
     payload: dict[str, Any] = Field(default_factory=dict)
@@ -131,7 +131,7 @@ class A2AMessage(BaseModel):
         return self.model_dump_json(by_alias=True)
 
     @classmethod
-    def from_json(cls, data: str) -> "A2AMessage":
+    def from_json(cls, data: str) -> A2AMessage:
         """Deserialize from a JSON string."""
         return cls.model_validate_json(data)
 

@@ -10,7 +10,6 @@ from forge.generator import (
     spec_from_description,
 )
 from forge.models import (
-    GenerationResult,
     ModuleSpec,
     OutputType,
     ToolParam,

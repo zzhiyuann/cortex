@@ -14,7 +14,7 @@ import click
 import yaml
 
 from . import __version__
-from .config import Config, DEFAULT_CONFIG_DIR, DEFAULT_CONFIG_FILE, DEFAULTS
+from .config import Config, DEFAULT_CONFIG_DIR, DEFAULT_CONFIG_FILE
 
 
 def _setup_logging(log_dir: Path):
@@ -86,7 +86,7 @@ def init():
     else:
         click.echo("Warning: Could not send test message. Check your token and chat ID.")
 
-    click.echo(f"\nRun 'dispatcher start' to begin.")
+    click.echo("\nRun 'dispatcher start' to begin.")
 
 
 @main.command()

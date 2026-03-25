@@ -1,13 +1,11 @@
 """Tests for forge.installer."""
 
-import json
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
 from forge.installer import install, uninstall
 from forge.models import (
-    InstallResult,
     InstallTarget,
     OutputType,
     Session,

@@ -13,14 +13,13 @@ from __future__ import annotations
 import json
 import os
 import socket
-import subprocess
 from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from cortex_cli.config import load_config, CONFIG_PATH, CORTEX_DIR
+from cortex_cli.config import load_config, CONFIG_PATH
 from cortex_cli.detect import detect_all, detect_system_python
 from cortex_cli.process import read_pid, pid_file, log_file
 from cortex_cli.setup import MCP_CONFIG, CLAUDE_SETTINGS, DISPATCHER_CONFIG, VIBE_REPLAY_DIR
@@ -70,7 +69,7 @@ def _check_mcp_binary(server_name: str, config: dict) -> dict | None:
 
     return {
         "issue": f"MCP server '{server_name}' binary not found: {cmd}",
-        "fix": f"Re-run 'cortex init' to reconfigure MCP servers, or install the missing package",
+        "fix": "Re-run 'cortex init' to reconfigure MCP servers, or install the missing package",
     }
 
 

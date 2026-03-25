@@ -6,28 +6,23 @@ generating replays, and exporting data.
 
 from __future__ import annotations
 
-import json
-import os
 import re
 import subprocess
-import sys
 import tempfile
 import webbrowser
 from pathlib import Path
 
 import click
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
-from rich import box
 
 from . import __version__
 from .analyzer import aggregate_learnings, analyze_session
 from .hooks import check_hooks, install_hooks, uninstall_hooks
 from .renderer import render_html, render_json, render_markdown
 from .store import SessionStore
-
 
 console = Console()
 
@@ -301,7 +296,7 @@ def analyze(session_id: str):
     with console.status("[bold cyan]Analyzing session..."):
         replay_data = analyze_session(store, session_id)
 
-    console.print(f"[green]Analysis complete.[/]")
+    console.print("[green]Analysis complete.[/]")
     console.print(
         f"  Phases: {len(replay_data.timeline)} | "
         f"Insights: {len(replay_data.insights)} | "
@@ -357,7 +352,6 @@ def serve(port: int, host: str):
     """Start a local web server to browse all replays."""
     import http.server
     import socketserver
-    import threading
 
     store = _get_store()
 
@@ -599,7 +593,7 @@ def _resolve_session_id(store: SessionStore, partial_id: str) -> str | None:
     if len(matches) == 1:
         return matches[0]
     elif len(matches) > 1:
-        console.print(f"[yellow]Ambiguous session ID. Matches:[/]")
+        console.print("[yellow]Ambiguous session ID. Matches:[/]")
         for m in matches[:10]:
             console.print(f"  {m}")
         return None

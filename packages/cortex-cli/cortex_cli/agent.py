@@ -22,7 +22,6 @@ from rich.table import Table
 
 from cortex_cli.config import get_telegram_creds
 from cortex_cli.detect import get_monorepo_root
-from cortex_cli.process import read_pid, write_pid, stop_process, log_size, tail_log
 
 console = Console()
 
@@ -329,7 +328,7 @@ def agent_status():
     if LOG_FILE.exists():
         log_size = LOG_FILE.stat().st_size
         table.add_row("Log Size", f"{log_size:,} bytes")
-        console.print(f"\n[dim]Last 10 lines of log:[/dim]")
+        console.print("\n[dim]Last 10 lines of log:[/dim]")
         lines = LOG_FILE.read_text().strip().split("\n")
         for line in lines[-10:]:
             console.print(f"  [dim]{line[:120]}[/dim]")

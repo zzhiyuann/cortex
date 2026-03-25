@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import json
+from datetime import UTC
 
 import pytest
 import websockets
@@ -375,15 +375,15 @@ class TestHeartbeatMonitoring:
 
             # Wait for cleanup to kick in (heartbeat_timeout=0.5s, cleanup_interval=10s)
             # But we can't wait 10s in a test, so manually trigger cleanup
-            from datetime import datetime, timezone, timedelta
+            from datetime import datetime, timedelta
 
             # Backdate the heartbeat
             server.agents["stale-1"].last_heartbeat = (
-                datetime.now(timezone.utc) - timedelta(seconds=5)
+                datetime.now(UTC) - timedelta(seconds=5)
             )
 
             # Run one iteration of cleanup manually
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             stale_agents = []
             for agent_id, info in server.agents.items():
                 elapsed = (now - info.last_heartbeat).total_seconds()

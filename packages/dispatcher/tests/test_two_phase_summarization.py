@@ -28,8 +28,7 @@ import yaml
 from dispatcher.config import Config
 from dispatcher.core import Dispatcher
 from dispatcher.runner import AgentRunner
-from dispatcher.session import Session, SessionManager
-from dispatcher.transcript import Transcript
+from dispatcher.session import Session
 
 
 # ============================================================

@@ -12,9 +12,7 @@ from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 
-from cortex_cli.detect import detect_all
 from cortex_cli.config import load_config
 
 console = Console()

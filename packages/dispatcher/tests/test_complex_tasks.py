@@ -78,7 +78,7 @@ def _report(label, code, out, elapsed):
     print(f"  exit={code}  time={elapsed:.1f}s  len={len(out)}")
     print(f"  output: {preview}")
     if elapsed > 60:
-        print(f"  WARNING: took over 60s")
+        print("  WARNING: took over 60s")
 
 
 class TestComplexTasks:

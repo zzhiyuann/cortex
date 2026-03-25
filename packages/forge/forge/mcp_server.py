@@ -213,7 +213,7 @@ def forge_generate(session_id: str) -> dict:
         if session.state in (SessionState.SUCCEEDED, SessionState.INSTALLED):
             return {
                 "error": (
-                    f"Session has already succeeded. "
+                    "Session has already succeeded. "
                     "Use forge_install to install it, or create a new session."
                 ),
                 "error_type": "invalid_state",

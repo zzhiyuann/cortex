@@ -9,7 +9,7 @@ Focuses on:
 import asyncio
 import json
 import time
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, AsyncMock
 
 import pytest
 
@@ -164,7 +164,7 @@ class TestReadStreamNoHang:
         elapsed = time.monotonic() - start
 
         assert result == "Hi! How can I help?"
-        assert elapsed < 2, f"should not hang on stderr when result event was received"
+        assert elapsed < 2, "should not hang on stderr when result event was received"
 
     @pytest.mark.asyncio
     async def test_empty_result_event_multi_turn(self):
@@ -255,7 +255,9 @@ class TestProgressCleanup:
         from dispatcher.core import Dispatcher
 
         # Minimal dispatcher with mocked Telegram
-        import yaml, tempfile, os
+        import yaml
+        import tempfile
+        import os
         tmp = tempfile.mkdtemp()
         cfg_data = {
             "telegram": {"bot_token": "test", "chat_id": 12345},

@@ -7,15 +7,12 @@ structured Event objects for storage and analysis.
 from __future__ import annotations
 
 import json
-import os
-import re
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from .models import Event, EventType, HookPayload
-
 
 # Tools that produce code changes
 CODE_CHANGE_TOOLS = {"Edit", "Write", "NotebookEdit"}

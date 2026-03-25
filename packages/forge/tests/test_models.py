@@ -2,7 +2,6 @@
 
 from forge.models import (
     ClarificationQuestion,
-    ClarificationResult,
     GenerationResult,
     InstallResult,
     InstallTarget,
